@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'pressable.dart';
+
 /// Google-branded sign-in button.
 ///
 /// Intentionally follows Google's sign-in branding (Roboto, neutral border,
 /// the multi-color "G") rather than the app's coral theme, as required by
 /// Google's brand guidelines. The logo is painted directly so no asset is
 /// needed.
-class GoogleSignInButton extends StatefulWidget {
+class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
     required this.onPressed,
@@ -20,63 +22,51 @@ class GoogleSignInButton extends StatefulWidget {
   final bool compact;
 
   @override
-  State<GoogleSignInButton> createState() => _GoogleSignInButtonState();
-}
-
-class _GoogleSignInButtonState extends State<GoogleSignInButton> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      enabled: widget.enabled,
-      label: 'Continue with Google',
-      child: GestureDetector(
-        onTapDown: widget.enabled
-            ? (_) => setState(() => _pressed = true)
-            : null,
-        onTapUp: widget.enabled
-            ? (_) {
-                setState(() => _pressed = false);
-                widget.onPressed();
-              }
-            : null,
-        onTapCancel: () => setState(() => _pressed = false),
-        child: AnimatedScale(
-          scale: _pressed ? 0.98 : 1.0,
-          duration: const Duration(milliseconds: 100),
-          child: Container(
-            height: widget.compact ? 48 : 52,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFF747775)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CustomPaint(painter: _GoogleLogoPainter()),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Continue with Google',
-                  style: GoogleFonts.roboto(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF1F1F1F),
-                    letterSpacing: 0.25,
-                  ),
-                ),
-              ],
+    final Widget surface = Container(
+      height: compact ? 48 : 52,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFF747775)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 18,
+            height: 18,
+            child: CustomPaint(painter: _GoogleLogoPainter()),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Continue with Google',
+            style: GoogleFonts.roboto(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF1F1F1F),
+              letterSpacing: 0.25,
             ),
           ),
-        ),
+        ],
       ),
+    );
+
+    if (!enabled) {
+      return Semantics(
+        button: true,
+        enabled: false,
+        label: 'Continue with Google',
+        child: Opacity(opacity: 0.6, child: surface),
+      );
+    }
+
+    return Pressable(
+      onTap: onPressed,
+      pressedScale: 0.98,
+      semanticLabel: 'Continue with Google',
+      child: surface,
     );
   }
 }

@@ -24,6 +24,7 @@ class ChoiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Widget? leadingWidget = leading;
     return Semantics(
       button: true,
       selected: isSelected,
@@ -46,7 +47,10 @@ class ChoiceCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (leading != null) ...[leading!, const SizedBox(width: 14)],
+              if (leadingWidget != null) ...[
+                leadingWidget,
+                const SizedBox(width: 14),
+              ],
               Expanded(child: Text(label, style: AppTextStyles.bodyLarge)),
               SelectionCheck(visible: isSelected),
             ],

@@ -5,9 +5,10 @@ import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 
 /// A themed text field with a coral focus glow, a check icon when valid, and an
-/// optional password visibility toggle. Borders and radii come from the app
-/// [InputDecorationTheme]; this widget adds the focus glow and validation
-/// affordances on top.
+/// optional password visibility toggle.
+///
+/// All view state (focus, validity, obscured) is driven by listenables rather
+/// than `setState`, so rebuilds stay scoped to this field.
 class NekoTextField extends StatefulWidget {
   const NekoTextField({
     super.key,
@@ -47,62 +48,40 @@ class NekoTextField extends StatefulWidget {
 }
 
 class _NekoTextFieldState extends State<NekoTextField> {
-  late final FocusNode _focusNode;
-  bool _obscured = true;
-  bool _focused = false;
-  String? _errorText;
-  bool _isValid = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode()..addListener(_onFocusChange);
-    widget.controller?.addListener(_revalidate);
-  }
-
-  void _onFocusChange() => setState(() => _focused = _focusNode.hasFocus);
-
-  void _revalidate() {
-    final String text = widget.controller?.text ?? '';
-    final String? error = widget.validator?.call(text);
-    setState(() {
-      _errorText = error;
-      _isValid = error == null && text.isNotEmpty;
-    });
-  }
+  final FocusNode _focusNode = FocusNode();
+  final ValueNotifier<bool> _obscured = ValueNotifier<bool>(true);
 
   @override
   void dispose() {
-    _focusNode
-      ..removeListener(_onFocusChange)
-      ..dispose();
-    widget.controller?.removeListener(_revalidate);
+    _focusNode.dispose();
+    _obscured.dispose();
     super.dispose();
   }
 
-  Widget? _buildSuffix() {
+  Widget? _suffix({required bool obscured, required bool isValid}) {
     if (widget.obscureText) {
       return IconButton(
         icon: Icon(
-          _obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          obscured ? Icons.visibility_outlined : Icons.visibility_off_outlined,
           color: AppColors.textSecondary,
         ),
-        onPressed: () => setState(() => _obscured = !_obscured),
-        tooltip: _obscured ? 'Show password' : 'Hide password',
+        onPressed: () => _obscured.value = !_obscured.value,
+        tooltip: obscured ? 'Show password' : 'Hide password',
       );
     }
-    if (widget.suffixText != null) {
+    final String? suffixText = widget.suffixText;
+    if (suffixText != null) {
       return Padding(
         padding: const EdgeInsets.only(right: 20),
         child: Text(
-          widget.suffixText!,
+          suffixText,
           style: AppTextStyles.bodyLarge.copyWith(
             color: AppColors.textSecondary,
           ),
         ),
       );
     }
-    if (widget.showValidCheck && _isValid) {
+    if (widget.showValidCheck && isValid) {
       return const Padding(
         padding: EdgeInsets.only(right: 16),
         child: Icon(Icons.check_circle, color: AppColors.success, size: 22),
@@ -113,15 +92,27 @@ class _NekoTextFieldState extends State<NekoTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AnimatedContainer(
+    final Listenable merged = Listenable.merge(<Listenable?>[
+      _focusNode,
+      widget.controller,
+      _obscured,
+    ]);
+
+    return ListenableBuilder(
+      listenable: merged,
+      builder: (context, _) {
+        final String text = widget.controller?.text ?? '';
+        final String? error = widget.validator?.call(text);
+        final bool isValid = error == null && text.isNotEmpty;
+        final bool focused = _focusNode.hasFocus;
+        final bool obscured = _obscured.value;
+
+        return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: _focused
+            boxShadow: focused
                 ? [
                     BoxShadow(
                       color: AppColors.primary.withValues(alpha: 0.18),
@@ -135,17 +126,16 @@ class _NekoTextFieldState extends State<NekoTextField> {
             controller: widget.controller,
             focusNode: _focusNode,
             autofocus: widget.autofocus,
-            obscureText: widget.obscureText && _obscured,
+            obscureText: widget.obscureText && obscured,
             keyboardType: widget.keyboardType,
             textInputAction: widget.textInputAction,
             maxLength: widget.maxLength,
             inputFormatters: widget.inputFormatters,
+            validator: widget.validator,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             style: AppTextStyles.bodyLarge,
             cursorColor: AppColors.primary,
-            onChanged: (value) {
-              _revalidate();
-              widget.onChanged?.call(value);
-            },
+            onChanged: widget.onChanged,
             onFieldSubmitted: widget.onSubmitted,
             decoration: InputDecoration(
               labelText: widget.label,
@@ -154,21 +144,14 @@ class _NekoTextFieldState extends State<NekoTextField> {
               floatingLabelStyle: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.primary,
               ),
-              suffixIcon: _buildSuffix(),
-            ),
-          ),
-        ),
-        if (_errorText != null)
-          Padding(
-            padding: const EdgeInsets.only(left: 16, top: 6),
-            child: Text(
-              _errorText!,
-              style: AppTextStyles.caption.copyWith(
+              errorStyle: AppTextStyles.caption.copyWith(
                 color: AppColors.primaryDark,
               ),
+              suffixIcon: _suffix(obscured: obscured, isValid: isValid),
             ),
           ),
-      ],
+        );
+      },
     );
   }
 }
