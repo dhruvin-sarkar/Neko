@@ -2,17 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../shared/widgets/pressable.dart';
 import '../../models/cat_document.dart';
 
 /// A single document row: a type icon, name, type + date, and a delete action.
+/// Tapping the row opens the document in the device's default viewer.
 class DocumentTile extends StatelessWidget {
   const DocumentTile({
     super.key,
     required this.document,
+    required this.onOpen,
     required this.onDelete,
   });
 
   final CatDocument document;
+  final VoidCallback onOpen;
   final VoidCallback onDelete;
 
   IconData get _icon {
@@ -34,49 +38,53 @@ class DocumentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.selectedFill,
-              borderRadius: BorderRadius.circular(12),
+    return Pressable(
+      onTap: onOpen,
+      semanticLabel: 'Open ${document.name}',
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.selectedFill,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(_icon, color: AppColors.primary, size: 22),
             ),
-            child: Icon(_icon, color: AppColors.primary, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  document.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodyLarge,
-                ),
-                const SizedBox(height: 2),
-                Text(_subtitle, style: AppTextStyles.caption),
-              ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    document.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodyLarge,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(_subtitle, style: AppTextStyles.caption),
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            onPressed: onDelete,
-            tooltip: 'Delete',
-            icon: const Icon(
-              Icons.delete_outline_rounded,
-              color: AppColors.textSecondary,
+            IconButton(
+              onPressed: onDelete,
+              tooltip: 'Delete',
+              icon: const Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../shared/services/feedback_service.dart';
 import '../../../../shared/services/file_picker_service.dart';
 import '../../models/cat_document.dart';
@@ -41,6 +43,30 @@ class DocumentsSection extends ConsumerWidget {
           name: meta.name,
           type: meta.type,
         );
+  }
+
+  Future<void> _open(
+    BuildContext context,
+    WidgetRef ref,
+    CatDocument doc,
+  ) async {
+    unawaited(ref.read(feedbackServiceProvider).onTap());
+    final Uri? uri = Uri.tryParse(doc.storageUrl);
+    bool opened = false;
+    if (uri != null) {
+      try {
+        opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } on Object catch (e, st) {
+        AppLogger.warning('Could not open document', e, st);
+      }
+    }
+    if (!opened && context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text("We couldn't open that document.")),
+        );
+    }
   }
 
   Future<void> _confirmDelete(
@@ -140,6 +166,7 @@ class DocumentsSection extends ConsumerWidget {
                 for (final CatDocument doc in docs) ...[
                   DocumentTile(
                     document: doc,
+                    onOpen: () => _open(context, ref, doc),
                     onDelete: () => _confirmDelete(context, ref, doc),
                   ),
                   const SizedBox(height: 12),

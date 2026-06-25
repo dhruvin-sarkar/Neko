@@ -71,3 +71,10 @@ Walked the whole flow (cold launch → splash gate → auth → onboarding → h
 **Hardened this pass:**
 - `EditCatScreen` no longer reads the cat once in `initState` (which stranded on a misleading "can't find that cat" if the profile list hadn't loaded yet — e.g. deep link or hot restart on the edit route). It now resolves the cat reactively, shows a spinner while the list is still loading, fills the form once via `_initFrom` (idempotent), and only shows "not found" when the list has loaded and the cat genuinely isn't there.
 - Sign-out is now guarded by a confirmation dialog (prevents an accidental one-tap logout) and surfaces failures via a snackbar through an `authController` `AsyncError` listener (previously a failed sign-out was silent and left the user signed in with no feedback).
+
+## Session 5 (cont.) — Document viewing
+
+- Tapping a document tile now opens it in the device's default viewer/browser via `url_launcher` (`LaunchMode.externalApplication`) against the stored Firebase download URL. The tile uses the shared `Pressable` for the same springy press feel as the cat banners; the delete icon button keeps its own tap target.
+- Chose `url_launcher` over bundling an in-app PDF/image viewer: the download URLs are already https and self-authenticating (token in URL), so handing off to the OS viewer is the lightest robust option and handles every file type (PDF/JPG/PNG/HEIC/WEBP) for free.
+- Failure handling: a malformed URL or a failed launch is logged and surfaced as a snackbar ("We couldn't open that document.") — never an unhandled exception.
+- Android 11+ package visibility: added an `<intent>` for `VIEW`/`https` to the manifest's existing `<queries>` block so the launch resolves in release builds. No new runtime permissions.
