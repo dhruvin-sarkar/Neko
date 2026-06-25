@@ -78,3 +78,14 @@ Walked the whole flow (cold launch → splash gate → auth → onboarding → h
 - Chose `url_launcher` over bundling an in-app PDF/image viewer: the download URLs are already https and self-authenticating (token in URL), so handing off to the OS viewer is the lightest robust option and handles every file type (PDF/JPG/PNG/HEIC/WEBP) for free.
 - Failure handling: a malformed URL or a failed launch is logged and surfaced as a snackbar ("We couldn't open that document.") — never an unhandled exception.
 - Android 11+ package visibility: added an `<intent>` for `VIEW`/`https` to the manifest's existing `<queries>` block so the launch resolves in release builds. No new runtime permissions.
+
+## Session 5 (cont.) — Cohesion & polish pass
+
+Filled the remaining gaps to make the current scope feel like a finished product:
+
+- **Cat deletion (completes CRUD).** You could create (onboarding), read (detail), and update (edit) a cat but not remove one. Added a "Remove this cat" action at the bottom of the edit screen, behind a confirmation dialog. `ProfileRepository.delete()` removes the cat's `documents` subcollection records and the cat document in a single atomic batch, then best-effort deletes the cat's Storage folder (avatar + document files via `listAll`) — Storage failures are logged, never surfaced, since the metadata is already gone. After a delete the screen routes to Home (the detail screen would otherwise show "not found"). If it was the last cat, Home shows its empty state with the add-cat affordance (onboarding stays complete, so the user isn't dumped back into onboarding).
+- **Settings, fleshed out.** Was just an email line + sign-out. Now leads with an account card (monogram avatar from the display name/email, name, email), an "About Neko" card (name, tagline, version), and the sign-out button, all with the staggered fade/slide intro used elsewhere. App metadata lives in `lib/app/app_info.dart` (`AppInfo.version` kept in sync with pubspec) rather than scattered string literals.
+- **Profile detail** now shows an "Added 12 Jun 2026" line under the breed when `createdAt` is present, giving the page a sense of history.
+- **Housekeeping:** fixed the stale nav-pill doc comment (it described a black selected circle; it's coral), and removed four empty legacy scaffold directories (`lib/screens`, `lib/services`, `lib/theme`, `lib/widgets`) left over from the pre-Riverpod structure.
+
+The full journey is now cohesive end to end: launch → splash (min 800ms, gated) → login/register (email + Google, reset, validation) → 7-step onboarding → Home (cat banners + add) ↔ Settings (account + about + sign-out) → cat detail (avatar, stats, added-date, documents) → edit (update + remove) → document upload/open/delete. Every screen shares the same tokens, Nunito type, coral accent, chiclet buttons, springy press feedback, and AsyncValue loading/error/empty handling.

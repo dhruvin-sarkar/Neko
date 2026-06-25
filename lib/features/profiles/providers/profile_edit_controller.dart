@@ -23,4 +23,15 @@ class ProfileEditController extends _$ProfileEditController {
     state = result;
     return !result.hasError;
   }
+
+  /// Permanently removes the cat with [catId]; returns `true` on success.
+  Future<bool> delete(String catId) async {
+    if (state.isLoading) return false;
+    state = const AsyncValue<void>.loading();
+    final AsyncValue<void> result = await AsyncValue.guard(
+      () => ref.read(profileRepositoryProvider).delete(catId),
+    );
+    state = result;
+    return !result.hasError;
+  }
 }

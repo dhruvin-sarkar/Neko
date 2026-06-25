@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 
 /// The custom bottom navigation pill: a white rounded pill where the selected
-/// destination sits inside a filled black circle (Duolingo-style), matching
-/// the app's reference design.
+/// destination sits inside a filled coral circle (Duolingo-style), echoing the
+/// app's brand accent.
 class NekoNavPill extends StatelessWidget {
   const NekoNavPill({
     super.key,

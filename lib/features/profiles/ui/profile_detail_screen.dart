@@ -76,6 +76,27 @@ class _CatProfileBody extends StatelessWidget {
     };
   }
 
+  String? get _addedLabel {
+    final DateTime? date = cat.createdAt;
+    if (date == null) return null;
+    const List<String> months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    final String month = months[(date.month - 1).clamp(0, 11)];
+    return 'Added ${date.day} $month ${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -105,6 +126,14 @@ class _CatProfileBody extends StatelessWidget {
                     color: AppColors.textSecondary,
                   ),
                 ),
+                if (_addedLabel != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    _addedLabel!,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.caption,
+                  ),
+                ],
                 const SizedBox(height: 32),
                 Row(
                   children: [

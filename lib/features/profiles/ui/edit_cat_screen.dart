@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/errors/app_exception.dart';
@@ -110,6 +111,53 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     if (ok && mounted) {
       unawaited(ref.read(feedbackServiceProvider).onSuccess());
       context.pop();
+    }
+  }
+
+  Future<void> _delete() async {
+    final CatProfile? original = _original;
+    if (original == null) return;
+
+    unawaited(ref.read(feedbackServiceProvider).onTap());
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Remove ${original.name}?',
+          style: AppTextStyles.headlineLarge,
+        ),
+        content: Text(
+          "This deletes ${original.name}'s profile and all their documents. "
+          "This can't be undone.",
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              'Remove',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.primaryDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final bool ok = await ref
+        .read(profileEditControllerProvider.notifier)
+        .delete(original.id);
+    if (ok && mounted) {
+      unawaited(ref.read(feedbackServiceProvider).onSuccess());
+      // The cat no longer exists, so return to Home rather than its (now
+      // missing) detail screen.
+      context.go(Routes.home);
     }
   }
 
@@ -267,6 +315,23 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
               enabled: _isValid,
               isLoading: isSaving,
               onPressed: _save,
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: isSaving ? null : _delete,
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.primaryDark,
+                  size: 20,
+                ),
+                label: Text(
+                  'Remove this cat',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+              ),
             ),
           ],
         ),

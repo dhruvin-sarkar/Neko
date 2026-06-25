@@ -7,7 +7,7 @@ part of 'profile_edit_controller.dart';
 // **************************************************************************
 
 String _$profileEditControllerHash() =>
-    r'd9a2ed03eaac24f7676260ae5af16b772d1851a0';
+    r'a02a53e0994fae3cdff997e342408d404d85784a';
 
 /// Drives saving edits to a cat profile and exposes progress as [AsyncValue].
 ///
