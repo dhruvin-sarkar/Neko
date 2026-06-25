@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../../../shared/widgets/neko_pill_button.dart';
+import '../../../../shared/widgets/neko_primary_button.dart';
 
-/// The onboarding continue button.
-///
-/// When [enabled] flips from false to true, it scales up from 0.97 to 1.0 over
-/// 200ms while [NekoPillButton] simultaneously animates its fill from grey to
-/// coral — the combined effect that signals "you can move on now".
-class AnimatedContinueButton extends StatelessWidget {
+/// The onboarding continue button: a Chiclet primary button that gives a
+/// spring scale-pop the moment it first becomes enabled, signalling "you can
+/// move on now".
+class AnimatedContinueButton extends StatefulWidget {
   const AnimatedContinueButton({
     super.key,
     required this.label,
@@ -22,17 +21,33 @@ class AnimatedContinueButton extends StatelessWidget {
   final bool isLoading;
 
   @override
+  State<AnimatedContinueButton> createState() => _AnimatedContinueButtonState();
+}
+
+class _AnimatedContinueButtonState extends State<AnimatedContinueButton> {
+  // Bumped on each disabled->enabled transition to replay the pop exactly once.
+  int _enablePulse = 0;
+
+  @override
+  void didUpdateWidget(AnimatedContinueButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.enabled && widget.enabled) _enablePulse++;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: enabled ? 1.0 : 0.97,
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      child: NekoPillButton(
-        label: label,
-        enabled: enabled,
-        isLoading: isLoading,
-        onPressed: enabled ? onPressed : null,
-      ),
-    );
+    return NekoPrimaryButton(
+          label: widget.label,
+          enabled: widget.enabled,
+          isLoading: widget.isLoading,
+          onPressed: widget.onPressed,
+        )
+        .animate(key: ValueKey<int>(_enablePulse))
+        .scaleXY(
+          begin: widget.enabled ? 0.95 : 1.0,
+          end: 1.0,
+          duration: 200.ms,
+          curve: Curves.elasticOut,
+        );
   }
 }

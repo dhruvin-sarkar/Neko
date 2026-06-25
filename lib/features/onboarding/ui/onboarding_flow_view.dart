@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../shared/services/feedback_service.dart';
 import '../models/step_config.dart';
 import '../providers/onboarding_provider.dart';
 import 'steps/activity_step.dart';
@@ -29,10 +32,13 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
 
   Future<void> _onContinue(StepConfig config) async {
     final notifier = ref.read(onboardingNotifierProvider.notifier);
+    final FeedbackService feedback = ref.read(feedbackServiceProvider);
     if (!config.isFinal) {
+      unawaited(feedback.onTap());
       notifier.nextStep();
       return;
     }
+    unawaited(feedback.onSuccess());
     final bool saved = await notifier.save();
     if (saved && mounted) context.go(Routes.home);
   }

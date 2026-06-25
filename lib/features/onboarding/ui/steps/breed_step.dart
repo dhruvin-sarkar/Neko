@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/theme/app_colors.dart';
-import '../../../../shared/motion/staggered_entrance.dart';
+import '../../../../shared/services/feedback_service.dart';
 import '../../data/onboarding_options.dart';
 import '../../providers/onboarding_provider.dart';
 import '../widgets/choice_card.dart';
@@ -21,6 +24,7 @@ class BreedStep extends ConsumerWidget {
       onboardingNotifierProvider.select((s) => s.draft.breed),
     );
     final notifier = ref.read(onboardingNotifierProvider.notifier);
+    final FeedbackService feedback = ref.read(feedbackServiceProvider);
     final String display = name.trim().isEmpty ? 'your cat' : name.trim();
 
     return Column(
@@ -29,20 +33,31 @@ class BreedStep extends ConsumerWidget {
         StepHeadline('What breed is $display?'),
         const SizedBox(height: 20),
         Expanded(
-          child: ListView.separated(
+          child: ListView.builder(
             padding: const EdgeInsets.only(bottom: 8),
             itemCount: OnboardingOptions.breeds.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final String breed = OnboardingOptions.breeds[index];
-              return StaggeredEntrance(
-                delay: Duration(milliseconds: 60 * index),
-                child: ChoiceCard(
-                  label: breed,
-                  isSelected: selected == breed,
-                  onTap: () => notifier.setBreed(breed),
-                  leading: const _BreedDot(),
-                ),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child:
+                    ChoiceCard(
+                          label: breed,
+                          isSelected: selected == breed,
+                          onTap: () {
+                            unawaited(feedback.onSelect());
+                            notifier.setBreed(breed);
+                          },
+                          leading: const _BreedDot(),
+                        )
+                        .animate(delay: (60 * index).ms)
+                        .fadeIn(duration: 250.ms)
+                        .slideY(
+                          begin: 0.3,
+                          end: 0,
+                          duration: 280.ms,
+                          curve: Curves.easeOutCubic,
+                        ),
               );
             },
           ),

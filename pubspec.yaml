@@ -38,6 +38,12 @@ dependencies:
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
 
+  # Motion, tactile buttons, sound, and mascot animation
+  flutter_animate: ^4.5.0
+  chiclet: ^1.2.1
+  audioplayers: ^6.0.0
+  rive: ^0.13.0
+
   # Logging
   logger: ^2.4.0
 
@@ -57,3 +63,5 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/sounds/
+    - assets/animations/

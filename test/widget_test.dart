@@ -46,14 +46,14 @@ void main() {
       expect(taps, 1);
     });
 
-    testWidgets('does not fire onPressed while loading', (tester) async {
+    testWidgets('does not fire onPressed when disabled', (tester) async {
       var taps = 0;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: NekoPillButton(
-              label: 'Saving',
-              isLoading: true,
+              label: 'Disabled',
+              enabled: false,
               onPressed: () => taps++,
             ),
           ),
@@ -61,7 +61,7 @@ void main() {
       );
 
       await tester.tap(find.byType(NekoPillButton));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(taps, 0);
     });

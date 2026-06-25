@@ -46,3 +46,8 @@ ios/Runner/GoogleService-Info.plist
 # Internal planning docs — not part of the shipped repo
 neko-docs/
 CLAUDE.md
+
+# Gradle / Android build artifacts
+android/build/
+android/.gradle/
+**/build/

@@ -31,7 +31,9 @@ class OnboardingTopBar extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: showProgress
-                ? OnboardingProgressBar(fraction: fraction)
+                ? RepaintBoundary(
+                    child: OnboardingProgressBar(fraction: fraction),
+                  )
                 : const SizedBox.shrink(),
           ),
           const SizedBox(width: 12),

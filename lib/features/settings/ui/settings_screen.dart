@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_pill_button.dart';
 import '../../auth/providers/auth_provider.dart';
 
@@ -32,11 +36,13 @@ class SettingsScreen extends ConsumerWidget {
               NekoPillButton(
                 label: 'Sign out',
                 isLoading: isLoading,
-                onPressed: () =>
-                    ref.read(authControllerProvider.notifier).signOut(),
+                onPressed: () {
+                  unawaited(ref.read(feedbackServiceProvider).onTap());
+                  ref.read(authControllerProvider.notifier).signOut();
+                },
               ),
             ],
-          ),
+          ).animate().fadeIn(duration: 280.ms),
         ),
       ),
     );

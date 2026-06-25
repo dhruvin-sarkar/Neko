@@ -1,40 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
-import '../../../shared/motion/springs.dart';
 
-/// First screen shown on launch. The wordmark springs in from 0.7→1.0 scale.
+/// First screen on launch. The wordmark springs in with an elastic overshoot.
 ///
 /// No navigation happens here — the router holds the app on `/splash` until
-/// the auth state resolves, then redirects. The progress indicator simply
-/// signals that work is happening.
-class SplashScreen extends StatefulWidget {
+/// auth resolves and a short minimum display time elapses, then redirects.
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _scale = AnimationController.unbounded(
-    vsync: this,
-    value: 0.7,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _scale.animateWith(SpringSimulation(Springs.nekoBounce, 0.7, 1.0, 0));
-  }
-
-  @override
-  void dispose() {
-    _scale.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,18 +19,21 @@ class _SplashScreenState extends State<SplashScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedBuilder(
-              animation: _scale,
-              builder: (context, child) =>
-                  Transform.scale(scale: _scale.value, child: child),
-              child: Text(
-                'Neko',
-                style: AppTextStyles.displayLarge.copyWith(
-                  fontSize: 56,
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
+            Text(
+                  'Neko',
+                  style: AppTextStyles.displayLarge.copyWith(
+                    fontSize: 56,
+                    color: AppColors.primary,
+                  ),
+                )
+                .animate()
+                .scaleXY(
+                  begin: 0.7,
+                  end: 1.0,
+                  duration: 500.ms,
+                  curve: Curves.elasticOut,
+                )
+                .fadeIn(duration: 300.ms),
             const SizedBox(height: 40),
             const SizedBox(
               height: 24,
@@ -64,7 +42,7 @@ class _SplashScreenState extends State<SplashScreen>
                 strokeWidth: 2.5,
                 color: AppColors.primary,
               ),
-            ),
+            ).animate(delay: 400.ms).fadeIn(duration: 300.ms),
           ],
         ),
       ),

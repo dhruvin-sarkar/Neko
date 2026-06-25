@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../app/theme/app_colors.dart';
 
-/// A coral circle with a white check that pops in when [visible] becomes true.
+/// A coral circle with a white check that pops in when [visible] becomes true,
+/// driven by `flutter_animate`'s target so it reverses cleanly on deselect.
 class SelectionCheck extends StatelessWidget {
   const SelectionCheck({super.key, required this.visible, this.size = 22});
 
@@ -11,14 +13,7 @@ class SelectionCheck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: visible ? 1.0 : 0.6,
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOutBack,
-      child: AnimatedOpacity(
-        opacity: visible ? 1.0 : 0.0,
-        duration: const Duration(milliseconds: 150),
-        child: Container(
+    return Container(
           width: size,
           height: size,
           decoration: const BoxDecoration(
@@ -30,8 +25,9 @@ class SelectionCheck extends StatelessWidget {
             size: size * 0.72,
             color: Colors.white,
           ),
-        ),
-      ),
-    );
+        )
+        .animate(target: visible ? 1 : 0)
+        .scaleXY(begin: 0, end: 1, duration: 150.ms, curve: Curves.elasticOut)
+        .fade(begin: 0, end: 1, duration: 150.ms);
   }
 }

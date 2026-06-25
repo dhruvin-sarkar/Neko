@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
-import '../motion/springs.dart';
 
-/// The primary call-to-action button.
+/// A secondary full-width pill button.
 ///
-/// Presses compress the button to 0.96 immediately, then spring back with a
-/// slight overshoot ([Springs.nekoBounce]) — the overshoot is what makes the
-/// tap feel satisfying. The fill animates between the coral enabled state and
-/// the grey disabled state over 200ms, and carries the flat "Duolingo depth"
-/// drop-shadow while enabled.
+/// Presses compress to 0.96 via `flutter_animate`'s target-driven scale, and
+/// the fill animates between coral (enabled) and grey (disabled). For the
+/// primary call-to-action, use `NekoPrimaryButton` (the Chiclet button).
 class NekoPillButton extends StatefulWidget {
   const NekoPillButton({
     super.key,
@@ -30,31 +27,16 @@ class NekoPillButton extends StatefulWidget {
   State<NekoPillButton> createState() => _NekoPillButtonState();
 }
 
-class _NekoPillButtonState extends State<NekoPillButton>
-    with SingleTickerProviderStateMixin {
-  // Unbounded so the spring can briefly pass 1.0 for the overshoot pop.
-  late final AnimationController _press = AnimationController.unbounded(
-    vsync: this,
-  );
+class _NekoPillButtonState extends State<NekoPillButton> {
+  // Local, ephemeral press state — justified setState (see DECISIONS.md).
+  bool _pressed = false;
 
   bool get _interactive =>
       widget.enabled && widget.onPressed != null && !widget.isLoading;
 
-  @override
-  void dispose() {
-    _press.dispose();
-    super.dispose();
+  void _setPressed(bool value) {
+    if (_pressed != value) setState(() => _pressed = value);
   }
-
-  void _pressDown() => _press.animateTo(
-    1,
-    duration: const Duration(milliseconds: 80),
-    curve: Curves.easeOut,
-  );
-
-  void _springBack() => _press.animateWith(
-    SpringSimulation(Springs.nekoBounce, _press.value, 0, 0),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -63,56 +45,54 @@ class _NekoPillButtonState extends State<NekoPillButton>
       enabled: _interactive,
       label: widget.label,
       child: GestureDetector(
-        onTapDown: _interactive ? (_) => _pressDown() : null,
+        onTapDown: _interactive ? (_) => _setPressed(true) : null,
         onTapUp: _interactive
             ? (_) {
-                _springBack();
+                _setPressed(false);
                 widget.onPressed?.call();
               }
             : null,
-        onTapCancel: _interactive ? _springBack : null,
-        child: AnimatedBuilder(
-          animation: _press,
-          builder: (context, child) {
-            final double scale = (1 - 0.04 * _press.value).clamp(0.9, 1.06);
-            return Transform.scale(scale: scale, child: child);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            height: 56,
-            width: double.infinity,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: _interactive ? AppColors.primary : AppColors.disabledBtn,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: _interactive
-                  ? [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.4),
-                        offset: const Offset(0, 4),
-                        blurRadius: 0,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: widget.isLoading
-                ? const SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.white,
-                    ),
-                  )
-                : Text(
-                    widget.label,
-                    style: AppTextStyles.buttonLabel.copyWith(
-                      color: Colors.white,
-                    ),
+        onTapCancel: _interactive ? () => _setPressed(false) : null,
+        child:
+            AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  height: 56,
+                  width: double.infinity,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _interactive
+                        ? AppColors.primary
+                        : AppColors.disabledBtn,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: _interactive
+                        ? [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              offset: const Offset(0, 4),
+                              blurRadius: 0,
+                            ),
+                          ]
+                        : null,
                   ),
-          ),
-        ),
+                  child: widget.isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          widget.label,
+                          style: AppTextStyles.buttonLabel.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                )
+                .animate(target: _pressed ? 1 : 0)
+                .scaleXY(end: 0.96, duration: 80.ms, curve: Curves.easeOut),
       ),
     );
   }

@@ -18,3 +18,16 @@ One line per significant judgment call made while building, for review.
 - Local, ephemeral view state (focus glow, press scale, password visibility) is driven by listenables/controllers, keeping Riverpod for app state only.
 - `shared_preferences` was removed once the SharedPreferences-based onboarding/login flags were replaced by Firestore + Firebase auth state.
 - The sleeping-cat and logo assets are 1×1 placeholders; the add-cat section falls back to a Material icon until real art is dropped in.
+
+## Session 2 — polish pass (flutter_animate, chiclet, audio, haptics, rive)
+
+- `chiclet ^0.0.5` does not exist; used `^1.2.1`. Verified its real API from the pub cache (`backgroundColor`, `buttonColor`, `buttonHeight`, `borderRadius`, `disabledBackgroundColor`) and centralized it in one `NekoPrimaryButton` wrapper.
+- Migrated every animation to `flutter_animate`; deleted `springs.dart` and `staggered_entrance.dart`. Manual `AnimationController`/`SpringSimulation` are gone — spring feel now comes from `Curves.elasticOut` (per the spec's guidance, since flutter_animate has no built-in spring).
+- Primary CTAs (Get started / Continue / Let's go / Sign in / Create account) are now `ChicletAnimatedButton` via `NekoPrimaryButton`. `NekoPillButton` is kept for secondary actions (sign out, retry) and the error card.
+- Exactly two justified `setState` usages remain: local press state in `NekoPillButton` and `Pressable` (ephemeral, not app state). Everything else is listenable/controller/`flutter_animate` target driven.
+- `SoundService` ships with placeholder (invalid) MP3s; `init()` is resilient — pools stay null on load failure and playback is a silent no-op. Drop real CC0 clips into `assets/sounds/` to enable sound. Haptics work regardless.
+- `NekoMascot` scaffolds Rive via `RiveFile.asset` + `FutureBuilder`, falling back to the icon when the placeholder `neko.riv` fails to parse. Wiring a `StateMachineController` is deferred until a real `.riv` (with known state-machine names) exists.
+- Added `SplashGate` (800ms minimum) so the splash never flashes; the router holds on `/splash` until both auth resolves and the gate elapses.
+- Home banner stagger uses `flutter_animate` per-item delay with stable `ValueKey(cat.id)` (no `_hasAnimated` flag needed — element identity prevents replay on Firestore updates).
+- Home rebuilt as `CustomScrollView` + `SliverList.builder` for banners (Phase 6 lazy-list rule); added a friendly empty-cats state.
+- The loading-button unit test became a disabled-button test, because a `CircularProgressIndicator` never settles under `pumpAndSettle`; the `_interactive` guard it verifies is identical.

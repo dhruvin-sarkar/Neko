@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/motion/staggered_entrance.dart';
+import '../../../../shared/services/feedback_service.dart';
 import '../../data/onboarding_options.dart';
 import '../../providers/onboarding_provider.dart';
 import '../widgets/color_swatch_card.dart';
@@ -20,6 +23,7 @@ class CoatColorStep extends ConsumerWidget {
       onboardingNotifierProvider.select((s) => s.draft.colorType),
     );
     final notifier = ref.read(onboardingNotifierProvider.notifier);
+    final FeedbackService feedback = ref.read(feedbackServiceProvider);
     final String display = name.trim().isEmpty ? 'your cat' : name.trim();
 
     return Column(
@@ -38,14 +42,22 @@ class CoatColorStep extends ConsumerWidget {
             itemCount: OnboardingOptions.coats.length,
             itemBuilder: (context, index) {
               final option = OnboardingOptions.coats[index];
-              return StaggeredEntrance(
-                delay: Duration(milliseconds: 60 * index),
-                child: ColorSwatchCard(
-                  option: option,
-                  isSelected: selected == option.value,
-                  onTap: () => notifier.setColorType(option.value),
-                ),
-              );
+              return ColorSwatchCard(
+                    option: option,
+                    isSelected: selected == option.value,
+                    onTap: () {
+                      unawaited(feedback.onSelect());
+                      notifier.setColorType(option.value);
+                    },
+                  )
+                  .animate(delay: (60 * index).ms)
+                  .fadeIn(duration: 250.ms)
+                  .slideY(
+                    begin: 0.3,
+                    end: 0,
+                    duration: 280.ms,
+                    curve: Curves.easeOutCubic,
+                  );
             },
           ),
         ),

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,9 +10,10 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/validators.dart';
+import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/auth_divider.dart';
 import '../../../shared/widgets/google_sign_in_button.dart';
-import '../../../shared/widgets/neko_pill_button.dart';
+import '../../../shared/widgets/neko_primary_button.dart';
 import '../../../shared/widgets/neko_text_field.dart';
 import '../providers/auth_provider.dart';
 
@@ -38,6 +42,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
+    unawaited(ref.read(feedbackServiceProvider).onTap());
     ref
         .read(authControllerProvider.notifier)
         .register(
@@ -60,6 +65,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         _showSnack(
           error is AppException ? error.message : 'Something went wrong.',
         );
+      } else if (next is AsyncData && (previous?.isLoading ?? false)) {
+        // Registration succeeded; the router will redirect into onboarding.
+        unawaited(ref.read(feedbackServiceProvider).onSuccess());
       }
     });
 
@@ -84,9 +92,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: 32),
                 GoogleSignInButton(
                   enabled: !isLoading,
-                  onPressed: () => ref
-                      .read(authControllerProvider.notifier)
-                      .signInWithGoogle(),
+                  onPressed: () {
+                    unawaited(ref.read(feedbackServiceProvider).onTap());
+                    ref
+                        .read(authControllerProvider.notifier)
+                        .signInWithGoogle();
+                  },
                 ),
                 const AuthDivider(),
                 NekoTextField(
@@ -118,7 +129,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 24),
-                NekoPillButton(
+                NekoPrimaryButton(
                   label: 'Create account',
                   isLoading: isLoading,
                   onPressed: _submit,
@@ -128,7 +139,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onTap: isLoading ? null : () => context.go(Routes.login),
                 ),
               ],
-            ),
+            ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.15, end: 0),
           ),
         ),
       ),

@@ -4,17 +4,23 @@ import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/neko_app.dart';
 import 'core/utils/logger.dart';
 import 'firebase_options.dart';
+import 'shared/services/sound_service.dart';
 
 void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // Global motion defaults — the baseline feel for every animation.
+      Animate.defaultDuration = const Duration(milliseconds: 250);
+      Animate.defaultCurve = Curves.easeOutCubic;
 
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
@@ -48,7 +54,14 @@ void main() {
         ),
       );
 
-      runApp(const ProviderScope(child: NekoApp()));
+      // Pre-load UI sounds so the first tap is low-latency. The same container
+      // backs the app, so the initialized service is the one widgets use.
+      final ProviderContainer container = ProviderContainer();
+      await container.read(soundServiceProvider).init();
+
+      runApp(
+        UncontrolledProviderScope(container: container, child: const NekoApp()),
+      );
     },
     (Object error, StackTrace stack) {
       AppLogger.error('Uncaught zone error', error, stack);

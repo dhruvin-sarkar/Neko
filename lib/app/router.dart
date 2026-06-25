@@ -14,6 +14,7 @@ import '../features/profiles/ui/profile_detail_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
 import '../shared/motion/page_transitions.dart';
 import 'routes.dart';
+import 'splash_gate_provider.dart';
 
 part 'router.g.dart';
 
@@ -88,6 +89,7 @@ class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
     _ref.listen(authStateChangesProvider, (_, _) => notifyListeners());
     _ref.listen(onboardingCompleteProvider, (_, _) => notifyListeners());
+    _ref.listen(splashGateProvider, (_, _) => notifyListeners());
   }
 
   final Ref _ref;
@@ -96,6 +98,11 @@ class RouterNotifier extends ChangeNotifier {
     final String location = state.matchedLocation;
     final bool onSplash = location == Routes.splash;
     final bool onAuth = Routes.isAuth(location);
+
+    // Keep the splash visible for a minimum time so it never flashes.
+    if (!_ref.read(splashGateProvider)) {
+      return onSplash ? null : Routes.splash;
+    }
 
     final authValue = _ref.read(authStateChangesProvider);
     // Auth state hasn't resolved yet — hold on the splash screen.
