@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../core/errors/app_exception.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/utils/logger.dart';
 import '../../onboarding/models/cat_profile.dart';
 
 part 'profile_repository.g.dart';
@@ -27,4 +29,18 @@ class ProfileRepository {
       .orderBy('createdAt')
       .snapshots()
       .map((snap) => snap.docs.map(CatProfile.fromFirestore).toList());
+
+  /// Updates an existing cat's editable fields. `id` and `createdAt` are never
+  /// overwritten.
+  Future<void> update(CatProfile profile) async {
+    try {
+      final Map<String, dynamic> data = profile.toJson()
+        ..remove('id')
+        ..remove('createdAt');
+      await _catsRef.doc(profile.id).update(data);
+    } on Object catch (e, st) {
+      AppLogger.error('Failed to update cat', e, st);
+      throw const AppException("We couldn't save your changes. Try again.");
+    }
+  }
 }

@@ -1,9 +1,8 @@
-import 'dart:math' as math;
-
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/validators.dart';
+import '../data/calorie_calculator.dart';
 import '../data/onboarding_repository.dart';
 import '../models/cat_profile.dart';
 import '../models/onboarding_state.dart';
@@ -49,8 +48,16 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   );
 
   /// Sets (or clears, with `null`) the local path of the chosen cat photo.
-  void setPhotoPath(String? photoPath) =>
-      state = state.copyWith(draft: state.draft.copyWith(photoPath: photoPath));
+  /// Choosing a photo clears any selected preset avatar.
+  void setPhotoPath(String? photoPath) => state = state.copyWith(
+    draft: state.draft.copyWith(photoPath: photoPath, avatarPreset: null),
+  );
+
+  /// Selects (or clears) a bundled preset avatar. Choosing one clears any
+  /// picked photo.
+  void setAvatarPreset(String? avatarPreset) => state = state.copyWith(
+    draft: state.draft.copyWith(avatarPreset: avatarPreset, photoPath: null),
+  );
 
   void nextStep() {
     if (state.step < _lastStep) state = state.copyWith(step: state.step + 1);
@@ -68,6 +75,8 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   /// Returns `true` on success. On failure, surfaces a message via
   /// [OnboardingState.errorMessage] and returns `false`.
   Future<bool> save() async {
+    // Guard against double-taps firing two saves.
+    if (state.isSaving) return false;
     final draft = state.draft;
     final profile = CatProfile(
       id: '',
@@ -78,9 +87,10 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       colorType: draft.colorType ?? 'other',
       activityLevel: draft.activityLevel ?? 'active',
       birthday: draft.birthday,
-      dailyCalorieTarget: _calorieTarget(
-        draft.weightKg ?? 0,
-        draft.activityLevel ?? 'active',
+      avatarPreset: draft.avatarPreset,
+      dailyCalorieTarget: CalorieCalculator.dailyTarget(
+        weightKg: draft.weightKg ?? 0,
+        activity: draft.activityLevel ?? 'active',
       ),
     );
 
@@ -95,18 +105,6 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       state = state.copyWith(isSaving: false, errorMessage: e.message);
       return false;
     }
-  }
-
-  /// Resting Energy Requirement scaled by activity, rounded to whole kcal.
-  int _calorieTarget(double weightKg, String activity) {
-    if (weightKg <= 0) return 0;
-    final double rer = 70 * math.pow(weightKg, 0.75).toDouble();
-    final double factor = switch (activity) {
-      'couch' => 1.0,
-      'outdoor' => 1.4,
-      _ => 1.2,
-    };
-    return (rer * factor).round();
   }
 }
 

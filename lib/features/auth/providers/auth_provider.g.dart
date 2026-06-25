@@ -44,7 +44,7 @@ final authRepositoryProvider = Provider<AuthRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthRepositoryRef = ProviderRef<AuthRepository>;
-String _$authControllerHash() => r'ae221a1279d558e9819e3e78f4c9cdd1b81227e6';
+String _$authControllerHash() => r'5b175d98ef56175c851aa3b3356f9ebfc0f01a92';
 
 /// Drives auth actions and exposes their progress as an [AsyncValue].
 ///

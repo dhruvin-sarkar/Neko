@@ -21,6 +21,7 @@ class CatProfile with _$CatProfile {
     required String activityLevel,
     @TimestampConverter() DateTime? birthday,
     String? photoUrl,
+    String? avatarPreset,
     @Default(0) int dailyCalorieTarget,
     @TimestampConverter() DateTime? createdAt,
   }) = _CatProfile;

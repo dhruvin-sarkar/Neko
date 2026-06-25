@@ -33,6 +33,9 @@ dependencies:
   # Cat photo capture / selection
   image_picker: ^1.1.2
 
+  # Document picking (vet records, passports, etc.)
+  file_picker: ^8.1.4
+
   # Environment secrets
   flutter_dotenv: ^5.1.0
 
@@ -66,5 +69,6 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/images/avatars/
     - assets/sounds/
     - assets/animations/

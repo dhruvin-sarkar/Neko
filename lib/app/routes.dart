@@ -15,6 +15,9 @@ abstract final class Routes {
   /// Builds the concrete cat detail location for [catId].
   static String profile(String catId) => '/profile/$catId';
 
+  /// Builds the edit location for [catId].
+  static String editCat(String catId) => '/profile/$catId/edit';
+
   /// Whether [location] is within the authentication section.
   static bool isAuth(String location) => location.startsWith('/auth');
 }

@@ -33,6 +33,7 @@ class AuthController extends _$AuthController {
   FutureOr<void> build() {}
 
   Future<void> signIn({required String email, required String password}) async {
+    if (state.isLoading) return;
     state = const AsyncValue<void>.loading();
     state = await AsyncValue.guard(
       () => ref
@@ -45,6 +46,7 @@ class AuthController extends _$AuthController {
     required String email,
     required String password,
   }) async {
+    if (state.isLoading) return;
     state = const AsyncValue<void>.loading();
     state = await AsyncValue.guard(
       () => ref
@@ -54,6 +56,7 @@ class AuthController extends _$AuthController {
   }
 
   Future<void> signInWithGoogle() async {
+    if (state.isLoading) return;
     state = const AsyncValue<void>.loading();
     state = await AsyncValue.guard(
       () => ref.read(authRepositoryProvider).signInWithGoogle(),
@@ -61,6 +64,7 @@ class AuthController extends _$AuthController {
   }
 
   Future<void> signOut() async {
+    if (state.isLoading) return;
     state = const AsyncValue<void>.loading();
     state = await AsyncValue.guard(
       () => ref.read(authRepositoryProvider).signOut(),
@@ -68,6 +72,7 @@ class AuthController extends _$AuthController {
   }
 
   Future<void> resetPassword(String email) async {
+    if (state.isLoading) return;
     state = const AsyncValue<void>.loading();
     state = await AsyncValue.guard(
       () => ref.read(authRepositoryProvider).sendPasswordReset(email),

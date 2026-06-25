@@ -17,6 +17,7 @@ _$CatProfileImpl _$$CatProfileImplFromJson(Map<String, dynamic> json) =>
       activityLevel: json['activityLevel'] as String,
       birthday: const TimestampConverter().fromJson(json['birthday']),
       photoUrl: json['photoUrl'] as String?,
+      avatarPreset: json['avatarPreset'] as String?,
       dailyCalorieTarget: (json['dailyCalorieTarget'] as num?)?.toInt() ?? 0,
       createdAt: const TimestampConverter().fromJson(json['createdAt']),
     );
@@ -32,6 +33,7 @@ Map<String, dynamic> _$$CatProfileImplToJson(_$CatProfileImpl instance) =>
       'activityLevel': instance.activityLevel,
       'birthday': const TimestampConverter().toJson(instance.birthday),
       'photoUrl': instance.photoUrl,
+      'avatarPreset': instance.avatarPreset,
       'dailyCalorieTarget': instance.dailyCalorieTarget,
       'createdAt': const TimestampConverter().toJson(instance.createdAt),
     };

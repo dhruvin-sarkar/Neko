@@ -1,30 +1,27 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'router.dart';
+part of 'file_picker_service.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$goRouterHash() => r'66bb05044d04ab6db85f354c192cc7982d9c6cca';
+String _$filePickerServiceHash() => r'db47ba3856f0178534cbd8b1068b05818154fac1';
 
-/// The app router. Auth gating lives entirely in [RouterNotifier.redirect] —
-/// no screen performs its own auth-based navigation.
-///
-/// Copied from [goRouter].
-@ProviderFor(goRouter)
-final goRouterProvider = Provider<GoRouter>.internal(
-  goRouter,
-  name: r'goRouterProvider',
+/// See also [filePickerService].
+@ProviderFor(filePickerService)
+final filePickerServiceProvider = Provider<FilePickerService>.internal(
+  filePickerService,
+  name: r'filePickerServiceProvider',
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
-      : _$goRouterHash,
+      : _$filePickerServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef GoRouterRef = ProviderRef<GoRouter>;
+typedef FilePickerServiceRef = ProviderRef<FilePickerService>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

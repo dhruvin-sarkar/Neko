@@ -9,10 +9,12 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../shared/services/feedback_service.dart';
 import '../../../../shared/services/image_picker_service.dart';
+import '../../data/avatar_presets.dart';
 import '../../providers/onboarding_provider.dart';
+import '../widgets/avatar_picker_sheet.dart';
 import '../widgets/step_headline.dart';
 
-/// Step 2 — an optional cat photo for the profile avatar and home banner.
+/// Step 2 — an optional cat photo (camera/gallery) or a preset avatar.
 class PhotoStep extends ConsumerWidget {
   const PhotoStep({super.key});
 
@@ -34,7 +36,11 @@ class PhotoStep extends ConsumerWidget {
     final String? photoPath = ref.watch(
       onboardingNotifierProvider.select((s) => s.draft.photoPath),
     );
+    final String? avatarPreset = ref.watch(
+      onboardingNotifierProvider.select((s) => s.draft.avatarPreset),
+    );
     final String display = name.trim().isEmpty ? 'your cat' : name.trim();
+    final bool hasAvatar = photoPath != null || avatarPreset != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -45,9 +51,14 @@ class PhotoStep extends ConsumerWidget {
           'Optional — you can always add one later.',
           style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
         ),
-        const SizedBox(height: 32),
-        Center(child: _PhotoPreview(photoPath: photoPath)),
         const SizedBox(height: 28),
+        Center(
+          child: _PhotoPreview(
+            photoPath: photoPath,
+            avatarPreset: avatarPreset,
+          ),
+        ),
+        const SizedBox(height: 24),
         Row(
           children: [
             Expanded(
@@ -67,35 +78,50 @@ class PhotoStep extends ConsumerWidget {
             ),
           ],
         ),
-        if (photoPath != null) ...[
-          const SizedBox(height: 8),
+        const SizedBox(height: 8),
+        Center(
+          child: TextButton(
+            onPressed: () {
+              unawaited(ref.read(feedbackServiceProvider).onTap());
+              AvatarPickerSheet.show(context);
+            },
+            child: Text(
+              hasAvatar ? 'Choose a different avatar' : 'Maybe later',
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+        ),
+        if (hasAvatar)
           Center(
             child: TextButton(
               onPressed: () => ref
                   .read(onboardingNotifierProvider.notifier)
                   .setPhotoPath(null),
               child: Text(
-                'Remove photo',
+                'Remove',
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.primaryDark,
                 ),
               ),
             ),
           ),
-        ],
       ],
     );
   }
 }
 
 class _PhotoPreview extends StatelessWidget {
-  const _PhotoPreview({required this.photoPath});
+  const _PhotoPreview({required this.photoPath, required this.avatarPreset});
 
   final String? photoPath;
+  final String? avatarPreset;
 
   @override
   Widget build(BuildContext context) {
     const double size = 160;
+
     final String? path = photoPath;
     if (path != null) {
       return ClipOval(
@@ -107,6 +133,30 @@ class _PhotoPreview extends StatelessWidget {
         ),
       );
     }
+
+    if (AvatarPresets.isPreset(avatarPreset)) {
+      return ClipOval(
+        child: Image.asset(
+          AvatarPresets.assetFor(avatarPreset ?? ''),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => const _PlaceholderCircle(size: size),
+        ),
+      );
+    }
+
+    return const _PlaceholderCircle(size: size);
+  }
+}
+
+class _PlaceholderCircle extends StatelessWidget {
+  const _PlaceholderCircle({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       width: size,
       height: size,

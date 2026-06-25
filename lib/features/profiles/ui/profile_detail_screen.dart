@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../documents/ui/widgets/documents_section.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../providers/profile_provider.dart';
 import 'widgets/cat_avatar.dart';
@@ -23,7 +26,20 @@ class ProfileDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(leading: const BackButton(color: AppColors.textPrimary)),
+      appBar: AppBar(
+        leading: const BackButton(color: AppColors.textPrimary),
+        actions: [
+          if (cat != null)
+            IconButton(
+              tooltip: 'Edit',
+              onPressed: () => context.push(Routes.editCat(catId)),
+              icon: const Icon(
+                Icons.edit_outlined,
+                color: AppColors.textPrimary,
+              ),
+            ),
+        ],
+      ),
       body: SafeArea(
         top: false,
         child: cat == null
@@ -70,6 +86,7 @@ class _CatProfileBody extends StatelessWidget {
                   child: CatAvatar(
                     colorType: cat.colorType,
                     photoUrl: cat.photoUrl,
+                    avatarPreset: cat.avatarPreset,
                     size: 112,
                     borderWidth: 3,
                   ),
@@ -129,9 +146,7 @@ class _CatProfileBody extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 32),
-                Text('Documents', style: AppTextStyles.headlineLarge),
-                const SizedBox(height: 12),
-                const _DocumentsPlaceholder(),
+                DocumentsSection(catId: cat.id),
               ]
               .animate(interval: 70.ms)
               .fadeIn(duration: 250.ms)
@@ -172,60 +187,6 @@ class _StatCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.bodyLarge,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DocumentsPlaceholder extends StatelessWidget {
-  const _DocumentsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.folder_open_outlined,
-            size: 40,
-            color: AppColors.textDisabled,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'No documents yet',
-            style: AppTextStyles.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Vet records, vaccination cards and passports will live here.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Text('Document uploads are coming soon.'),
-                  ),
-                );
-            },
-            icon: const Icon(Icons.upload_file_outlined),
-            label: const Text('Upload a document'),
           ),
         ],
       ),

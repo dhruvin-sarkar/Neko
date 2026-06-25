@@ -27,7 +27,11 @@ class CatProfileBanner extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CatAvatar(colorType: cat.colorType, photoUrl: cat.photoUrl),
+            CatAvatar(
+              colorType: cat.colorType,
+              photoUrl: cat.photoUrl,
+              avatarPreset: cat.avatarPreset,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

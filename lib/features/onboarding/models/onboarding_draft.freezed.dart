@@ -26,6 +26,7 @@ mixin _$OnboardingDraft {
   String? get colorType => throw _privateConstructorUsedError;
   String? get activityLevel => throw _privateConstructorUsedError;
   String? get photoPath => throw _privateConstructorUsedError;
+  String? get avatarPreset => throw _privateConstructorUsedError;
 
   /// Create a copy of OnboardingDraft
   /// with the given fields replaced by the non-null parameter values.
@@ -51,6 +52,7 @@ abstract class $OnboardingDraftCopyWith<$Res> {
     String? colorType,
     String? activityLevel,
     String? photoPath,
+    String? avatarPreset,
   });
 }
 
@@ -78,6 +80,7 @@ class _$OnboardingDraftCopyWithImpl<$Res, $Val extends OnboardingDraft>
     Object? colorType = freezed,
     Object? activityLevel = freezed,
     Object? photoPath = freezed,
+    Object? avatarPreset = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -117,6 +120,10 @@ class _$OnboardingDraftCopyWithImpl<$Res, $Val extends OnboardingDraft>
                 ? _value.photoPath
                 : photoPath // ignore: cast_nullable_to_non_nullable
                       as String?,
+            avatarPreset: freezed == avatarPreset
+                ? _value.avatarPreset
+                : avatarPreset // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -142,6 +149,7 @@ abstract class _$$OnboardingDraftImplCopyWith<$Res>
     String? colorType,
     String? activityLevel,
     String? photoPath,
+    String? avatarPreset,
   });
 }
 
@@ -168,6 +176,7 @@ class __$$OnboardingDraftImplCopyWithImpl<$Res>
     Object? colorType = freezed,
     Object? activityLevel = freezed,
     Object? photoPath = freezed,
+    Object? avatarPreset = freezed,
   }) {
     return _then(
       _$OnboardingDraftImpl(
@@ -207,6 +216,10 @@ class __$$OnboardingDraftImplCopyWithImpl<$Res>
             ? _value.photoPath
             : photoPath // ignore: cast_nullable_to_non_nullable
                   as String?,
+        avatarPreset: freezed == avatarPreset
+            ? _value.avatarPreset
+            : avatarPreset // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -225,6 +238,7 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
     this.colorType,
     this.activityLevel,
     this.photoPath,
+    this.avatarPreset,
   }) : super._();
 
   @override
@@ -248,10 +262,12 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
   final String? activityLevel;
   @override
   final String? photoPath;
+  @override
+  final String? avatarPreset;
 
   @override
   String toString() {
-    return 'OnboardingDraft(name: $name, breed: $breed, ageYears: $ageYears, ageMonths: $ageMonths, weightKg: $weightKg, birthday: $birthday, colorType: $colorType, activityLevel: $activityLevel, photoPath: $photoPath)';
+    return 'OnboardingDraft(name: $name, breed: $breed, ageYears: $ageYears, ageMonths: $ageMonths, weightKg: $weightKg, birthday: $birthday, colorType: $colorType, activityLevel: $activityLevel, photoPath: $photoPath, avatarPreset: $avatarPreset)';
   }
 
   @override
@@ -274,7 +290,9 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
             (identical(other.activityLevel, activityLevel) ||
                 other.activityLevel == activityLevel) &&
             (identical(other.photoPath, photoPath) ||
-                other.photoPath == photoPath));
+                other.photoPath == photoPath) &&
+            (identical(other.avatarPreset, avatarPreset) ||
+                other.avatarPreset == avatarPreset));
   }
 
   @override
@@ -289,6 +307,7 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
     colorType,
     activityLevel,
     photoPath,
+    avatarPreset,
   );
 
   /// Create a copy of OnboardingDraft
@@ -314,6 +333,7 @@ abstract class _OnboardingDraft extends OnboardingDraft {
     final String? colorType,
     final String? activityLevel,
     final String? photoPath,
+    final String? avatarPreset,
   }) = _$OnboardingDraftImpl;
   const _OnboardingDraft._() : super._();
 
@@ -335,6 +355,8 @@ abstract class _OnboardingDraft extends OnboardingDraft {
   String? get activityLevel;
   @override
   String? get photoPath;
+  @override
+  String? get avatarPreset;
 
   /// Create a copy of OnboardingDraft
   /// with the given fields replaced by the non-null parameter values.

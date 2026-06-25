@@ -9,6 +9,7 @@ import '../features/auth/ui/register_screen.dart';
 import '../features/auth/ui/splash_screen.dart';
 import '../features/onboarding/providers/onboarding_status_provider.dart';
 import '../features/onboarding/ui/onboarding_screen.dart';
+import '../features/profiles/ui/edit_cat_screen.dart';
 import '../features/profiles/ui/home_screen.dart';
 import '../features/profiles/ui/profile_detail_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
@@ -67,6 +68,15 @@ GoRouter goRouter(Ref ref) {
             catId: state.pathParameters['catId'] ?? '',
           ),
         ),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            pageBuilder: (context, state) => PageTransitions.slideFromRight(
+              key: state.pageKey,
+              child: EditCatScreen(catId: state.pathParameters['catId'] ?? ''),
+            ),
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
