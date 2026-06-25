@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../onboarding/models/cat_profile.dart';
+import '../providers/profile_provider.dart';
+import 'widgets/cat_avatar.dart';
 
-/// Placeholder cat detail screen. The full profile UI is a later milestone.
+/// Full-screen profile for a single cat: avatar, name, breed, and key stats.
 class ProfileDetailScreen extends ConsumerWidget {
   const ProfileDetailScreen({super.key, required this.catId});
 
@@ -13,14 +16,178 @@ class ProfileDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final bool isLoading = ref.watch(
+      catProfilesProvider.select((v) => v.isLoading),
+    );
+    final CatProfile? cat = ref.watch(catByIdProvider(catId));
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(leading: const BackButton()),
-      body: Center(
+      appBar: AppBar(leading: const BackButton(color: AppColors.textPrimary)),
+      body: SafeArea(
+        top: false,
+        child: cat == null
+            ? (isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : const _NotFound())
+            : _CatProfileBody(cat: cat),
+      ),
+    );
+  }
+}
+
+class _CatProfileBody extends StatelessWidget {
+  const _CatProfileBody({required this.cat});
+
+  final CatProfile cat;
+
+  String get _ageLabel {
+    if (cat.years > 0) {
+      return cat.months > 0 ? '${cat.years}y ${cat.months}m' : '${cat.years}y';
+    }
+    return '${cat.months}m';
+  }
+
+  String get _activityLabel {
+    return switch (cat.activityLevel) {
+      'couch' => 'Couch potato',
+      'outdoor' => 'Outdoor explorer',
+      _ => 'Playful indoor',
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+      children:
+          [
+                Center(
+                  child: CatAvatar(
+                    colorType: cat.colorType,
+                    photoUrl: cat.photoUrl,
+                    size: 112,
+                    borderWidth: 3,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  cat.name,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.displayLarge,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  cat.breed,
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.cake_outlined,
+                        label: 'Age',
+                        value: _ageLabel,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.monitor_weight_outlined,
+                        label: 'Weight',
+                        value: '${cat.weightKg} kg',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.directions_run_rounded,
+                        label: 'Activity',
+                        value: _activityLabel,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _StatCard(
+                        icon: Icons.local_fire_department_outlined,
+                        label: 'Daily target',
+                        value: '${cat.dailyCalorieTarget} kcal',
+                      ),
+                    ),
+                  ],
+                ),
+              ]
+              .animate(interval: 70.ms)
+              .fadeIn(duration: 250.ms)
+              .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primary, size: 22),
+          const SizedBox(height: 12),
+          Text(label, style: AppTextStyles.caption),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.bodyLarge,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotFound extends StatelessWidget {
+  const _NotFound();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
         child: Text(
-          'Cat profile',
+          "Hmm, we can't find that cat.",
+          textAlign: TextAlign.center,
           style: AppTextStyles.headlineLarge,
-        ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.15, end: 0),
+        ),
       ),
     );
   }

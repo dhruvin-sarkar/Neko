@@ -31,3 +31,11 @@ One line per significant judgment call made while building, for review.
 - Home banner stagger uses `flutter_animate` per-item delay with stable `ValueKey(cat.id)` (no `_hasAnimated` flag needed — element identity prevents replay on Firestore updates).
 - Home rebuilt as `CustomScrollView` + `SliverList.builder` for banners (Phase 6 lazy-list rule); added a friendly empty-cats state.
 - The loading-button unit test became a disabled-button test, because a `CircularProgressIndicator` never settles under `pumpAndSettle`; the `_interactive` guard it verifies is identical.
+
+## Session 3 — home/profile/settings shell
+
+- Home and Settings are now a persistent `StatefulShellRoute.indexedStack` (`MainShell`) sharing one bottom nav pill; splash, auth, onboarding, and cat-profile detail are pushed over the shell as full screens.
+- `NekoNavPill` restyled to match the reference: a white pill where the active tab sits in a filled black circle (was a black pill with dimmed icons). It now reports taps via `onSelect(index)` → `goBranch`.
+- Built the real cat profile detail screen (large avatar, name, breed, and Age/Weight/Activity/Daily-target stat cards) backed by a new `catById` family provider; handles loading and not-found states.
+- The add-cat "+" now overlays the sleeping-cat mat on its lower-left (whole illustration tappable), matching the reference, with a Material-icon mat fallback until real art lands.
+- Per the user, the reference image is inspiration only; colors follow the UI_GUIDELINES tokens (amber home, coral primary, dark-teal banners, Nunito) rather than copying the mockup's exact palette.

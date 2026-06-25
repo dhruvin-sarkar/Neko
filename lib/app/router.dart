@@ -13,6 +13,7 @@ import '../features/profiles/ui/home_screen.dart';
 import '../features/profiles/ui/profile_detail_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
 import '../shared/motion/page_transitions.dart';
+import 'main_shell.dart';
 import 'routes.dart';
 import 'splash_gate_provider.dart';
 
@@ -59,11 +60,6 @@ GoRouter goRouter(Ref ref) {
         ),
       ),
       GoRoute(
-        path: Routes.home,
-        pageBuilder: (context, state) =>
-            PageTransitions.fade(key: state.pageKey, child: const HomeScreen()),
-      ),
-      GoRoute(
         path: Routes.profilePattern,
         pageBuilder: (context, state) => PageTransitions.slideFromRight(
           key: state.pageKey,
@@ -72,12 +68,27 @@ GoRouter goRouter(Ref ref) {
           ),
         ),
       ),
-      GoRoute(
-        path: Routes.settings,
-        pageBuilder: (context, state) => PageTransitions.slideFromRight(
-          key: state.pageKey,
-          child: const SettingsScreen(),
-        ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MainShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.home,
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.settings,
+                builder: (context, state) => const SettingsScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
     ],
   );

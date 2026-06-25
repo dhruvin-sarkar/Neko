@@ -6,7 +6,7 @@ part of 'router.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$goRouterHash() => r'9d12d21b3e95815a6020dfa79bda2127a92ae942';
+String _$goRouterHash() => r'c5b2ae420f6b242f1494da5241df9fcbc0c22918';
 
 /// The app router. Auth gating lives entirely in [RouterNotifier.redirect] —
 /// no screen performs its own auth-based navigation.

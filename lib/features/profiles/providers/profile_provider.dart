@@ -17,3 +17,15 @@ Stream<List<CatProfile>> catProfiles(Ref ref) {
   }
   return ref.watch(profileRepositoryProvider).watchAll();
 }
+
+/// Looks up a single cat by id from the streamed list. Returns `null` while the
+/// list is still loading or if the cat no longer exists.
+@riverpod
+CatProfile? catById(Ref ref, String catId) {
+  final List<CatProfile> cats =
+      ref.watch(catProfilesProvider).valueOrNull ?? const <CatProfile>[];
+  for (final CatProfile cat in cats) {
+    if (cat.id == catId) return cat;
+  }
+  return null;
+}
