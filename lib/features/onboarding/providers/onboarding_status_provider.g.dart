@@ -1,0 +1,34 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'onboarding_status_provider.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+String _$onboardingCompleteHash() =>
+    r'ff90c20c11c97cc062c7eba8eac19f7777a5cdc7';
+
+/// Streams whether the signed-in user has finished onboarding.
+///
+/// Emits `false` while signed out. Reads `users/{uid}.onboardingComplete`
+/// reactively so the router redirects automatically the moment the flag flips
+/// to `true` after the final onboarding step.
+///
+/// Copied from [onboardingComplete].
+@ProviderFor(onboardingComplete)
+final onboardingCompleteProvider = StreamProvider<bool>.internal(
+  onboardingComplete,
+  name: r'onboardingCompleteProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$onboardingCompleteHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef OnboardingCompleteRef = StreamProviderRef<bool>;
+// ignore_for_file: type=lint
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -33,9 +33,6 @@ dependencies:
   # Environment secrets
   flutter_dotenv: ^5.1.0
 
-  # Local key-value storage (removed in Phase 2 once onboarding moves to Firestore)
-  shared_preferences: ^2.5.3
-
   # UI
   google_fonts: ^6.2.1
   cached_network_image: ^3.4.1
