@@ -1,0 +1,48 @@
+# Misc.
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+
+# Flutter crap
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+app.*.symbols
+app.*.map.json
+
+# Android Studio crap
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+.env
+
+# Secrets / local Firebase config — judges add their own from the Firebase console
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Internal planning docs — not part of the shipped repo
+neko-docs/
+CLAUDE.md

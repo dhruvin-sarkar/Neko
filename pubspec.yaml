@@ -1,0 +1,62 @@
+name: neko
+description: "Premium cat owner companion app."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State management (Riverpod 2.x with code generation)
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.6.2
+
+  # Immutable models / serialization annotations
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # Firebase (kept on the v2/v4 line for this milestone)
+  firebase_core: ^2.28.0
+  firebase_auth: ^4.16.0
+  cloud_firestore: ^4.13.0
+  firebase_storage: ^11.6.0
+  google_sign_in: ^6.2.0
+
+  # Environment secrets
+  flutter_dotenv: ^5.1.0
+
+  # Local key-value storage (removed in Phase 2 once onboarding moves to Firestore)
+  shared_preferences: ^2.5.3
+
+  # UI
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+  shimmer: ^3.0.0
+
+  # Logging
+  logger: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Code generation
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.6.3
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/images/

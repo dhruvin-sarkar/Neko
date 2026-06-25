@@ -1,0 +1,52 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+/// Page transition helpers that give every route the same "slide from the
+/// right" feel instead of the default Material push.
+abstract final class PageTransitions {
+  const PageTransitions._();
+
+  static const Duration _duration = Duration(milliseconds: 280);
+
+  /// Wraps [child] in a [CustomTransitionPage] that slides in from the right
+  /// (and slides back out to the right on pop).
+  static CustomTransitionPage<void> slideFromRight({
+    required LocalKey key,
+    required Widget child,
+  }) {
+    return CustomTransitionPage<void>(
+      key: key,
+      transitionDuration: _duration,
+      reverseTransitionDuration: _duration,
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final Animation<Offset> position = animation.drive(
+          Tween<Offset>(
+            begin: const Offset(0.18, 0),
+            end: Offset.zero,
+          ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        );
+        return SlideTransition(
+          position: position,
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+    );
+  }
+
+  /// A fade-only transition for the splash → first-route handoff, where a
+  /// horizontal slide would feel abrupt.
+  static CustomTransitionPage<void> fade({
+    required LocalKey key,
+    required Widget child,
+  }) {
+    return CustomTransitionPage<void>(
+      key: key,
+      transitionDuration: _duration,
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    );
+  }
+}
