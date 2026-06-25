@@ -55,3 +55,19 @@ One line per significant judgment call made while building, for review.
 - Profile editing: tapping a cat banner opens the detail screen, which now has an Edit action (`/profile/:catId/edit`). `EditCatScreen` pre-fills from the live profile and saves via `ProfileEditController` → `ProfileRepository.update()` (never overwrites `id`/`createdAt`). The daily calorie target is recomputed on save using the shared `CalorieCalculator.dailyTarget()` (extracted from `OnboardingNotifier` so onboarding and editing stay in sync). The edit form uses local `setState` for ephemeral field state only (text controllers + breed/coat/activity dropdown selections) — justified view state, not domain state.
 - Document uploads: the Documents section on the profile lists a cat's stored documents (Firestore `users/{uid}/cats/{catId}/documents`) and supports add/delete. Flow: pick a file (`file_picker`) → name it and choose a type (passport/vaccination/microchip/license/other) in `UploadDocumentSheet` → upload to Storage and record metadata. Deletes confirm first and tolerate a missing Storage object (metadata removal still succeeds). All errors surface as snackbars via `AsyncError` listeners; repositories throw `AppException` only.
 - `file_picker` needs no Android manifest changes — it uses the system document picker (Storage Access Framework), so no runtime storage permission is required.
+
+## Session 5 (cont.) — Full-flow audit & hardening
+
+Walked the whole flow (cold launch → splash gate → auth → onboarding → home → profile → edit → documents → logout) looking for ways to break or fool it. Findings and outcomes:
+
+**Verified sound (no change needed):**
+- Auth gating is centralized in `RouterNotifier.redirect`; no screen self-navigates on auth. The redirect holds on splash until (a) the 800ms gate elapses, (b) auth resolves, and (c) onboarding status resolves — so there's never a flash or a premature route.
+- Logout is race-safe: `catProfiles`, `catById`, `documents`, and `onboardingComplete` all watch `authStateChanges` first and return empty/false streams when signed out, so they drop their dependency on `currentUser` (which throws when signed out) before it can error. Logging out cleanly streams home/profile to empty and the redirect lands on login.
+- Onboarding completion is not bounced back: the atomic batch write flips `onboardingComplete` with Firestore latency compensation emitting the new value locally before `commit()` resolves, so `context.go(home)` after `save()` sees `complete == true`. The `/onboarding` route stays intentionally reachable so a returning user can add another cat (Home "+" calls `reset()` then pushes it).
+- Double-save/double-submit guarded everywhere via `isLoading`/`isSaving` early-returns.
+- Pickers (image + file) never throw into the UI — cancel or failure returns `null`. Avatar/photo upload is best-effort and never blocks the cat save. Document delete tolerates a missing Storage object.
+- Offline: Firestore's cached `onboardingComplete` keeps a returning user out of a redundant onboarding loop; a save attempted offline fails with a friendly message rather than a partial write.
+
+**Hardened this pass:**
+- `EditCatScreen` no longer reads the cat once in `initState` (which stranded on a misleading "can't find that cat" if the profile list hadn't loaded yet — e.g. deep link or hot restart on the edit route). It now resolves the cat reactively, shows a spinner while the list is still loading, fills the form once via `_initFrom` (idempotent), and only shows "not found" when the list has loaded and the cat genuinely isn't there.
+- Sign-out is now guarded by a confirmation dialog (prevents an accidental one-tap logout) and surfaces failures via a snackbar through an `authController` `AsyncError` listener (previously a failed sign-out was silent and left the user signed in with no feedback).

@@ -30,34 +30,32 @@ class EditCatScreen extends ConsumerStatefulWidget {
 
 class _EditCatScreenState extends ConsumerState<EditCatScreen> {
   CatProfile? _original;
-  late final TextEditingController _name;
-  late final TextEditingController _years;
-  late final TextEditingController _months;
-  late final TextEditingController _weight;
+  bool _initialized = false;
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _years = TextEditingController();
+  final TextEditingController _months = TextEditingController();
+  final TextEditingController _weight = TextEditingController();
 
   // Ephemeral edit-form selections (see DECISIONS.md).
   String? _breed;
   String? _coat;
   String? _activity;
 
-  @override
-  void initState() {
-    super.initState();
-    final CatProfile? cat = ref.read(catByIdProvider(widget.catId));
+  /// Fills the form from [cat] exactly once, the moment the profile becomes
+  /// available. Reaching this screen before the cat list has loaded (e.g. a
+  /// deep link or a hot restart on the edit route) therefore recovers instead
+  /// of stranding the user.
+  void _initFrom(CatProfile cat) {
+    if (_initialized) return;
+    _initialized = true;
     _original = cat;
-    _name = TextEditingController(text: cat?.name ?? '');
-    _years = TextEditingController(
-      text: (cat != null && cat.years > 0) ? '${cat.years}' : '',
-    );
-    _months = TextEditingController(
-      text: (cat != null && cat.months > 0) ? '${cat.months}' : '',
-    );
-    _weight = TextEditingController(
-      text: (cat != null && cat.weightKg > 0) ? '${cat.weightKg}' : '',
-    );
-    _breed = cat?.breed;
-    _coat = cat?.colorType;
-    _activity = cat?.activityLevel;
+    _name.text = cat.name;
+    _years.text = cat.years > 0 ? '${cat.years}' : '';
+    _months.text = cat.months > 0 ? '${cat.months}' : '';
+    _weight.text = cat.weightKg > 0 ? '${cat.weightKg}' : '';
+    _breed = cat.breed;
+    _coat = cat.colorType;
+    _activity = cat.activityLevel;
   }
 
   @override
@@ -139,15 +137,25 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
       profileEditControllerProvider.select((s) => s.isLoading),
     );
 
+    // Resolve the cat reactively so the form fills in as soon as the profile
+    // list has loaded, even if this screen opened first.
+    final CatProfile? cat = ref.watch(catByIdProvider(widget.catId));
+    if (cat != null) _initFrom(cat);
+    final bool stillLoading = ref.watch(
+      catProfilesProvider.select((v) => v.isLoading),
+    );
+
     if (_original == null) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        appBar: AppBar(leading: const BackButton()),
+        appBar: AppBar(leading: const BackButton(color: AppColors.textPrimary)),
         body: Center(
-          child: Text(
-            "We can't find that cat to edit.",
-            style: AppTextStyles.headlineLarge,
-          ),
+          child: (cat == null && stillLoading)
+              ? const CircularProgressIndicator(color: AppColors.primary)
+              : Text(
+                  "We can't find that cat to edit.",
+                  style: AppTextStyles.headlineLarge,
+                ),
         ),
       );
     }
