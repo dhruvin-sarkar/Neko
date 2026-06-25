@@ -85,7 +85,7 @@ class _NavItem extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: selected ? Colors.black : Colors.transparent,
+            color: selected ? AppColors.primary : Colors.transparent,
             shape: BoxShape.circle,
           ),
           child: Icon(

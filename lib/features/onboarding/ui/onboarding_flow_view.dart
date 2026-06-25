@@ -14,6 +14,7 @@ import 'steps/age_step.dart';
 import 'steps/breed_step.dart';
 import 'steps/coat_color_step.dart';
 import 'steps/name_step.dart';
+import 'steps/photo_step.dart';
 import 'steps/weight_step.dart';
 import 'widgets/animated_continue_button.dart';
 import 'widgets/onboarding_top_bar.dart';
@@ -109,10 +110,11 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                       key: ValueKey<int>(state.step),
                       child: switch (state.step) {
                         1 => const NameStep(),
-                        2 => const BreedStep(),
-                        3 => const AgeStep(),
-                        4 => const WeightStep(),
-                        5 => const CoatColorStep(),
+                        2 => const PhotoStep(),
+                        3 => const BreedStep(),
+                        4 => const AgeStep(),
+                        5 => const WeightStep(),
+                        6 => const CoatColorStep(),
                         _ => const ActivityStep(),
                       },
                     ),

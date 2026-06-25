@@ -17,6 +17,7 @@ class OnboardingDraft with _$OnboardingDraft {
     DateTime? birthday,
     String? colorType,
     String? activityLevel,
+    String? photoPath,
   }) = _OnboardingDraft;
 
   /// Total age in months across the years and months fields.

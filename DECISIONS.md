@@ -39,3 +39,11 @@ One line per significant judgment call made while building, for review.
 - Built the real cat profile detail screen (large avatar, name, breed, and Age/Weight/Activity/Daily-target stat cards) backed by a new `catById` family provider; handles loading and not-found states.
 - The add-cat "+" now overlays the sleeping-cat mat on its lower-left (whole illustration tappable), matching the reference, with a Material-icon mat fallback until real art lands.
 - Per the user, the reference image is inspiration only; colors follow the UI_GUIDELINES tokens (amber home, coral primary, dark-teal banners, Nunito) rather than copying the mockup's exact palette.
+
+## Session 4 — cat photo + richer profile
+
+- Added an optional cat-photo step to onboarding (now 7 question steps; photo is step 2, right after the name). It uses `image_picker` (camera or gallery) via an `ImagePickerService` that returns a path or null (failures logged, never thrown).
+- Photo upload is best-effort and wired end to end: photo path lives in the onboarding draft → on final save the `OnboardingRepository` uploads it to `users/{uid}/cats/{catId}/avatar.jpg`, stores the download URL as `photoUrl`, and the existing `CatAvatar` renders it on the banner and profile. A failed upload still saves the cat (no photo) rather than blocking onboarding.
+- Cat profile detail screen fleshed out: avatar, name, breed, Age/Weight/Activity/Daily-target stat cards, and a Documents section with a "coming soon" upload affordance — deliberately reserving the bottom area for the future document feature.
+- Nav pill active tab now highlights in coral (brand accent) on a white pill, rather than black — ties the navigation to the app's primary color.
+- No Android manifest changes needed: `image_picker` ships its own FileProvider and uses the system photo picker (no runtime storage permission on modern Android); Storage rules already permit image uploads under the user's path.

@@ -128,6 +128,10 @@ class _CatProfileBody extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 32),
+                Text('Documents', style: AppTextStyles.headlineLarge),
+                const SizedBox(height: 12),
+                const _DocumentsPlaceholder(),
               ]
               .animate(interval: 70.ms)
               .fadeIn(duration: 250.ms)
@@ -168,6 +172,60 @@ class _StatCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.bodyLarge,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentsPlaceholder extends StatelessWidget {
+  const _DocumentsPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.folder_open_outlined,
+            size: 40,
+            color: AppColors.textDisabled,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'No documents yet',
+            style: AppTextStyles.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Vet records, vaccination cards and passports will live here.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          OutlinedButton.icon(
+            onPressed: () {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(
+                    content: Text('Document uploads are coming soon.'),
+                  ),
+                );
+            },
+            icon: const Icon(Icons.upload_file_outlined),
+            label: const Text('Upload a document'),
           ),
         ],
       ),

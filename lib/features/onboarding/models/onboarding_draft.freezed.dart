@@ -25,6 +25,7 @@ mixin _$OnboardingDraft {
   DateTime? get birthday => throw _privateConstructorUsedError;
   String? get colorType => throw _privateConstructorUsedError;
   String? get activityLevel => throw _privateConstructorUsedError;
+  String? get photoPath => throw _privateConstructorUsedError;
 
   /// Create a copy of OnboardingDraft
   /// with the given fields replaced by the non-null parameter values.
@@ -49,6 +50,7 @@ abstract class $OnboardingDraftCopyWith<$Res> {
     DateTime? birthday,
     String? colorType,
     String? activityLevel,
+    String? photoPath,
   });
 }
 
@@ -75,6 +77,7 @@ class _$OnboardingDraftCopyWithImpl<$Res, $Val extends OnboardingDraft>
     Object? birthday = freezed,
     Object? colorType = freezed,
     Object? activityLevel = freezed,
+    Object? photoPath = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -110,6 +113,10 @@ class _$OnboardingDraftCopyWithImpl<$Res, $Val extends OnboardingDraft>
                 ? _value.activityLevel
                 : activityLevel // ignore: cast_nullable_to_non_nullable
                       as String?,
+            photoPath: freezed == photoPath
+                ? _value.photoPath
+                : photoPath // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -134,6 +141,7 @@ abstract class _$$OnboardingDraftImplCopyWith<$Res>
     DateTime? birthday,
     String? colorType,
     String? activityLevel,
+    String? photoPath,
   });
 }
 
@@ -159,6 +167,7 @@ class __$$OnboardingDraftImplCopyWithImpl<$Res>
     Object? birthday = freezed,
     Object? colorType = freezed,
     Object? activityLevel = freezed,
+    Object? photoPath = freezed,
   }) {
     return _then(
       _$OnboardingDraftImpl(
@@ -194,6 +203,10 @@ class __$$OnboardingDraftImplCopyWithImpl<$Res>
             ? _value.activityLevel
             : activityLevel // ignore: cast_nullable_to_non_nullable
                   as String?,
+        photoPath: freezed == photoPath
+            ? _value.photoPath
+            : photoPath // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -211,6 +224,7 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
     this.birthday,
     this.colorType,
     this.activityLevel,
+    this.photoPath,
   }) : super._();
 
   @override
@@ -232,10 +246,12 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
   final String? colorType;
   @override
   final String? activityLevel;
+  @override
+  final String? photoPath;
 
   @override
   String toString() {
-    return 'OnboardingDraft(name: $name, breed: $breed, ageYears: $ageYears, ageMonths: $ageMonths, weightKg: $weightKg, birthday: $birthday, colorType: $colorType, activityLevel: $activityLevel)';
+    return 'OnboardingDraft(name: $name, breed: $breed, ageYears: $ageYears, ageMonths: $ageMonths, weightKg: $weightKg, birthday: $birthday, colorType: $colorType, activityLevel: $activityLevel, photoPath: $photoPath)';
   }
 
   @override
@@ -256,7 +272,9 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
             (identical(other.colorType, colorType) ||
                 other.colorType == colorType) &&
             (identical(other.activityLevel, activityLevel) ||
-                other.activityLevel == activityLevel));
+                other.activityLevel == activityLevel) &&
+            (identical(other.photoPath, photoPath) ||
+                other.photoPath == photoPath));
   }
 
   @override
@@ -270,6 +288,7 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
     birthday,
     colorType,
     activityLevel,
+    photoPath,
   );
 
   /// Create a copy of OnboardingDraft
@@ -294,6 +313,7 @@ abstract class _OnboardingDraft extends OnboardingDraft {
     final DateTime? birthday,
     final String? colorType,
     final String? activityLevel,
+    final String? photoPath,
   }) = _$OnboardingDraftImpl;
   const _OnboardingDraft._() : super._();
 
@@ -313,6 +333,8 @@ abstract class _OnboardingDraft extends OnboardingDraft {
   String? get colorType;
   @override
   String? get activityLevel;
+  @override
+  String? get photoPath;
 
   /// Create a copy of OnboardingDraft
   /// with the given fields replaced by the non-null parameter values.

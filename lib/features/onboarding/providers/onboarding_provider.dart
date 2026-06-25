@@ -11,8 +11,9 @@ import '../models/step_config.dart';
 
 part 'onboarding_provider.g.dart';
 
-/// The last step index (0-based). Step 0 is the welcome screen.
-const int _lastStep = 6;
+/// The last step index (0-based). Step 0 is the welcome screen; steps 1–7 are
+/// the questions (name, photo, breed, age, weight, coat, activity).
+const int _lastStep = 7;
 
 /// Holds the in-progress cat draft and step position for the onboarding flow.
 ///
@@ -46,6 +47,10 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   void setActivityLevel(String activityLevel) => state = state.copyWith(
     draft: state.draft.copyWith(activityLevel: activityLevel),
   );
+
+  /// Sets (or clears, with `null`) the local path of the chosen cat photo.
+  void setPhotoPath(String? photoPath) =>
+      state = state.copyWith(draft: state.draft.copyWith(photoPath: photoPath));
 
   void nextStep() {
     if (state.step < _lastStep) state = state.copyWith(step: state.step + 1);
@@ -81,7 +86,9 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 
     state = state.copyWith(isSaving: true, errorMessage: null);
     try {
-      await ref.read(onboardingRepositoryProvider).completeOnboarding(profile);
+      await ref
+          .read(onboardingRepositoryProvider)
+          .completeOnboarding(profile, photoPath: draft.photoPath);
       state = state.copyWith(isSaving: false);
       return true;
     } on AppException catch (e) {
@@ -110,11 +117,12 @@ StepConfig stepConfigOf(OnboardingState state) {
   final bool canContinue = switch (state.step) {
     0 => true,
     1 => Validators.catName(draft.name) == null,
-    2 => draft.breed != null,
-    3 => draft.totalMonths > 0,
-    4 => (draft.weightKg ?? 0) > 0 && (draft.weightKg ?? 0) <= 30,
-    5 => draft.colorType != null,
-    6 => draft.activityLevel != null,
+    2 => true, // photo is optional
+    3 => draft.breed != null,
+    4 => draft.totalMonths > 0,
+    5 => (draft.weightKg ?? 0) > 0 && (draft.weightKg ?? 0) <= 30,
+    6 => draft.colorType != null,
+    7 => draft.activityLevel != null,
     _ => false,
   };
 
