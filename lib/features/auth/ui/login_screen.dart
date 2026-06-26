@@ -118,7 +118,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _passwordController,
                   obscureText: true,
                   textInputAction: TextInputAction.done,
-                  validator: Validators.password,
+                  validator: Validators.signInPassword,
                   onSubmitted: (_) => _submit(),
                 ),
                 Align(

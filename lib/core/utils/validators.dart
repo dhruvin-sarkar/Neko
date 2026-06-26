@@ -19,6 +19,16 @@ abstract final class Validators {
     return null;
   }
 
+  /// Sign-in only needs a non-empty password. The 8-character policy is a
+  /// registration rule — enforcing it on the login form would lock out valid
+  /// accounts whose password is shorter (Firebase's own minimum is 6, and
+  /// accounts may have been created outside this app). Let Firebase decide if
+  /// the password is correct.
+  static String? signInPassword(String? value) {
+    if (value == null || value.isEmpty) return 'Password is required';
+    return null;
+  }
+
   static String? confirmPassword(String? value, String original) {
     if (value != original) return 'Passwords do not match';
     return null;
