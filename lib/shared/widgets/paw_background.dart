@@ -55,13 +55,15 @@ class _PawPainter extends CustomPainter {
 
   final Animation<double> progress;
 
-  static const double _tile = 132;
-  static const double _pawSize = 22;
+  static const double _tile = 124;
+  static const double _pawSize = 24;
 
   @override
   void paint(Canvas canvas, Size size) {
+    // A rosy pink reads clearly on the amber (coral was too close in hue to
+    // show), but kept low-opacity so it stays texture, not noise.
     final Paint paint = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.08);
+      ..color = const Color(0xFFFF5C8D).withValues(alpha: 0.22);
 
     final double t = progress.value;
     final double shiftX = t * _tile;
