@@ -62,6 +62,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
       if (next is AsyncError) {
         final Object error = next.error;
+        unawaited(ref.read(feedbackServiceProvider).onError());
         _showSnack(
           error is AppException ? error.message : 'Something went wrong.',
         );

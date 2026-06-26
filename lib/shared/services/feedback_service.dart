@@ -36,7 +36,7 @@ class FeedbackService {
   Future<void> onSuccess() async {
     unawaited(_sound.success());
     await HapticFeedback.heavyImpact();
-    await Future<void>.delayed(const Duration(milliseconds: 50));
+    await Future<void>.delayed(const Duration(milliseconds: 80));
     await HapticFeedback.mediumImpact();
   }
 

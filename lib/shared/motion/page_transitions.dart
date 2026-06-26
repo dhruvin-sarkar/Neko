@@ -7,9 +7,10 @@ abstract final class PageTransitions {
   const PageTransitions._();
 
   static const Duration _duration = Duration(milliseconds: 280);
+  static const Duration _reverseDuration = Duration(milliseconds: 240);
 
   /// Wraps [child] in a [CustomTransitionPage] that slides in from the right
-  /// (and slides back out to the right on pop).
+  /// with a quick fade, and slides back out on pop.
   static CustomTransitionPage<void> slideFromRight({
     required LocalKey key,
     required Widget child,
@@ -17,18 +18,27 @@ abstract final class PageTransitions {
     return CustomTransitionPage<void>(
       key: key,
       transitionDuration: _duration,
-      reverseTransitionDuration: _duration,
+      reverseTransitionDuration: _reverseDuration,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         final Animation<Offset> position = animation.drive(
           Tween<Offset>(
-            begin: const Offset(0.18, 0),
+            begin: const Offset(1, 0),
             end: Offset.zero,
           ).chain(CurveTween(curve: Curves.easeOutCubic)),
         );
         return SlideTransition(
           position: position,
-          child: FadeTransition(opacity: animation, child: child),
+          child: FadeTransition(
+            opacity: animation.drive(
+              Tween<double>(begin: 0, end: 1).chain(
+                CurveTween(
+                  curve: const Interval(0, 0.5, curve: Curves.easeOut),
+                ),
+              ),
+            ),
+            child: child,
+          ),
         );
       },
     );

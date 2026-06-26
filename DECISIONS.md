@@ -109,3 +109,12 @@ Adopted the full design system across the app, with one override: the page backg
 - All onboarding choice cards (breed/coat/activity) share one look: white with a soft flat shadow, snapping to a coral border + tint with a checkmark popping in.
 - Progress bar is the thin 8px coral-on-cloudGray bar.
 - Feedback map filled out to the five moments — tap (light), select (selectionClick), advance (medium + whoosh), success (heavy, 50ms gap, medium — the rewarding double tap), and error (vibrate). Sounds stay optional/no-op until real clips land in `assets/sounds/`.
+
+## Session 8 — Motion & feel pass
+
+- Switched the primary CTA back onto `chiclet`'s `ChicletAnimatedButton` for the real physical press (kept the `NekoPrimaryButton` wrapper API so nothing else changed); label renders uppercase, success variant uses the green pair.
+- Page transitions now do the full slide-from-right with a fade over the first half of the animation (280ms in, 240ms back). Onboarding step changes slide the full width directionally (forward/back).
+- Feedback map: success is the double tap with an 80ms gap; wired `onError` into the auth error listeners and the onboarding save-fail path.
+- Added `confetti`: finishing onboarding saves the cat, fires the success haptic, bursts confetti (coral + cat colours) for 1.5s, then the router takes you home.
+
+Deferred (noted, not blocking): converting the home/breed lists to `AnimateList` with a `_hasAnimated` guard (current per-item stagger with stable keys already animates once and doesn't replay on Firestore updates), the "newest cat" bounce on home, and a chiclet outlined style for the secondary "I already have an account" link. Sounds remain optional no-ops until real clips are added.

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,8 +20,9 @@ import 'steps/weight_step.dart';
 import 'widgets/animated_continue_button.dart';
 import 'widgets/onboarding_top_bar.dart';
 
-/// The chrome for steps 1–6: back arrow, progress bar, the sliding step
-/// content, and the continue button. Owns advancing and the final save.
+/// The chrome for the question steps: back arrow, progress bar, the sliding
+/// step content, and the continue button. Owns advancing and the final save,
+/// and fires the confetti celebration when the cat is saved.
 class OnboardingFlowView extends ConsumerStatefulWidget {
   const OnboardingFlowView({super.key});
 
@@ -30,6 +32,15 @@ class OnboardingFlowView extends ConsumerStatefulWidget {
 
 class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
   int _lastStep = 1;
+  final ConfettiController _confetti = ConfettiController(
+    duration: const Duration(milliseconds: 1200),
+  );
+
+  @override
+  void dispose() {
+    _confetti.dispose();
+    super.dispose();
+  }
 
   Future<void> _onContinue(StepConfig config) async {
     final notifier = ref.read(onboardingNotifierProvider.notifier);
@@ -39,9 +50,13 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
       notifier.nextStep();
       return;
     }
-    unawaited(feedback.onSuccess());
+    // Final step: save first, then celebrate before the router takes us home.
     final bool saved = await notifier.save();
-    if (saved && mounted) context.go(Routes.home);
+    if (!mounted || !saved) return;
+    unawaited(feedback.onSuccess());
+    _confetti.play();
+    await Future<void>.delayed(const Duration(milliseconds: 1500));
+    if (mounted) context.go(Routes.home);
   }
 
   @override
@@ -50,6 +65,7 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
       onboardingNotifierProvider.select((s) => s.errorMessage),
       (previous, next) {
         if (next != null && next.isNotEmpty) {
+          unawaited(ref.read(feedbackServiceProvider).onError());
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(next)));
@@ -71,70 +87,93 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
       child: Scaffold(
         backgroundColor: AppColors.background,
         resizeToAvoidBottomInset: true,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                OnboardingTopBar(
-                  onBack: notifier.previousStep,
-                  showProgress: config.showProgress,
-                  fraction: config.progressFraction,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeOutCubic,
-                    transitionBuilder: (child, animation) {
-                      final bool incoming =
-                          child.key == ValueKey<int>(state.step);
-                      final double begin = incoming
-                          ? (forward ? 1 : -1)
-                          : (forward ? -1 : 1);
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: animation.drive(
-                            Tween<Offset>(
-                              begin: Offset(begin * 0.18, 0),
-                              end: Offset.zero,
-                            ).chain(CurveTween(curve: Curves.easeOutCubic)),
-                          ),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: KeyedSubtree(
-                      key: ValueKey<int>(state.step),
-                      child: switch (state.step) {
-                        1 => const NameStep(),
-                        2 => const PhotoStep(),
-                        3 => const BreedStep(),
-                        4 => const AgeStep(),
-                        5 => const WeightStep(),
-                        6 => const CoatColorStep(),
-                        _ => const ActivityStep(),
-                      },
+        body: Stack(
+          children: [
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    OnboardingTopBar(
+                      onBack: notifier.previousStep,
+                      showProgress: config.showProgress,
+                      fraction: config.progressFraction,
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 260),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeOutCubic,
+                        transitionBuilder: (child, animation) {
+                          final bool incoming =
+                              child.key == ValueKey<int>(state.step);
+                          final double begin = incoming
+                              ? (forward ? 1 : -1)
+                              : (forward ? -1 : 1);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: animation.drive(
+                                Tween<Offset>(
+                                  begin: Offset(begin, 0),
+                                  end: Offset.zero,
+                                ).chain(CurveTween(curve: Curves.easeOutCubic)),
+                              ),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey<int>(state.step),
+                          child: switch (state.step) {
+                            1 => const NameStep(),
+                            2 => const PhotoStep(),
+                            3 => const BreedStep(),
+                            4 => const AgeStep(),
+                            5 => const WeightStep(),
+                            6 => const CoatColorStep(),
+                            _ => const ActivityStep(),
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    AnimatedContinueButton(
+                      label: config.continueLabel,
+                      enabled: config.canContinue,
+                      isLoading: state.isSaving,
+                      color: config.isFinal
+                          ? AppColors.success
+                          : AppColors.primary,
+                      shadowColor: config.isFinal
+                          ? AppColors.successDark
+                          : AppColors.primaryDark,
+                      onPressed: () => _onContinue(config),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                AnimatedContinueButton(
-                  label: config.continueLabel,
-                  enabled: config.canContinue,
-                  isLoading: state.isSaving,
-                  color: config.isFinal ? AppColors.success : AppColors.primary,
-                  shadowColor: config.isFinal
-                      ? AppColors.successDark
-                      : AppColors.primaryDark,
-                  onPressed: () => _onContinue(config),
-                ),
-                const SizedBox(height: 8),
-              ],
+              ),
             ),
-          ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confetti,
+                blastDirectionality: BlastDirectionality.explosive,
+                numberOfParticles: 30,
+                gravity: 0.2,
+                emissionFrequency: 0.05,
+                colors: const [
+                  AppColors.primary,
+                  AppColors.success,
+                  AppColors.warning,
+                  AppColors.info,
+                  AppColors.coatGinger,
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
