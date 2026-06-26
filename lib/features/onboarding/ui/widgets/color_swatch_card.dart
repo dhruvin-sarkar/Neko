@@ -32,12 +32,20 @@ class ColorSwatchCard extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.selectedFill : AppColors.surfaceCard,
+            color: isSelected ? AppColors.primaryLight : AppColors.snowWhite,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isSelected ? AppColors.selectedBorder : AppColors.border,
-              width: isSelected ? 3 : 1,
+              color: isSelected ? AppColors.primary : AppColors.cloudGray,
+              width: isSelected ? 2.5 : 2,
             ),
+            boxShadow: isSelected
+                ? null
+                : [
+                    BoxShadow(
+                      color: AppColors.cloudGray.withValues(alpha: 0.8),
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
           child: Stack(
             children: [

@@ -38,9 +38,9 @@ void main() {
         ),
       );
 
-      expect(find.text('Continue'), findsOneWidget);
+      expect(find.text('CONTINUE'), findsOneWidget);
 
-      await tester.tap(find.text('Continue'));
+      await tester.tap(find.text('CONTINUE'));
       await tester.pumpAndSettle();
 
       expect(taps, 1);

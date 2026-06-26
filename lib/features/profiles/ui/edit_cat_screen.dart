@@ -37,7 +37,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
   final TextEditingController _months = TextEditingController();
   final TextEditingController _weight = TextEditingController();
 
-  // Ephemeral edit-form selections (see DECISIONS.md).
+  // I hold the dropdown selections here while the form is open.
   String? _breed;
   String? _coat;
   String? _activity;

@@ -1,6 +1,6 @@
-/// Bundled cat avatar options offered when the user doesn't add their own
-/// photo. The ids are stored on the cat as `avatarPreset`; the artwork lives in
-/// `assets/images/avatars/` (placeholder art for now).
+/// The built-in cat avatars I offer when someone doesn't add their own photo.
+/// I save the chosen id on the cat as `avatarPreset`; the images live in
+/// `assets/images/avatars/`.
 abstract final class AvatarPresets {
   const AvatarPresets._();
 

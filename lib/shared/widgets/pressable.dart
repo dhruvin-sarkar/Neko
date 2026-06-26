@@ -25,7 +25,7 @@ class Pressable extends StatefulWidget {
 }
 
 class _PressableState extends State<Pressable> {
-  // Local, ephemeral press state — justified setState (see DECISIONS.md).
+  // Just the pressed state for the animation, so I keep it in local state.
   bool _pressed = false;
 
   void _setPressed(bool value) {

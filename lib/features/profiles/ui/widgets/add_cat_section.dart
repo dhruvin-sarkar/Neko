@@ -3,9 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/pressable.dart';
 
-/// The "add another cat" affordance: the sleeping-cat illustration with a coral
-/// plus button overlaid on its lower-left, matching the reference design. The
-/// whole illustration is tappable.
+/// The "add another cat" button: the sleeping-cat illustration with a coral
+/// plus over its lower-left. The whole illustration is tappable.
 class AddCatSection extends StatelessWidget {
   const AddCatSection({super.key, required this.onTap});
 
@@ -59,7 +58,7 @@ class AddCatSection extends StatelessWidget {
   }
 }
 
-/// Stand-in mat used until the real sleeping-cat artwork is added.
+/// The mat I draw if the sleeping-cat image fails to load.
 class _MatPlaceholder extends StatelessWidget {
   const _MatPlaceholder();
 

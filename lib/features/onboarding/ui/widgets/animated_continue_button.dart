@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/neko_primary_button.dart';
 
-/// The onboarding continue button: a Chiclet primary button that gives a
-/// spring scale-pop the moment it first becomes enabled, signalling "you can
-/// move on now".
+/// The onboarding continue button: a primary button that gives a spring
+/// scale-pop the moment it first becomes enabled, signalling "you can move on
+/// now".
 class AnimatedContinueButton extends StatefulWidget {
   const AnimatedContinueButton({
     super.key,
@@ -13,12 +14,16 @@ class AnimatedContinueButton extends StatefulWidget {
     required this.enabled,
     required this.onPressed,
     this.isLoading = false,
+    this.color = AppColors.primary,
+    this.shadowColor = AppColors.primaryDark,
   });
 
   final String label;
   final bool enabled;
   final VoidCallback onPressed;
   final bool isLoading;
+  final Color color;
+  final Color shadowColor;
 
   @override
   State<AnimatedContinueButton> createState() => _AnimatedContinueButtonState();
@@ -41,6 +46,8 @@ class _AnimatedContinueButtonState extends State<AnimatedContinueButton> {
           enabled: widget.enabled,
           isLoading: widget.isLoading,
           onPressed: widget.onPressed,
+          color: widget.color,
+          shadowColor: widget.shadowColor,
         )
         .animate(key: ValueKey<int>(_enablePulse))
         .scaleXY(

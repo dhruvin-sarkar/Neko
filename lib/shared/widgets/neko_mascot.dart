@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-/// The Neko mascot.
-///
-/// Renders [fallback] (a placeholder mark) sized to [size]. A Rive-animated
-/// version will be wired in here once a real `.riv` animation file exists; for
-/// now there is no animation asset, so this stays a lightweight placeholder.
+/// The Neko mascot. We don't have the animated version yet, so I just show
+/// [fallback] at the given [size].
 class NekoMascot extends StatelessWidget {
   const NekoMascot({super.key, required this.size, required this.fallback});
 

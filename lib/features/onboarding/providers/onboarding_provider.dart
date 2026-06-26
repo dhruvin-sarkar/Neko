@@ -108,8 +108,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   }
 }
 
-/// Derives the chrome configuration (progress + continue button) for the
-/// current onboarding state. Pure, so it is trivially testable.
+/// Works out the progress bar and continue-button state for the current step.
 StepConfig stepConfigOf(OnboardingState state) {
   final draft = state.draft;
   final bool canContinue = switch (state.step) {

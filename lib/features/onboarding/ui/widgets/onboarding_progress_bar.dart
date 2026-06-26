@@ -14,8 +14,8 @@ class OnboardingProgressBar extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(100),
       child: Container(
-        height: 6,
-        color: AppColors.surfaceCard,
+        height: 8,
+        color: AppColors.cloudGray,
         child: AnimatedFractionallySizedBox(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,

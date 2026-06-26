@@ -28,7 +28,7 @@ class NekoPillButton extends StatefulWidget {
 }
 
 class _NekoPillButtonState extends State<NekoPillButton> {
-  // Local, ephemeral press state — justified setState (see DECISIONS.md).
+  // Just the pressed state for the animation, so I keep it in local state.
   bool _pressed = false;
 
   bool get _interactive =>
@@ -85,7 +85,7 @@ class _NekoPillButtonState extends State<NekoPillButton> {
                           ),
                         )
                       : Text(
-                          widget.label,
+                          widget.label.toUpperCase(),
                           style: AppTextStyles.buttonLabel.copyWith(
                             color: Colors.white,
                           ),

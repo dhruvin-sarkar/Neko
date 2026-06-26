@@ -97,3 +97,15 @@ The full journey is now cohesive end to end: launch → splash (min 800ms, gated
 - With rive gone the project has **no native code at all** (Firebase/image_picker/file_picker/audioplayers are pure Java/Kotlin/Dart), so no NDK is needed and the build is far more portable. Both `flutter build apk --debug` and `--release` succeed cleanly. `flutter analyze` → no issues.
 - Left the NDK workarounds in `android/gradle.properties` (`rive.ndk.version`, `android.ndk.suppressMinSdkVersionError=21`) in place as harmless no-ops; they cost nothing now and will smooth the path if/when rive returns alongside an explicit `minSdk 21`.
 - **Rive re-add is deferred to a later milestone** and gated on (a) a real `.riv` asset existing and (b) an on-device run confirming no regressions. The Pixel 8 was not connected to the build machine this session (`flutter devices` saw only Windows/Chrome/Edge), so the on-device walkthrough is pending hardware.
+
+## Session 7 — Duolingo design system
+
+Adopted the full design system across the app, with one override: the page background is the warm amber everywhere (not white) — white is kept for the cards and fields that sit on top.
+
+- Colours rebuilt around the new tokens (coral brand + primaryDark/primaryLight, the green success family, danger/info/warning, and the Duolingo neutrals — almostBlack text instead of pure black, graphite/silver/cloudGray/snowWhite). Older token names (textPrimary, surfaceCard, border, etc.) are kept as aliases pointing at the canonical values so every existing widget keeps working.
+- Typography moved to Fredoka for headlines and Nunito for everything else. Google Fonts ships "Fredoka" as a variable family now (the old "Fredoka One" was merged in), so I use `GoogleFonts.fredoka` at weight 600 for the plump look. Button labels render uppercase with wide tracking.
+- Added `AppSpacing`/`AppRadius` on a 4px grid.
+- The primary CTA is now a real 3D press button: a coral face resting 4px above a darker platform that slides down on press. I reimplemented `NekoPrimaryButton` in place (same API) so every CTA picked it up, and dropped the chiclet dependency from the button. The onboarding final step uses the green success variant.
+- All onboarding choice cards (breed/coat/activity) share one look: white with a soft flat shadow, snapping to a coral border + tint with a checkmark popping in.
+- Progress bar is the thin 8px coral-on-cloudGray bar.
+- Feedback map filled out to the five moments — tap (light), select (selectionClick), advance (medium + whoosh), success (heavy, 50ms gap, medium — the rewarding double tap), and error (vibrate). Sounds stay optional/no-op until real clips land in `assets/sounds/`.

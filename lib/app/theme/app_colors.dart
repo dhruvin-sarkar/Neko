@@ -1,47 +1,61 @@
 import 'package:flutter/material.dart';
 
-/// Central color tokens for the Neko app.
+/// The single source of truth for colour in the app.
 ///
-/// These values are the single source of truth for color across the app.
-/// Onboarding screens are white; the home screen uses the warm amber-peach
-/// [homeBg]; the brand accent is the coral [primary].
+/// Coral is our brand accent (it plays the role Duolingo's green plays for
+/// them): it appears once per screen, on the main call-to-action. Pages sit on
+/// the warm amber background; white is reserved for the cards and fields that
+/// sit on top of it. I keep a few legacy names as aliases at the bottom so
+/// older widgets keep working while pointing at the same canonical values.
 abstract final class AppColors {
   const AppColors._();
 
-  // Backgrounds — the app uses one warm amber page background throughout;
-  // white is reserved for cards/fields (surfaceCard) layered on top of it.
-  static const Color background = Color(0xFFF5C275);
-  static const Color homeBg = Color(0xFFF5C275);
-  static const Color surfaceCard = Color(0xFFFFFFFF);
+  // Brand — coral
+  static const Color primary = Color(
+    0xFFFF6B6B,
+  ); // every CTA, logo, active state
+  static const Color primaryDark = Color(
+    0xFFCC4444,
+  ); // the 4px shadow under a coral button
+  static const Color primaryLight = Color(
+    0xFFFFE5E5,
+  ); // selected card fill, active tints
+
+  // Semantic — success (the only place I use green)
+  static const Color success = Color(0xFF58CC02);
+  static const Color successDark = Color(0xFF3F8F01);
+  static const Color successLight = Color(0xFFD7FFB8);
+
+  // Semantic — danger / errors
+  static const Color danger = Color(0xFFFF4B4B);
+  static const Color dangerDark = Color(0xFFCC0000);
+  static const Color dangerLight = Color(0xFFFFE0E0);
+
+  // Semantic — info / links / secondary actions
+  static const Color info = Color(0xFF1CB0F6);
+  static const Color infoDark = Color(0xFF0A7AB8);
+  static const Color infoLight = Color(0xFFDEF3FF);
+
+  // Semantic — warning / streaks
+  static const Color warning = Color(0xFFFFC700);
+
+  // Neutrals — I never use pure black or `Colors.grey`.
+  static const Color almostBlack = Color(0xFF3C3C3C); // primary text
+  static const Color charcoal = Color(0xFF4B4B4B); // subheadings
+  static const Color graphite = Color(0xFF777777); // body copy, descriptions
+  static const Color silver = Color(0xFFAFAFAF); // placeholders, disabled text
+  static const Color cloudGray = Color(0xFFE5E5E5); // borders, dividers
+  static const Color snowWhite = Color(0xFFFFFFFF); // card surfaces
+
+  // Surfaces
+  static const Color homeBg = Color(0xFFF5C275); // warm amber page background
+  static const Color darkBanner = Color(0xFF2F4F5E); // cat profile pill banners
 
   /// A subtle neutral fill for elements layered on a white card (e.g. an icon
   /// tile) where plain white would be invisible against the card.
   static const Color surfaceMuted = Color(0xFFF1ECE4);
 
-  // Brand
-  static const Color primary = Color(0xFFFF6B6B);
-  static const Color primaryDark = Color(0xFFE85555);
-
-  // Selection states
-  static const Color selectedFill = Color(0xFFFFF0F0);
-  static const Color selectedBorder = Color(0xFFFF6B6B);
-
-  // Text
-  static const Color textPrimary = Color(0xFF1A1A1A);
-  static const Color textSecondary = Color(0xFF6B6B6B);
-  static const Color textDisabled = Color(0xFFBDBDBD);
-
-  // Controls
-  static const Color disabledBtn = Color(0xFFE0E0E0);
-  static const Color border = Color(0xFFE0E0E0);
-
-  // Surfaces
-  static const Color darkBanner = Color(0xFF2F4F5E);
-
-  // Semantic — reserved for calorie/progress states only.
-  static const Color success = Color(0xFF58CC02);
-
-  // Coat colors used for cat avatars when no photo is set.
+  // Cat coat colours used for avatars when there's no photo.
   static const Color coatGinger = Color(0xFFFF8C42);
   static const Color coatBlack = Color(0xFF2D2D2D);
   static const Color coatWhite = Color(0xFFF0F0F0);
@@ -51,10 +65,19 @@ abstract final class AppColors {
   static const Color coatTortoiseshell = Color(0xFFB8651B);
   static const Color coatOther = Color(0xFFBDBDBD);
 
-  /// Maps a stored [colorType] string to its avatar color.
-  ///
-  /// Falls back to [coatOther] for unknown values so the UI never breaks on
-  /// unexpected data.
+  // --- Legacy aliases (kept so existing widgets keep compiling) ---
+  static const Color background = homeBg; // every page sits on amber
+  static const Color surfaceCard = snowWhite;
+  static const Color textPrimary = almostBlack;
+  static const Color textSecondary = graphite;
+  static const Color textDisabled = silver;
+  static const Color border = cloudGray;
+  static const Color selectedFill = primaryLight;
+  static const Color selectedBorder = primary;
+  static const Color disabledBtn = cloudGray;
+
+  /// Maps a stored [colorType] string to its avatar colour, falling back to a
+  /// neutral so unexpected data never breaks the UI.
   static Color catColorFor(String colorType) {
     return switch (colorType) {
       'ginger' => coatGinger,

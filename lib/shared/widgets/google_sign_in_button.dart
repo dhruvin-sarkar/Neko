@@ -3,12 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'pressable.dart';
 
-/// Google-branded sign-in button.
-///
-/// Intentionally follows Google's sign-in branding (Roboto, neutral border,
-/// the multi-color "G") rather than the app's coral theme, as required by
-/// Google's brand guidelines. The logo is painted directly so no asset is
-/// needed.
+/// Google sign-in button. I follow Google's own branding here (Roboto, the
+/// neutral border, the multi-color "G") instead of our coral theme, because
+/// their brand guidelines require it. I paint the logo directly so it needs no
+/// asset.
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
