@@ -47,11 +47,10 @@ dependencies:
   # Opening stored documents in the device's default viewer/browser
   url_launcher: ^6.3.1
 
-  # Motion, tactile buttons, sound, and mascot animation
+  # Motion, tactile buttons, and sound
   flutter_animate: ^4.5.0
   chiclet: ^1.2.1
   audioplayers: ^6.0.0
-  rive: ^0.13.0
 
   # Logging
   logger: ^2.4.0
