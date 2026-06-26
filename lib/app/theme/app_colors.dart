@@ -8,10 +8,15 @@ import 'package:flutter/material.dart';
 abstract final class AppColors {
   const AppColors._();
 
-  // Backgrounds
-  static const Color background = Color(0xFFFFFFFF);
+  // Backgrounds — the app uses one warm amber page background throughout;
+  // white is reserved for cards/fields (surfaceCard) layered on top of it.
+  static const Color background = Color(0xFFF5C275);
   static const Color homeBg = Color(0xFFF5C275);
   static const Color surfaceCard = Color(0xFFFFFFFF);
+
+  /// A subtle neutral fill for elements layered on a white card (e.g. an icon
+  /// tile) where plain white would be invisible against the card.
+  static const Color surfaceMuted = Color(0xFFF1ECE4);
 
   // Brand
   static const Color primary = Color(0xFFFF6B6B);

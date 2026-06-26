@@ -49,7 +49,7 @@ class ActivityCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.primary.withValues(alpha: 0.12)
-                      : AppColors.background,
+                      : AppColors.surfaceMuted,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
