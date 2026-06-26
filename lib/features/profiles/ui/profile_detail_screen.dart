@@ -70,9 +70,9 @@ class _CatProfileBody extends StatelessWidget {
 
   String get _activityLabel {
     return switch (cat.activityLevel) {
-      'couch' => 'Couch potato',
-      'outdoor' => 'Outdoor explorer',
-      _ => 'Playful indoor',
+      'couch' => 'Low Activity',
+      'outdoor' => 'Highly Active',
+      _ => 'Moderately Active',
     };
   }
 

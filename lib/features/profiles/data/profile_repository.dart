@@ -34,10 +34,26 @@ class ProfileRepository {
   final CollectionReference<Map<String, dynamic>> _catsRef;
 
   /// Streams the user's cats, oldest first.
-  Stream<List<CatProfile>> watchAll() => _catsRef
-      .orderBy('createdAt')
-      .snapshots()
-      .map((snap) => snap.docs.map(CatProfile.fromFirestore).toList());
+  ///
+  /// I sort on the client rather than with `orderBy('createdAt')` in the query:
+  /// a just-saved cat has a server timestamp that's still null locally, and a
+  /// `createdAt` order-by would drop it from the results until the server
+  /// confirms — so the new cat wouldn't show up on Home right after onboarding.
+  /// Sorting here keeps pending writes visible (newest, at the end).
+  Stream<List<CatProfile>> watchAll() => _catsRef.snapshots().map((snap) {
+    final List<CatProfile> cats = snap.docs
+        .map(CatProfile.fromFirestore)
+        .toList();
+    cats.sort((a, b) {
+      final DateTime? ad = a.createdAt;
+      final DateTime? bd = b.createdAt;
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1; // a is a pending write — keep it last
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    });
+    return cats;
+  });
 
   /// Updates an existing cat's editable fields. `id` and `createdAt` are never
   /// overwritten.

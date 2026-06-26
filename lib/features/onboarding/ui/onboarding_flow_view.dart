@@ -143,12 +143,6 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                       label: config.continueLabel,
                       enabled: config.canContinue,
                       isLoading: state.isSaving,
-                      color: config.isFinal
-                          ? AppColors.success
-                          : AppColors.primary,
-                      shadowColor: config.isFinal
-                          ? AppColors.successDark
-                          : AppColors.primaryDark,
                       onPressed: () => _onContinue(config),
                     ),
                     const SizedBox(height: 8),

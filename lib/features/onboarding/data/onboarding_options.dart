@@ -55,20 +55,20 @@ abstract final class OnboardingOptions {
   static const List<ActivityOption> activities = <ActivityOption>[
     ActivityOption(
       value: 'couch',
-      label: 'Couch potato',
-      description: 'Indoor, mostly naps',
+      label: 'Low Activity',
+      description: 'Sleeps most of the day with short indoor play sessions',
       icon: Icons.weekend_rounded,
     ),
     ActivityOption(
       value: 'active',
-      label: 'Playful indoor',
-      description: 'Active but stays inside',
+      label: 'Moderately Active',
+      description: 'Regular indoor play and occasional exploration',
       icon: Icons.toys_rounded,
     ),
     ActivityOption(
       value: 'outdoor',
-      label: 'Outdoor explorer',
-      description: 'Goes outside regularly',
+      label: 'Highly Active',
+      description: 'Frequent running, climbing, and outdoor exploration',
       icon: Icons.park_rounded,
     ),
   ];

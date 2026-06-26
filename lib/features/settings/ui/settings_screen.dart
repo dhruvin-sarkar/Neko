@@ -78,10 +78,10 @@ class SettingsScreen extends ConsumerWidget {
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children:
-              [
+        child:
+            Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Text('Settings', style: AppTextStyles.displayLarge),
                     const SizedBox(height: 24),
                     _AccountCard(displayName: displayName, email: email),
@@ -93,11 +93,11 @@ class SettingsScreen extends ConsumerWidget {
                       isLoading: isLoading,
                       onPressed: () => _confirmSignOut(context, ref),
                     ),
-                  ]
-                  .animate(interval: 60.ms)
-                  .fadeIn(duration: 280.ms)
-                  .slideY(begin: 0.12, end: 0, curve: Curves.easeOutCubic),
-        ),
+                  ],
+                )
+                .animate()
+                .fadeIn(duration: 280.ms)
+                .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic),
       ),
     );
   }

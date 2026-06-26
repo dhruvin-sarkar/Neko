@@ -39,10 +39,22 @@ class DocumentRepository {
   final CollectionReference<Map<String, dynamic>> _docsRef;
   final Reference _storageBase;
 
-  Stream<List<CatDocument>> watchAll() => _docsRef
-      .orderBy('uploadedAt', descending: true)
-      .snapshots()
-      .map((snap) => snap.docs.map(CatDocument.fromFirestore).toList());
+  Stream<List<CatDocument>> watchAll() => _docsRef.snapshots().map((snap) {
+    final List<CatDocument> docs = snap.docs
+        .map(CatDocument.fromFirestore)
+        .toList();
+    // Newest first; a just-uploaded doc has a pending server timestamp, so I
+    // sort on the client (rather than orderBy) to keep it visible right away.
+    docs.sort((a, b) {
+      final DateTime? ad = a.uploadedAt;
+      final DateTime? bd = b.uploadedAt;
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return -1; // pending upload — show it first
+      if (bd == null) return 1;
+      return bd.compareTo(ad);
+    });
+    return docs;
+  });
 
   /// Uploads the file at [path] to Storage and records its metadata.
   Future<void> upload({
