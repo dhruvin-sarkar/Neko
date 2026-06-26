@@ -59,6 +59,17 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
     if (mounted) context.go(Routes.home);
   }
 
+  /// The back arrow goes to the previous question, or — if we're already on the
+  /// first one — exits onboarding entirely (e.g. cancelling "add another cat"
+  /// and returning to Home).
+  void _onBack() {
+    if (ref.read(onboardingNotifierProvider).step > 1) {
+      ref.read(onboardingNotifierProvider.notifier).previousStep();
+    } else if (context.canPop()) {
+      context.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<String?>(
@@ -95,7 +106,7 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                 child: Column(
                   children: [
                     OnboardingTopBar(
-                      onBack: notifier.previousStep,
+                      onBack: _onBack,
                       showProgress: config.showProgress,
                       fraction: config.progressFraction,
                     ),
