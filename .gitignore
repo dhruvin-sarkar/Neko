@@ -51,3 +51,13 @@ CLAUDE.md
 android/build/
 android/.gradle/
 **/build/
+
+# Local build / analyze / test output logs
+/apkbuild.txt
+/apkdebug.txt
+/az.txt
+/tt.txt
+/pg.txt
+/br.txt
+/ci.txt
+/devices.txt
