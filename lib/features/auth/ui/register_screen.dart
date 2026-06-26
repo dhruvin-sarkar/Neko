@@ -14,6 +14,7 @@ import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/auth_divider.dart';
 import '../../../shared/widgets/google_sign_in_button.dart';
 import '../../../shared/widgets/neko_primary_button.dart';
+import '../../../shared/widgets/neko_snackbar.dart';
 import '../../../shared/widgets/neko_text_field.dart';
 import '../providers/auth_provider.dart';
 
@@ -51,10 +52,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
   }
 
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+  void _showSnack(String message, {bool error = false}) {
+    NekoSnackBar.show(context, message, error: error);
   }
 
   @override
@@ -65,6 +64,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         unawaited(ref.read(feedbackServiceProvider).onError());
         _showSnack(
           error is AppException ? error.message : 'Something went wrong.',
+          error: true,
         );
       } else if (next is AsyncData && (previous?.isLoading ?? false)) {
         // Registration succeeded; the router will redirect into onboarding.

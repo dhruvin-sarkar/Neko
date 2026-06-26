@@ -10,7 +10,9 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../shared/services/feedback_service.dart';
+import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_primary_button.dart';
+import '../../../shared/widgets/neko_snackbar.dart';
 import '../../../shared/widgets/neko_text_field.dart';
 import '../../onboarding/data/calorie_calculator.dart';
 import '../../onboarding/data/onboarding_options.dart';
@@ -119,7 +121,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     if (original == null) return;
 
     unawaited(ref.read(feedbackServiceProvider).onTap());
-    final bool? confirmed = await showDialog<bool>(
+    final bool? confirmed = await showNekoDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
@@ -169,15 +171,11 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     ) {
       if (next is AsyncError) {
         final Object error = next.error;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                error is AppException ? error.message : 'Something went wrong.',
-              ),
-            ),
-          );
+        NekoSnackBar.show(
+          context,
+          error is AppException ? error.message : 'Something went wrong.',
+          error: true,
+        );
       }
     });
 

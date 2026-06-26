@@ -10,6 +10,8 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/logger.dart';
 import '../../../../shared/services/feedback_service.dart';
 import '../../../../shared/services/file_picker_service.dart';
+import '../../../../shared/widgets/neko_dialog.dart';
+import '../../../../shared/widgets/neko_snackbar.dart';
 import '../../models/cat_document.dart';
 import '../../providers/document_provider.dart';
 import 'document_tile.dart';
@@ -61,11 +63,11 @@ class DocumentsSection extends ConsumerWidget {
       }
     }
     if (!opened && context.mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text("We couldn't open that document.")),
-        );
+      NekoSnackBar.show(
+        context,
+        "We couldn't open that document.",
+        error: true,
+      );
     }
   }
 
@@ -74,7 +76,7 @@ class DocumentsSection extends ConsumerWidget {
     WidgetRef ref,
     CatDocument document,
   ) async {
-    final bool? confirmed = await showDialog<bool>(
+    final bool? confirmed = await showNekoDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Delete document?', style: AppTextStyles.headlineLarge),
@@ -113,15 +115,11 @@ class DocumentsSection extends ConsumerWidget {
     ) {
       if (next is AsyncError) {
         final Object error = next.error;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                error is AppException ? error.message : 'Something went wrong.',
-              ),
-            ),
-          );
+        NekoSnackBar.show(
+          context,
+          error is AppException ? error.message : 'Something went wrong.',
+          error: true,
+        );
       }
     });
 

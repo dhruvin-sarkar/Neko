@@ -10,7 +10,9 @@ import '../../../app/theme/app_text_styles.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/services/feedback_service.dart';
+import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_pill_button.dart';
+import '../../../shared/widgets/neko_snackbar.dart';
 import '../../auth/providers/auth_provider.dart';
 
 /// The Settings tab. Background and bottom nav pill are provided by [MainShell].
@@ -19,7 +21,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
     unawaited(ref.read(feedbackServiceProvider).onTap());
-    final bool? confirmed = await showDialog<bool>(
+    final bool? confirmed = await showNekoDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Sign out?', style: AppTextStyles.headlineLarge),
@@ -55,15 +57,11 @@ class SettingsScreen extends ConsumerWidget {
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
       if (next is AsyncError) {
         final Object error = next.error;
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(
-              content: Text(
-                error is AppException ? error.message : 'Something went wrong.',
-              ),
-            ),
-          );
+        NekoSnackBar.show(
+          context,
+          error is AppException ? error.message : 'Something went wrong.',
+          error: true,
+        );
       }
     });
 

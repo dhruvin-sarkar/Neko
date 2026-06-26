@@ -15,6 +15,7 @@ class CatAvatar extends StatelessWidget {
     this.avatarPreset,
     this.size = 48,
     this.borderWidth = 2,
+    this.heroTag,
   });
 
   final String colorType;
@@ -23,8 +24,23 @@ class CatAvatar extends StatelessWidget {
   final double size;
   final double borderWidth;
 
+  /// When set, the avatar participates in a Hero shared-element transition
+  /// (e.g. flying from the home banner into the profile detail).
+  final Object? heroTag;
+
   @override
   Widget build(BuildContext context) {
+    final Widget avatar = _buildAvatar();
+    if (heroTag == null) return avatar;
+    return Hero(
+      tag: heroTag!,
+      // Keep the avatar circular and crisp throughout the flight.
+      flightShuttleBuilder: (_, _, _, _, toHero) => toHero.widget,
+      child: avatar,
+    );
+  }
+
+  Widget _buildAvatar() {
     final Widget fallback = Container(
       width: size,
       height: size,

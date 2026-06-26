@@ -22,6 +22,13 @@ AuthRepository authRepository(Ref ref) => AuthRepository(
   googleSignIn: ref.watch(googleSignInProvider),
 );
 
+/// Interactive Google account changes, used by the official web sign-in button.
+/// When the web button completes the picker, the account flows through here and
+/// [AuthController] completes Firebase sign-in.
+@Riverpod(keepAlive: true)
+Stream<GoogleSignInAccount?> googleAccountChanges(Ref ref) =>
+    ref.watch(authRepositoryProvider).googleAccountChanges;
+
 /// Drives auth actions and exposes their progress as an [AsyncValue].
 ///
 /// The UI calls these methods, watches this controller for loading/error

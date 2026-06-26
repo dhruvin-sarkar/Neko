@@ -1,12 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'pressable.dart';
 
-/// Google sign-in button. I follow Google's own branding here (Roboto, the
-/// neutral border, the multi-color "G") instead of our coral theme, because
-/// their brand guidelines require it. I paint the logo directly so it needs no
-/// asset.
+/// Google sign-in button following Google's branding (Roboto, neutral border,
+/// the four-color "G"). The logo is painted directly so it needs no asset.
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
@@ -33,8 +33,8 @@ class GoogleSignInButton extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(
-            width: 18,
-            height: 18,
+            width: 20,
+            height: 20,
             child: CustomPaint(painter: _GoogleLogoPainter()),
           ),
           const SizedBox(width: 12),
@@ -69,65 +69,57 @@ class GoogleSignInButton extends StatelessWidget {
   }
 }
 
+/// Paints the official four-color Google "G".
+///
+/// The mark is a thick ring split into four colored arcs (red top, yellow
+/// left, green bottom, blue upper-right) plus the blue horizontal crossbar that
+/// runs from the centre out to the ring on the right.
 class _GoogleLogoPainter extends CustomPainter {
+  static const Color _blue = Color(0xFF4285F4);
+  static const Color _red = Color(0xFFEA4335);
+  static const Color _yellow = Color(0xFFFBBC05);
+  static const Color _green = Color(0xFF34A853);
+
+  double _rad(double degrees) => degrees * math.pi / 180.0;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-    final double centerX = w / 2;
-    final double centerY = h / 2;
-    final double radius = w / 2;
-    final Rect rect = Rect.fromCircle(
-      center: Offset(centerX, centerY),
-      radius: radius,
-    );
-    final Paint paint = Paint()..style = PaintingStyle.fill;
+    final Offset center = size.center(Offset.zero);
+    final double outer = size.shortestSide / 2;
+    // Ring thickness ≈ the bar height of the real mark.
+    final double stroke = outer * 0.46;
+    final double radius = outer - stroke / 2;
+    final Rect rect = Rect.fromCircle(center: center, radius: radius);
 
-    paint.color = const Color(0xFF34A853); // Green
-    canvas.drawPath(
-      Path()
-        ..moveTo(centerX, centerY)
-        ..lineTo(centerX + radius * 0.7, centerY + radius * 0.7)
-        ..arcTo(rect, 0.785, 1.57, false)
-        ..close(),
-      paint,
-    );
+    final Paint arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
 
-    paint.color = const Color(0xFFFBBC05); // Yellow
-    canvas.drawPath(
-      Path()
-        ..moveTo(centerX, centerY)
-        ..lineTo(centerX - radius * 0.7, centerY + radius * 0.7)
-        ..arcTo(rect, 2.355, 1.57, false)
-        ..close(),
-      paint,
-    );
+    // Clockwise from a little above the east bar opening.
+    // Blue sweeps across the east (and merges with the crossbar), then green
+    // along the bottom, yellow up the left, red across the top.
+    arc.color = _blue;
+    canvas.drawArc(rect, _rad(-75), _rad(115), false, arc);
+    arc.color = _green;
+    canvas.drawArc(rect, _rad(40), _rad(95), false, arc);
+    arc.color = _yellow;
+    canvas.drawArc(rect, _rad(135), _rad(75), false, arc);
+    arc.color = _red;
+    canvas.drawArc(rect, _rad(210), _rad(75), false, arc);
 
-    paint.color = const Color(0xFFEA4335); // Red
-    canvas.drawPath(
-      Path()
-        ..moveTo(centerX, centerY)
-        ..lineTo(centerX - radius * 0.7, centerY - radius * 0.7)
-        ..arcTo(rect, 3.925, 1.57, false)
-        ..close(),
-      paint,
+    // Blue crossbar: from the centre out to the ring on the right, at the
+    // vertical middle, the same thickness as the ring.
+    final Paint bar = Paint()
+      ..color = _blue
+      ..style = PaintingStyle.fill;
+    final Rect barRect = Rect.fromLTRB(
+      center.dx,
+      center.dy - stroke / 2,
+      center.dx + radius + stroke / 2,
+      center.dy + stroke / 2,
     );
-
-    paint.color = const Color(0xFF4285F4); // Blue
-    canvas.drawPath(
-      Path()
-        ..moveTo(centerX, centerY)
-        ..lineTo(centerX + radius * 0.7, centerY - radius * 0.7)
-        ..arcTo(rect, 5.495, 0.785, false)
-        ..lineTo(centerX + radius, centerY + radius * 0.1)
-        ..lineTo(centerX, centerY + radius * 0.1)
-        ..close(),
-      paint,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(centerX, centerY - radius * 0.1, radius, radius * 0.25),
-      paint,
-    );
+    canvas.drawRect(barRect, bar);
   }
 
   @override

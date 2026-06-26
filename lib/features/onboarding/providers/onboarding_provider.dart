@@ -1,8 +1,10 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/errors/app_exception.dart';
+import '../../../core/providers/firebase_providers.dart';
 import '../../../core/utils/validators.dart';
 import '../data/calorie_calculator.dart';
+import '../data/onboarding_persistence.dart';
 import '../data/onboarding_repository.dart';
 import '../models/cat_profile.dart';
 import '../models/onboarding_state.dart';
@@ -99,6 +101,12 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       await ref
           .read(onboardingRepositoryProvider)
           .completeOnboarding(profile, photoPath: draft.photoPath);
+      // Persist completion locally so a returning user skips onboarding even
+      // before Firestore echoes the flag back (and while offline).
+      final String? uid = ref.read(authStateChangesProvider).valueOrNull?.uid;
+      if (uid != null) {
+        await ref.read(onboardingPersistenceProvider).setComplete(uid);
+      }
       state = state.copyWith(isSaving: false);
       return true;
     } on AppException catch (e) {

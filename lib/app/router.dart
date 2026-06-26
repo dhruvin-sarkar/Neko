@@ -35,42 +35,42 @@ GoRouter goRouter(Ref ref) {
     routes: <RouteBase>[
       GoRoute(
         path: Routes.splash,
-        pageBuilder: (context, state) => PageTransitions.fade(
+        pageBuilder: (context, state) => PageTransitions.pawCurtain(
           key: state.pageKey,
           child: const SplashScreen(),
         ),
       ),
       GoRoute(
         path: Routes.welcome,
-        pageBuilder: (context, state) => PageTransitions.fade(
+        pageBuilder: (context, state) => PageTransitions.pawCurtain(
           key: state.pageKey,
           child: const WelcomeScreen(),
         ),
       ),
       GoRoute(
         path: Routes.login,
-        pageBuilder: (context, state) => PageTransitions.slideFromRight(
+        pageBuilder: (context, state) => PageTransitions.fadeThrough(
           key: state.pageKey,
           child: const LoginScreen(),
         ),
       ),
       GoRoute(
         path: Routes.register,
-        pageBuilder: (context, state) => PageTransitions.slideFromRight(
+        pageBuilder: (context, state) => PageTransitions.fadeThrough(
           key: state.pageKey,
           child: const RegisterScreen(),
         ),
       ),
       GoRoute(
         path: Routes.onboarding,
-        pageBuilder: (context, state) => PageTransitions.fade(
+        pageBuilder: (context, state) => PageTransitions.pawCurtain(
           key: state.pageKey,
           child: const OnboardingScreen(),
         ),
       ),
       GoRoute(
         path: Routes.profilePattern,
-        pageBuilder: (context, state) => PageTransitions.slideFromRight(
+        pageBuilder: (context, state) => PageTransitions.blurFade(
           key: state.pageKey,
           child: ProfileDetailScreen(
             catId: state.pathParameters['catId'] ?? '',
@@ -79,7 +79,7 @@ GoRouter goRouter(Ref ref) {
         routes: [
           GoRoute(
             path: 'edit',
-            pageBuilder: (context, state) => PageTransitions.slideFromRight(
+            pageBuilder: (context, state) => PageTransitions.fadeThrough(
               key: state.pageKey,
               child: EditCatScreen(catId: state.pathParameters['catId'] ?? ''),
             ),

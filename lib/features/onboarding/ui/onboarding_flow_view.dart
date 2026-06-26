@@ -7,7 +7,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../shared/motion/page_transitions.dart';
 import '../../../shared/services/feedback_service.dart';
+import '../../../shared/widgets/neko_snackbar.dart';
 import '../models/step_config.dart';
 import '../providers/onboarding_provider.dart';
 import 'steps/activity_step.dart';
@@ -50,13 +52,21 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
       notifier.nextStep();
       return;
     }
-    // Final step: save first, then celebrate before the router takes us home.
+    // Final step: save first, then celebrate before the curtain sweeps us home.
     final bool saved = await notifier.save();
     if (!mounted || !saved) return;
     unawaited(feedback.onSuccess());
     _confetti.play();
     await Future<void>.delayed(const Duration(milliseconds: 1500));
-    if (mounted) context.go(Routes.home);
+    if (!mounted) return;
+    // Branded paw-curtain hands off to Home: it covers the screen, we navigate
+    // underneath, then it sweeps open to reveal the app.
+    await playPawCurtain(
+      context,
+      onCovered: () {
+        if (mounted) context.go(Routes.home);
+      },
+    );
   }
 
   /// The back arrow goes to the previous question, or — if we're already on the
@@ -77,9 +87,7 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
       (previous, next) {
         if (next != null && next.isNotEmpty) {
           unawaited(ref.read(feedbackServiceProvider).onError());
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(content: Text(next)));
+          NekoSnackBar.show(context, next, error: true);
         }
       },
     );

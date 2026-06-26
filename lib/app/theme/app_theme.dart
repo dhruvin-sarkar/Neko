@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../shared/motion/page_transitions.dart';
 import 'app_colors.dart';
 import 'app_text_styles.dart';
 
@@ -29,6 +30,16 @@ abstract final class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: Colors.transparent,
       textTheme: _textTheme,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: NekoPageTransitionsBuilder(),
+          TargetPlatform.iOS: NekoPageTransitionsBuilder(),
+          TargetPlatform.macOS: NekoPageTransitionsBuilder(),
+          TargetPlatform.windows: NekoPageTransitionsBuilder(),
+          TargetPlatform.linux: NekoPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: NekoPageTransitionsBuilder(),
+        },
+      ),
       filledButtonTheme: _filledButtonTheme,
       outlinedButtonTheme: _outlinedButtonTheme,
       textButtonTheme: _textButtonTheme,

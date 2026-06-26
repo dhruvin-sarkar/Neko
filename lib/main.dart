@@ -7,9 +7,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/neko_app.dart';
 import 'core/utils/logger.dart';
+import 'features/onboarding/data/onboarding_persistence.dart';
 import 'firebase_options.dart';
 import 'shared/services/sound_service.dart';
 
@@ -56,7 +58,12 @@ void main() {
 
       // Pre-load UI sounds so the first tap is low-latency. The same container
       // backs the app, so the initialized service is the one widgets use.
-      final ProviderContainer container = ProviderContainer();
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final ProviderContainer container = ProviderContainer(
+        overrides: <Override>[
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+      );
       await container.read(soundServiceProvider).init();
 
       runApp(

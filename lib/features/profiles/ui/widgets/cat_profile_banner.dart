@@ -31,6 +31,7 @@ class CatProfileBanner extends StatelessWidget {
               colorType: cat.colorType,
               photoUrl: cat.photoUrl,
               avatarPreset: cat.avatarPreset,
+              heroTag: 'cat-avatar-${cat.id}',
             ),
             const SizedBox(width: 16),
             Expanded(

@@ -26,6 +26,12 @@ class AuthRepository {
 
   User? get currentUser => _auth.currentUser;
 
+  /// Interactive Google account stream. The official web sign-in button (the
+  /// `google_sign_in_web` rendered button) drives this stream: when the user
+  /// completes the Google picker, the resulting account flows through here.
+  Stream<GoogleSignInAccount?> get googleAccountChanges =>
+      _googleSignIn.onCurrentUserChanged;
+
   /// Signs in with email and password.
   Future<void> signInWithEmail({
     required String email,
@@ -109,6 +115,46 @@ class AuthRepository {
     }
   }
 
+  /// Completes Firebase sign-in from an already-obtained Google [account].
+  ///
+  /// Used by the web sign-in flow, where the official `google_sign_in_web`
+  /// button performs the interactive picker and surfaces the account through
+  /// [googleAccountChanges]. Reuses the same token → credential →
+  /// `signInWithCredential` → user-document logic as [signInWithGoogle].
+  /// Returns `true` on success. Throws [AppException] on failure.
+  Future<bool> completeGoogleSignIn(GoogleSignInAccount account) async {
+    try {
+      final GoogleSignInAuthentication auth = await account.authentication;
+      if (auth.idToken == null) {
+        throw const AppException(
+          'Google did not return a valid token. Try again.',
+        );
+      }
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: auth.accessToken,
+        idToken: auth.idToken,
+      );
+      final UserCredential result = await _auth.signInWithCredential(
+        credential,
+      );
+      final User? user = result.user;
+      if (user != null) {
+        await _ensureUserDocument(
+          user,
+          displayName:
+              user.displayName ?? _displayNameFromEmail(user.email ?? ''),
+        );
+      }
+      return true;
+    } on FirebaseAuthException catch (e, st) {
+      throw _mapAuthError(e, st);
+    } on AppException {
+      rethrow;
+    } on Object catch (e, st) {
+      throw _mapUnknown(e, st);
+    }
+  }
+
   Future<void> sendPasswordReset(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
@@ -128,23 +174,30 @@ class AuthRepository {
     }
   }
 
-  /// Creates or merges the `users/{uid}` document. `createdAt` is only written
-  /// once (merge never overwrites an existing value because we use set-merge
-  /// and the field is server-stamped on first write).
+  /// Creates or merges the `users/{uid}` document. Best-effort: a failure here
+  /// (e.g. Firestore rules or a transient network error) is logged but never
+  /// thrown, so it can't turn an otherwise-successful sign-in into an error.
+  /// `createdAt` is only written once (merge never overwrites an existing
+  /// value because we use set-merge and the field is server-stamped on first
+  /// write).
   Future<void> _ensureUserDocument(
     User user, {
     required String displayName,
   }) async {
-    final DocumentReference<Map<String, dynamic>> ref = _firestore
-        .collection('users')
-        .doc(user.uid);
-    final DocumentSnapshot<Map<String, dynamic>> existing = await ref.get();
-    await ref.set({
-      'displayName': displayName,
-      'email': user.email ?? '',
-      if (!existing.exists) 'createdAt': FieldValue.serverTimestamp(),
-      if (!existing.exists) 'onboardingComplete': false,
-    }, SetOptions(merge: true));
+    try {
+      final DocumentReference<Map<String, dynamic>> ref = _firestore
+          .collection('users')
+          .doc(user.uid);
+      final DocumentSnapshot<Map<String, dynamic>> existing = await ref.get();
+      await ref.set({
+        'displayName': displayName,
+        'email': user.email ?? '',
+        if (!existing.exists) 'createdAt': FieldValue.serverTimestamp(),
+        if (!existing.exists) 'onboardingComplete': false,
+      }, SetOptions(merge: true));
+    } on Object catch (e, st) {
+      AppLogger.warning('Could not sync user document; continuing', e, st);
+    }
   }
 
   String _displayNameFromEmail(String email) {
@@ -179,7 +232,11 @@ class AuthRepository {
   }
 
   AppException _mapUnknown(Object e, StackTrace st) {
-    AppLogger.error('Unexpected auth failure', e, st);
+    AppLogger.error(
+      'Unexpected auth failure (${e.runtimeType}): $e',
+      e,
+      st,
+    );
     return AppException('Something went wrong. Please try again.', cause: e);
   }
 }
