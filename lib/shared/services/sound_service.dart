@@ -23,11 +23,11 @@ class SoundService {
   Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
-    _tapPool = await _tryCreate('assets/sounds/tap.mp3', maxPlayers: 4);
-    _selectPool = await _tryCreate('assets/sounds/select.mp3', maxPlayers: 2);
-    _whooshPool = await _tryCreate('assets/sounds/whoosh.mp3', maxPlayers: 2);
-    _successPool = await _tryCreate('assets/sounds/success.mp3', maxPlayers: 1);
-    _errorPool = await _tryCreate('assets/sounds/error.mp3', maxPlayers: 1);
+    _tapPool = await _tryCreate('sounds/tap.mp3', maxPlayers: 4);
+    _selectPool = await _tryCreate('sounds/select.mp3', maxPlayers: 2);
+    _whooshPool = await _tryCreate('sounds/whoosh.mp3', maxPlayers: 2);
+    _successPool = await _tryCreate('sounds/success.mp3', maxPlayers: 1);
+    _errorPool = await _tryCreate('sounds/error.mp3', maxPlayers: 1);
   }
 
   Future<AudioPool?> _tryCreate(String path, {required int maxPlayers}) async {

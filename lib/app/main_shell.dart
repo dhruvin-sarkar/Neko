@@ -25,7 +25,9 @@ class MainShell extends ConsumerWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.only(top: 8, bottom: 16),
-          child: Center(
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            heightFactor: 1,
             child: NekoNavPill(
               selectedIndex: navigationShell.currentIndex,
               onSelect: (index) {
