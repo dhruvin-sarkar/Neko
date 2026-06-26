@@ -23,7 +23,7 @@ class _PawBackgroundState extends State<PawBackground>
   // One slow loop = the pattern drifts exactly one tile, so it wraps seamlessly.
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 40),
+    duration: const Duration(seconds: 25),
   )..repeat();
 
   @override
