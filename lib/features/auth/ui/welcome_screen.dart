@@ -5,31 +5,25 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../app/routes.dart';
-import '../../../../app/theme/app_colors.dart';
-import '../../../../app/theme/app_text_styles.dart';
-import '../../../../core/providers/firebase_providers.dart';
-import '../../../../shared/services/feedback_service.dart';
-import '../../../../shared/widgets/neko_mascot.dart';
-import '../../../../shared/widgets/neko_primary_button.dart';
-import '../../../../shared/widgets/neko_text_button.dart';
-import '../../providers/onboarding_provider.dart';
+import '../../../app/routes.dart';
+import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_text_styles.dart';
+import '../../../shared/services/feedback_service.dart';
+import '../../../shared/widgets/neko_mascot.dart';
+import '../../../shared/widgets/neko_primary_button.dart';
+import '../../../shared/widgets/neko_text_button.dart';
 
-/// Step 0 — the warm welcome. White screen, a mascot that springs in, and the
-/// two entry actions.
-class WelcomeStep extends ConsumerWidget {
-  const WelcomeStep({super.key});
+/// The first screen a signed-out person sees: the Neko welcome, with "Get
+/// started" leading into account creation and a link to sign in.
+class WelcomeScreen extends ConsumerWidget {
+  const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bool isAuthed = ref.watch(
-      authStateChangesProvider.select((v) => v.valueOrNull != null),
-    );
-    final notifier = ref.read(onboardingNotifierProvider.notifier);
     final FeedbackService feedback = ref.read(feedbackServiceProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -40,16 +34,17 @@ class WelcomeStep extends ConsumerWidget {
                 label: 'Get started',
                 onPressed: () {
                   unawaited(feedback.onTap());
-                  notifier.nextStep();
+                  context.go(Routes.register);
                 },
               ),
-              if (!isAuthed) ...[
-                const SizedBox(height: 12),
-                NekoTextButton(
-                  label: 'I already have an account',
-                  onPressed: () => context.go(Routes.login),
-                ),
-              ],
+              const SizedBox(height: 8),
+              NekoTextButton(
+                label: 'I already have an account',
+                onPressed: () {
+                  unawaited(feedback.onTap());
+                  context.go(Routes.login);
+                },
+              ),
             ],
           ),
         ),
@@ -67,7 +62,7 @@ class _WelcomeMark extends StatelessWidget {
       width: 132,
       height: 132,
       decoration: const BoxDecoration(
-        color: AppColors.selectedFill,
+        color: AppColors.primaryLight,
         shape: BoxShape.circle,
       ),
       child: const Icon(Icons.pets_rounded, size: 64, color: AppColors.primary),

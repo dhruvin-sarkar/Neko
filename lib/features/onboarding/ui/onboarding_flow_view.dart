@@ -80,12 +80,12 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
     final notifier = ref.read(onboardingNotifierProvider.notifier);
 
     return PopScope(
-      canPop: false,
+      canPop: state.step <= 1,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) notifier.previousStep();
       },
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [

@@ -3,6 +3,7 @@ abstract final class Routes {
   const Routes._();
 
   static const String splash = '/splash';
+  static const String welcome = '/welcome';
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String onboarding = '/onboarding';

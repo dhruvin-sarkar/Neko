@@ -118,3 +118,9 @@ Adopted the full design system across the app, with one override: the page backg
 - Added `confetti`: finishing onboarding saves the cat, fires the success haptic, bursts confetti (coral + cat colours) for 1.5s, then the router takes you home.
 
 Deferred (noted, not blocking): converting the home/breed lists to `AnimateList` with a `_hasAnimated` guard (current per-item stagger with stable keys already animates once and doesn't replay on Firestore updates), the "newest cat" bounce on home, and a chiclet outlined style for the secondary "I already have an account" link. Sounds remain optional no-ops until real clips are added.
+
+## Session 9 — Paw background + welcome-first flow
+
+- Added `PawBackground`: a single app-wide widget (wired through `MaterialApp.router`'s `builder`) that fills the warm amber and paints a faint field of cat paws drifting slowly and diagonally on a 40s loop. It sits behind every route, so the motion is continuous across page transitions. Every Scaffold is now transparent (theme default + each screen) so the background shows through. Kept subtle: ~8% coral, slow drift, staggered grid with a small per-paw tilt so it reads as texture, not clutter.
+- Reordered the entry flow so the Neko "Get started" welcome is the first page for signed-out users. New `WelcomeScreen` at `/welcome` (mascot + Get started → register, "I already have an account" → login). The router now lands signed-out users on `/welcome` (login/register reachable from it). Login/Register gained back buttons to `/welcome`.
+- Since the brand welcome moved pre-auth, onboarding no longer has its own welcome step — it starts directly on the name question (`OnboardingState` starts at step 1; the in-flow welcome step was removed). The first question can be backed out of (PopScope `canPop` at step 1), so "add another cat" can be cancelled.

@@ -25,7 +25,7 @@ class ProfileDetailScreen extends ConsumerWidget {
     final CatProfile? cat = ref.watch(catByIdProvider(catId));
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: const BackButton(color: AppColors.textPrimary),
         actions: [

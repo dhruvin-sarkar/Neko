@@ -7,6 +7,7 @@ import '../core/providers/firebase_providers.dart';
 import '../features/auth/ui/login_screen.dart';
 import '../features/auth/ui/register_screen.dart';
 import '../features/auth/ui/splash_screen.dart';
+import '../features/auth/ui/welcome_screen.dart';
 import '../features/onboarding/providers/onboarding_status_provider.dart';
 import '../features/onboarding/ui/onboarding_screen.dart';
 import '../features/profiles/ui/edit_cat_screen.dart';
@@ -37,6 +38,13 @@ GoRouter goRouter(Ref ref) {
         pageBuilder: (context, state) => PageTransitions.fade(
           key: state.pageKey,
           child: const SplashScreen(),
+        ),
+      ),
+      GoRoute(
+        path: Routes.welcome,
+        pageBuilder: (context, state) => PageTransitions.fade(
+          key: state.pageKey,
+          child: const WelcomeScreen(),
         ),
       ),
       GoRoute(
@@ -118,6 +126,7 @@ class RouterNotifier extends ChangeNotifier {
   String? redirect(BuildContext context, GoRouterState state) {
     final String location = state.matchedLocation;
     final bool onSplash = location == Routes.splash;
+    final bool onWelcome = location == Routes.welcome;
     final bool onAuth = Routes.isAuth(location);
 
     // Keep the splash visible for a minimum time so it never flashes.
@@ -133,7 +142,9 @@ class RouterNotifier extends ChangeNotifier {
 
     final user = authValue.valueOrNull;
     if (user == null) {
-      return onAuth ? null : Routes.login;
+      // Signed out: the Welcome screen is the landing; login/register are
+      // reachable from it. Anything else bounces back to Welcome.
+      return (onWelcome || onAuth) ? null : Routes.welcome;
     }
 
     final onboardingValue = _ref.read(onboardingCompleteProvider);
@@ -147,9 +158,9 @@ class RouterNotifier extends ChangeNotifier {
       return location == Routes.onboarding ? null : Routes.onboarding;
     }
 
-    // Fully onboarded: never sit on splash or auth. The onboarding route stays
-    // reachable on purpose so a returning user can add another cat.
-    if (onSplash || onAuth) return Routes.home;
+    // Fully onboarded: never sit on splash, welcome, or auth. The onboarding
+    // route stays reachable on purpose so a returning user can add another cat.
+    if (onSplash || onWelcome || onAuth) return Routes.home;
     return null;
   }
 }

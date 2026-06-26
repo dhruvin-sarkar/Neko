@@ -21,7 +21,7 @@ const int _lastStep = 7;
 @riverpod
 class OnboardingNotifier extends _$OnboardingNotifier {
   @override
-  OnboardingState build() => const OnboardingState();
+  OnboardingState build() => const OnboardingState(step: 1);
 
   void setName(String name) =>
       state = state.copyWith(draft: state.draft.copyWith(name: name));
@@ -64,11 +64,11 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   }
 
   void previousStep() {
-    if (state.step > 0) state = state.copyWith(step: state.step - 1);
+    if (state.step > 1) state = state.copyWith(step: state.step - 1);
   }
 
   /// Resets the flow to a clean draft — used when adding another cat.
-  void reset() => state = const OnboardingState();
+  void reset() => state = const OnboardingState(step: 1);
 
   /// Persists the collected cat and marks onboarding complete.
   ///

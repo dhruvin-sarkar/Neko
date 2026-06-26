@@ -195,7 +195,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
 
     if (_original == null) {
       return Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         appBar: AppBar(leading: const BackButton(color: AppColors.textPrimary)),
         body: Center(
           child: (cat == null && stillLoading)
@@ -209,7 +209,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: const BackButton(color: AppColors.textPrimary),
         title: Text(

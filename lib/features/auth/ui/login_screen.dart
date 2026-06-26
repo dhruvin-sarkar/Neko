@@ -84,8 +84,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final bool isLoading = ref.watch(authControllerProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: AppColors.homeBg,
-      appBar: AppBar(automaticallyImplyLeading: false),
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        leading: BackButton(
+          color: AppColors.textPrimary,
+          onPressed: isLoading ? null : () => context.go(Routes.welcome),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),

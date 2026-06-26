@@ -27,7 +27,7 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: Colors.transparent,
       textTheme: _textTheme,
       filledButtonTheme: _filledButtonTheme,
       outlinedButtonTheme: _outlinedButtonTheme,

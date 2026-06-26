@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../features/profiles/ui/widgets/neko_nav_pill.dart';
 import '../shared/services/feedback_service.dart';
-import 'theme/app_colors.dart';
 
 /// Hosts the Home and Settings tabs behind a persistent bottom nav pill.
 ///
@@ -20,7 +19,7 @@ class MainShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: AppColors.homeBg,
+      backgroundColor: Colors.transparent,
       body: navigationShell,
       bottomNavigationBar: SafeArea(
         top: false,
