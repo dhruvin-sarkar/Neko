@@ -14,7 +14,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.homeBg,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -23,7 +23,7 @@ class SplashScreen extends StatelessWidget {
                   'Neko',
                   style: AppTextStyles.displayLarge.copyWith(
                     fontSize: 56,
-                    color: AppColors.primary,
+                    color: AppColors.darkBanner,
                   ),
                 )
                 .animate()
@@ -40,7 +40,7 @@ class SplashScreen extends StatelessWidget {
               width: 24,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: AppColors.primary,
+                color: AppColors.darkBanner,
               ),
             ).animate(delay: 400.ms).fadeIn(duration: 300.ms),
           ],

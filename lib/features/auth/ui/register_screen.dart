@@ -74,7 +74,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final bool isLoading = ref.watch(authControllerProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.homeBg,
       appBar: AppBar(
         leading: BackButton(
           onPressed: isLoading ? null : () => context.go(Routes.login),
