@@ -12,6 +12,8 @@ import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
+import '../../tour/providers/tour_keys.dart';
+import '../../tour/ui/home_tour.dart';
 import '../providers/profile_provider.dart';
 import 'widgets/add_cat_section.dart';
 import 'widgets/cat_banner_shimmer.dart';
@@ -31,6 +33,14 @@ class HomeScreen extends ConsumerWidget {
       authStateChangesProvider.select((v) => v.valueOrNull?.displayName),
     );
     final FeedbackService feedback = ref.read(feedbackServiceProvider);
+    final TourKeys tourKeys = ref.read(tourKeysProvider);
+
+    // Kick off the first-run guided tour once Home is on screen. The call
+    // self-guards (persistence + in-memory flag) and waits for its targets to
+    // lay out, so firing it on every build is safe.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) HomeTour.maybeShow(context, ref);
+    });
 
     void openCat(String catId) {
       unawaited(feedback.onTap());
@@ -46,11 +56,13 @@ class HomeScreen extends ConsumerWidget {
     return SafeArea(
       bottom: false,
       child: CustomScrollView(
+        controller: ref.read(homeScrollControllerProvider),
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             sliver: SliverToBoxAdapter(
               child: HomeGreeting(
+                key: tourKeys.greeting,
                 displayName: displayName,
               ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.15, end: 0),
             ),
@@ -72,7 +84,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ],
-            data: (list) => _catSlivers(list, openCat, addCat),
+            data: (list) => _catSlivers(list, openCat, addCat, tourKeys),
           ),
         ],
       ),
@@ -85,12 +97,15 @@ List<Widget> _catSlivers(
   List<CatProfile> cats,
   void Function(String) onOpenCat,
   VoidCallback onAddCat,
+  TourKeys tourKeys,
 ) {
   if (cats.isEmpty) {
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        sliver: SliverToBoxAdapter(child: _EmptyCats(onAddCat: onAddCat)),
+        sliver: SliverToBoxAdapter(
+          child: _EmptyCats(onAddCat: onAddCat, plusKey: tourKeys.addCatPlus),
+        ),
       ),
     ];
   }
@@ -101,39 +116,46 @@ List<Widget> _catSlivers(
         itemCount: cats.length,
         itemBuilder: (context, index) {
           final CatProfile cat = cats[index];
+          final Widget banner =
+              RepaintBoundary(
+                    child: CatProfileBanner(
+                      cat: cat,
+                      onTap: () => onOpenCat(cat.id),
+                    ),
+                  )
+                  .animate(delay: (80 * index).ms)
+                  .fadeIn(duration: 250.ms)
+                  .slideY(
+                    begin: 0.3,
+                    end: 0,
+                    duration: 280.ms,
+                    curve: Curves.easeOutCubic,
+                  );
           return Padding(
             key: ValueKey<String>(cat.id),
             padding: const EdgeInsets.only(bottom: 16),
-            child:
-                RepaintBoundary(
-                      child: CatProfileBanner(
-                        cat: cat,
-                        onTap: () => onOpenCat(cat.id),
-                      ),
-                    )
-                    .animate(delay: (80 * index).ms)
-                    .fadeIn(duration: 250.ms)
-                    .slideY(
-                      begin: 0.3,
-                      end: 0,
-                      duration: 280.ms,
-                      curve: Curves.easeOutCubic,
-                    ),
+            // The first banner anchors the "your crew" tour step.
+            child: index == 0
+                ? KeyedSubtree(key: tourKeys.firstCat, child: banner)
+                : banner,
           );
         },
       ),
     ),
     SliverPadding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-      sliver: SliverToBoxAdapter(child: AddCatSection(onTap: onAddCat)),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      sliver: SliverToBoxAdapter(
+        child: AddCatSection(plusKey: tourKeys.addCatPlus, onTap: onAddCat),
+      ),
     ),
   ];
 }
 
 class _EmptyCats extends StatelessWidget {
-  const _EmptyCats({required this.onAddCat});
+  const _EmptyCats({required this.onAddCat, this.plusKey});
 
   final VoidCallback onAddCat;
+  final Key? plusKey;
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +175,7 @@ class _EmptyCats extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        AddCatSection(onTap: onAddCat),
+        AddCatSection(plusKey: plusKey, onTap: onAddCat),
       ],
     );
   }

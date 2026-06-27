@@ -42,7 +42,7 @@ GoRouter goRouter(Ref ref) {
       ),
       GoRoute(
         path: Routes.welcome,
-        pageBuilder: (context, state) => PageTransitions.pawCurtain(
+        pageBuilder: (context, state) => PageTransitions.fadeThrough(
           key: state.pageKey,
           child: const WelcomeScreen(),
         ),

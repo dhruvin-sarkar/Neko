@@ -6,9 +6,12 @@ import '../../../../shared/widgets/pressable.dart';
 /// The "add another cat" button: the sleeping-cat illustration with a coral
 /// plus over its lower-left. The whole illustration is tappable.
 class AddCatSection extends StatelessWidget {
-  const AddCatSection({super.key, required this.onTap});
+  const AddCatSection({super.key, required this.onTap, this.plusKey});
 
   final VoidCallback onTap;
+
+  /// Optional key used by the guided tour to spotlight the "+" button.
+  final Key? plusKey;
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +33,7 @@ class AddCatSection extends StatelessWidget {
               Align(
                 alignment: const Alignment(-0.55, 0.55),
                 child: Container(
+                  key: plusKey,
                   width: 52,
                   height: 52,
                   decoration: BoxDecoration(

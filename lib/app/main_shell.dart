@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/profiles/ui/widgets/neko_nav_pill.dart';
+import '../features/tour/providers/tour_keys.dart';
 import '../shared/motion/page_transitions.dart';
 import '../shared/services/feedback_service.dart';
 
@@ -20,6 +21,7 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final tourKeys = ref.read(tourKeysProvider);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: BlurBranchSwitcher(
@@ -34,6 +36,8 @@ class MainShell extends ConsumerWidget {
             alignment: Alignment.bottomCenter,
             heightFactor: 1,
             child: NekoNavPill(
+              homeKey: tourKeys.navHome,
+              settingsKey: tourKeys.navSettings,
               selectedIndex: navigationShell.currentIndex,
               onSelect: (index) {
                 unawaited(ref.read(feedbackServiceProvider).onTap());

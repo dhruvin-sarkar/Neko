@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -38,12 +40,24 @@ class AuthRepository {
     required String password,
   }) async {
     try {
-      await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
-        password: password,
+      final User? user = await _runAuth(
+        () => _auth.signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        ),
       );
+      // Signing in means the account already exists, so make sure they're
+      // marked onboarded and land Home rather than back in the add-a-cat flow.
+      if (user != null) {
+        await _ensureUserDocument(
+          user,
+          displayName: user.displayName ?? _displayNameFromEmail(email),
+        );
+      }
     } on FirebaseAuthException catch (e, st) {
       throw _mapAuthError(e, st);
+    } on AppException {
+      rethrow;
     } on Object catch (e, st) {
       throw _mapUnknown(e, st);
     }
@@ -55,12 +69,12 @@ class AuthRepository {
     required String password,
   }) async {
     try {
-      final UserCredential credential = await _auth
-          .createUserWithEmailAndPassword(
-            email: email.trim(),
-            password: password,
-          );
-      final User? user = credential.user;
+      final User? user = await _runAuth(
+        () => _auth.createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        ),
+      );
       if (user == null) {
         throw const AppException(
           'Account creation did not complete. Try again.',
@@ -71,6 +85,8 @@ class AuthRepository {
       await _ensureUserDocument(user, displayName: displayName);
     } on FirebaseAuthException catch (e, st) {
       throw _mapAuthError(e, st);
+    } on AppException {
+      rethrow;
     } on Object catch (e, st) {
       throw _mapUnknown(e, st);
     }
@@ -94,10 +110,9 @@ class AuthRepository {
         accessToken: auth.accessToken,
         idToken: auth.idToken,
       );
-      final UserCredential result = await _auth.signInWithCredential(
-        credential,
+      final User? user = await _runAuth(
+        () => _auth.signInWithCredential(credential),
       );
-      final User? user = result.user;
       if (user != null) {
         await _ensureUserDocument(
           user,
@@ -134,10 +149,9 @@ class AuthRepository {
         accessToken: auth.accessToken,
         idToken: auth.idToken,
       );
-      final UserCredential result = await _auth.signInWithCredential(
-        credential,
+      final User? user = await _runAuth(
+        () => _auth.signInWithCredential(credential),
       );
-      final User? user = result.user;
       if (user != null) {
         await _ensureUserDocument(
           user,
@@ -174,12 +188,58 @@ class AuthRepository {
     }
   }
 
+  /// Runs a Firebase auth [action] and returns the signed-in [User].
+  ///
+  /// Works around a known firebase_auth (v4 line) bug where the native sign-in
+  /// succeeds but decoding the returned credential throws a type-cast error
+  /// (`type 'List<Object?>' is not a subtype of type 'PigeonUserDetails?'`).
+  /// When that happens we don't fail the sign-in: if a user is actually
+  /// authenticated, we return it. Real auth failures still surface as
+  /// [FirebaseAuthException] and propagate unchanged.
+  Future<User?> _runAuth(Future<UserCredential> Function() action) async {
+    try {
+      final UserCredential credential = await action();
+      return credential.user ?? _auth.currentUser;
+    } on FirebaseAuthException {
+      rethrow;
+    } on Object catch (e, st) {
+      final User? recovered = await _userAfterDecodeError();
+      if (recovered == null) throw _mapUnknown(e, st);
+      AppLogger.warning(
+        'Recovered from firebase_auth credential decode bug',
+        e,
+        st,
+      );
+      return recovered;
+    }
+  }
+
+  /// After a credential-decode error, resolve the actually-signed-in user —
+  /// immediately if available, otherwise by briefly waiting for the auth state
+  /// to settle.
+  Future<User?> _userAfterDecodeError() async {
+    if (_auth.currentUser != null) return _auth.currentUser;
+    try {
+      return await _auth
+          .authStateChanges()
+          .firstWhere((User? u) => u != null)
+          .timeout(const Duration(seconds: 3));
+    } on Object {
+      return _auth.currentUser;
+    }
+  }
+
   /// Creates or merges the `users/{uid}` document. Best-effort: a failure here
   /// (e.g. Firestore rules or a transient network error) is logged but never
   /// thrown, so it can't turn an otherwise-successful sign-in into an error.
-  /// `createdAt` is only written once (merge never overwrites an existing
-  /// value because we use set-merge and the field is server-stamped on first
-  /// write).
+  ///
+  /// Onboarding routing keys off `onboardingComplete`: a brand-new account
+  /// (no existing document) starts at `false` so it lands in the add-a-cat
+  /// flow, while a returning user (document already exists) is marked complete
+  /// so they go straight Home instead of being sent through onboarding again.
+  /// `guidedTourComplete` follows the same first-time rule so the Home tour is
+  /// shown once to new users and skipped for returning ones.
+  /// `createdAt` is only stamped on first write (merge never overwrites it).
   Future<void> _ensureUserDocument(
     User user, {
     required String displayName,
@@ -189,11 +249,13 @@ class AuthRepository {
           .collection('users')
           .doc(user.uid);
       final DocumentSnapshot<Map<String, dynamic>> existing = await ref.get();
+      final bool isReturning = existing.exists;
       await ref.set({
         'displayName': displayName,
         'email': user.email ?? '',
-        if (!existing.exists) 'createdAt': FieldValue.serverTimestamp(),
-        if (!existing.exists) 'onboardingComplete': false,
+        if (!isReturning) 'createdAt': FieldValue.serverTimestamp(),
+        'onboardingComplete': isReturning,
+        'guidedTourComplete': isReturning,
       }, SetOptions(merge: true));
     } on Object catch (e, st) {
       AppLogger.warning('Could not sync user document; continuing', e, st);

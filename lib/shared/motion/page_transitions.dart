@@ -21,7 +21,7 @@ abstract final class PageTransitions {
   static const Duration _duration = Duration(milliseconds: 320);
 
   // ── Paw Curtain Transition (branded context-switch handoff) ──
-  static const Duration _curtainDuration = Duration(milliseconds: 1100);
+  static const Duration _curtainDuration = Duration(milliseconds: 900);
 
   /// Panel fill for the curtain — the brand background colour.
   static const Color _kCurtainColor = AppColors.primary;
@@ -300,18 +300,23 @@ class _BlurBranchSwitcherState extends State<BlurBranchSwitcher>
 
 // ── Paw Curtain — pure helper functions ──
 
-/// Triangular coverage fraction with a single peak at the midpoint.
-double _curtainCoverage(double t) =>
-    t <= 0.5 ? (t / 0.5) : (1.0 - (t - 0.5) / 0.5);
+/// Progress at which the panel is fully covering and the new screen is swapped
+/// in behind it. Through the whole cover phase the panel fills the entire
+/// screen (opaque), so the screen you're leaving is never visible behind it;
+/// after this point the panel sweeps diagonally away to reveal the new screen.
+const double _kCurtainCover = 0.26;
 
-/// Panel alpha; reaches full opacity well before the midpoint.
-double _curtainPanelOpacity(double t) => (t * 8).clamp(0.0, 1.0).toDouble();
+/// Visible coverage: full through the cover phase, then recedes to zero as the
+/// panel opens. Used only to short-circuit painting once nothing is covered.
+double _curtainCoverage(double t) => t <= _kCurtainCover
+    ? 1.0
+    : (1.0 - (t - _kCurtainCover) / (1.0 - _kCurtainCover));
 
 /// Page-content alpha: fully masked (0.0) through the covering phase, then
-/// snaps to fully opaque exactly at the midpoint — while the panel still
+/// snaps to fully opaque exactly at the cover point — while the panel still
 /// covers the screen, so the flip is invisible and the previous screen can
-/// never show through the uncovered region.
-double _curtainContentOpacity(double t) => t <= 0.5 ? 0.0 : 1.0;
+/// never show through.
+double _curtainContentOpacity(double t) => t <= _kCurtainCover ? 0.0 : 1.0;
 
 /// Linear interpolation helper.
 double _lerp(double a, double b, double t) => a + (b - a) * t;
@@ -331,36 +336,36 @@ Offset _pawMotifOffset(double t, Size size, {double inset = 48}) {
 
 // ── Diagonal half-plane panel geometry ──
 
-/// Builds the panel path for progress `t`. Phase 1 (t ≤ 0.5) grows the covered
-/// region from the start corner; Phase 2 (t > 0.5) grows the uncovered region
-/// so the panel retreats off the opposite corner. `extent = w + h` makes
-/// coverage exactly full-screen at t = 0.5.
+/// Builds the panel path for progress `t`. During the cover phase (t ≤ cover
+/// point) the panel fills the entire screen so the previous screen is never
+/// visible behind it. After the cover point the uncovered region grows so the
+/// panel retreats off the opposite corner, revealing the new page.
 Path _panelPath(Size size, double t) {
-  final double extent = size.width + size.height;
-  if (t <= 0.5) {
-    final double front = extent * (t / 0.5);
-    return _halfPlaneBelowDiagonal(size, front);
+  if (t <= _kCurtainCover) {
+    // Cover phase: fill the whole screen immediately (opaque cover).
+    return Path()..addRect(Offset.zero & size);
   }
-  final double back = extent * ((t - 0.5) / 0.5);
+  final double extent = size.width + size.height;
+  final double back = extent * ((t - _kCurtainCover) / (1.0 - _kCurtainCover));
   return _halfPlaneAboveDiagonal(size, back);
 }
 
-/// Covered region for Phase 1: where `x + y <= front`, clipped to the screen.
-Path _halfPlaneBelowDiagonal(Size size, double front) {
-  final List<Offset> clipped = _clipRectToHalfPlane(
-    size,
-    (Offset p) => p.dx + p.dy - front,
-    keepNegative: true,
-  );
-  return _polygonPath(clipped);
-}
-
-/// Uncovered-complement region for Phase 2: where `x + y >= back`.
+/// Uncovered-complement region for the reveal: where `x + y >= back`.
 Path _halfPlaneAboveDiagonal(Size size, double back) {
   final List<Offset> clipped = _clipRectToHalfPlane(
     size,
     (Offset p) => p.dx + p.dy - back,
     keepNegative: false,
+  );
+  return _polygonPath(clipped);
+}
+
+/// Covered region growing from the start corner: where `x + y <= front`.
+Path _halfPlaneBelowDiagonal(Size size, double front) {
+  final List<Offset> clipped = _clipRectToHalfPlane(
+    size,
+    (Offset p) => p.dx + p.dy - front,
+    keepNegative: true,
   );
   return _polygonPath(clipped);
 }
@@ -470,8 +475,7 @@ class _PawCurtainPainter extends CustomPainter {
     final double coverage = _curtainCoverage(t);
     if (coverage <= 0) return;
 
-    final Paint panelPaint = Paint()
-      ..color = panelColor.withValues(alpha: _curtainPanelOpacity(t));
+    final Paint panelPaint = Paint()..color = panelColor;
     canvas.drawPath(_panelPath(size, t), panelPaint);
 
     _paintPawTrail(canvas, size, t);
@@ -486,15 +490,17 @@ class _PawCurtainPainter extends CustomPainter {
     final Offset normal = Offset(-math.sin(angle), math.cos(angle));
     final double sideStep = size.shortestSide * 0.05;
 
-    final double trailFade = t <= 0.5
+    final double trailFade = t <= _kCurtainCover
         ? 1.0
-        : (1.0 - (t - 0.5) / 0.30).clamp(0.0, 1.0).toDouble();
+        : (1.0 - (t - _kCurtainCover) / 0.30).clamp(0.0, 1.0).toDouble();
     if (trailFade <= 0) return;
 
     for (int i = 0; i < count; i++) {
       final double f = (i + 0.5) / count;
-      final double appearAt = _lerp(0.08, 0.46, f);
-      final double a = ((t - appearAt) / 0.08).clamp(0.0, 1.0).toDouble();
+      final double appearAt = _lerp(0.04, _kCurtainCover * 0.9, f);
+      final double a = ((t - appearAt) / (_kCurtainCover * 0.35))
+          .clamp(0.0, 1.0)
+          .toDouble();
       if (a <= 0) continue;
 
       final Offset base = _pawMotifOffset(f, size);
@@ -528,14 +534,29 @@ class _PawCurtainPainter extends CustomPainter {
 /// [CustomTransitionPage] (e.g. finishing onboarding / adding a cat → the Home
 /// shell).
 ///
-/// Honors reduce-motion by skipping the overlay and navigating immediately.
+/// Plays the branded paw curtain as a full-screen overlay around a hand-off.
+/// The sequence is deliberate and gap-free:
+///
+///   1. the curtain sweeps **closed** (a diagonal panel with a walking paw
+///      trail) until it fully covers the screen;
+///   2. [onCovered] runs and the curtain **holds** at full cover until that
+///      future completes — so the caller can change screens (sign out,
+///      navigate) entirely hidden behind the cover;
+///   3. the curtain sweeps **open** to reveal the now-current screen.
+///
+/// Because the reveal waits for [onCovered], the previous screen is never seen
+/// during the open even when the swap is asynchronous (e.g. sign-out, where we
+/// wait for auth to clear and the router to land on Welcome).
+///
+/// Honors reduce-motion by skipping the overlay and running [onCovered]
+/// immediately.
 Future<void> playPawCurtain(
   BuildContext context, {
-  required VoidCallback onCovered,
-}) {
+  required FutureOr<void> Function() onCovered,
+}) async {
   if (MediaQuery.of(context).disableAnimations) {
-    onCovered();
-    return Future<void>.value();
+    await onCovered();
+    return;
   }
 
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
@@ -554,12 +575,13 @@ Future<void> playPawCurtain(
   return done.future;
 }
 
-/// The animated overlay used by [playPawCurtain]: a self-running paw curtain
-/// that fires [onCovered] at the midpoint and [onComplete] when it finishes.
+/// The animated overlay used by [playPawCurtain]: sweeps closed, awaits
+/// [onCovered] while fully covering the screen, then sweeps open and fires
+/// [onComplete].
 class _PawCurtainOverlay extends StatefulWidget {
   const _PawCurtainOverlay({required this.onCovered, required this.onComplete});
 
-  final VoidCallback onCovered;
+  final FutureOr<void> Function() onCovered;
   final VoidCallback onComplete;
 
   @override
@@ -567,37 +589,66 @@ class _PawCurtainOverlay extends StatefulWidget {
 }
 
 class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
+    with TickerProviderStateMixin {
+  late final AnimationController _close = AnimationController(
     vsync: this,
-    duration: PageTransitions._curtainDuration,
+    duration: const Duration(milliseconds: 480),
   );
-  bool _covered = false;
+  late final AnimationController _open = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 620),
+  );
+  late final CurvedAnimation _closeCurve = CurvedAnimation(
+    parent: _close,
+    curve: Curves.easeInOutCubic,
+  );
+  late final CurvedAnimation _openCurve = CurvedAnimation(
+    parent: _open,
+    curve: Curves.easeInOutCubic,
+  );
+
+  bool _started = false;
 
   @override
   void initState() {
     super.initState();
-    _controller
-      ..addListener(_onTick)
-      ..addStatusListener(_onStatus)
-      ..forward();
+    _open.addStatusListener((status) {
+      if (status == AnimationStatus.completed) widget.onComplete();
+    });
+    _runSequence();
   }
 
-  void _onTick() {
-    // Fire once the panel fully covers the screen (the midpoint).
-    if (!_covered && _controller.value >= 0.5) {
-      _covered = true;
-      widget.onCovered();
+  Future<void> _runSequence() async {
+    if (_started) return;
+    _started = true;
+
+    // 1. Sweep closed until the screen is fully covered.
+    await _close.forward();
+    if (!mounted) return;
+
+    // 2. Hold at full cover while the caller swaps screens underneath. Guarded
+    // so a failure can't strand the curtain in the closed state.
+    try {
+      await widget.onCovered();
+    } on Object {
+      // ignore — we still open to reveal whatever screen is now current.
     }
-  }
+    if (!mounted) return;
 
-  void _onStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed) widget.onComplete();
+    // Let the newly-swapped screen settle for a frame before revealing it.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+
+    // 3. Sweep open to reveal it.
+    await _open.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _closeCurve.dispose();
+    _openCurve.dispose();
+    _close.dispose();
+    _open.dispose();
     super.dispose();
   }
 
@@ -606,8 +657,9 @@ class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
     return Positioned.fill(
       child: IgnorePointer(
         child: CustomPaint(
-          painter: _PawCurtainPainter(
-            progress: _controller,
+          painter: _OverlayCurtainPainter(
+            close: _closeCurve,
+            open: _openCurve,
             panelColor: PageTransitions._kCurtainColor,
             pawColor: PageTransitions._kPawBrandColor,
           ),
@@ -615,4 +667,75 @@ class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
       ),
     );
   }
+}
+
+/// Paints the overlay curtain: a diagonal panel that sweeps closed (covered
+/// region grows from the start corner), holds full-screen, then sweeps open
+/// (panel retreats off the opposite corner), with a walking paw trail.
+class _OverlayCurtainPainter extends CustomPainter {
+  _OverlayCurtainPainter({
+    required this.close,
+    required this.open,
+    required this.panelColor,
+    required this.pawColor,
+  }) : super(repaint: Listenable.merge(<Listenable>[close, open]));
+
+  final Animation<double> close;
+  final Animation<double> open;
+  final Color panelColor;
+  final Color pawColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double c = close.value;
+    final double o = open.value;
+    final double extent = size.width + size.height;
+
+    final Path panel = o <= 0
+        ? _halfPlaneBelowDiagonal(size, extent * c) // closing / holding
+        : _halfPlaneAboveDiagonal(size, extent * o); // opening
+    canvas.drawPath(panel, Paint()..color = panelColor);
+
+    _paintPawTrail(canvas, size, c, o);
+  }
+
+  void _paintPawTrail(Canvas canvas, Size size, double c, double o) {
+    const int count = 6;
+    final double pawScale = size.shortestSide * 0.055;
+    final double angle = math.atan2(size.height, size.width);
+    final Offset normal = Offset(-math.sin(angle), math.cos(angle));
+    final double sideStep = size.shortestSide * 0.05;
+
+    // Paws walk in during the close, then fade out as the panel opens.
+    final double trailFade = (1.0 - o / 0.5).clamp(0.0, 1.0).toDouble();
+    if (trailFade <= 0) return;
+
+    for (int i = 0; i < count; i++) {
+      final double f = (i + 0.5) / count;
+      final double appearAt = _lerp(0.05, 0.85, f);
+      final double a = ((c - appearAt) / 0.15).clamp(0.0, 1.0).toDouble();
+      if (a <= 0) continue;
+
+      final Offset base = _pawMotifOffset(f, size);
+      final double side = i.isEven ? 1.0 : -1.0;
+      final Offset center = base + normal * (sideStep * side);
+
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(angle + math.pi / 2 + side * 0.12);
+      canvas.translate(-center.dx, -center.dy);
+      canvas.drawPath(
+        _pawPath(center, pawScale),
+        Paint()..color = pawColor.withValues(alpha: a * trailFade),
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(_OverlayCurtainPainter old) =>
+      old.close.value != close.value ||
+      old.open.value != open.value ||
+      old.panelColor != panelColor ||
+      old.pawColor != pawColor;
 }

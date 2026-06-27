@@ -10,10 +10,16 @@ class NekoNavPill extends StatelessWidget {
     super.key,
     required this.selectedIndex,
     required this.onSelect,
+    this.homeKey,
+    this.settingsKey,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelect;
+
+  /// Optional keys used by the first-run guided tour to spotlight each item.
+  final Key? homeKey;
+  final Key? settingsKey;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +42,7 @@ class NekoNavPill extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _NavItem(
+            key: homeKey,
             selectedIcon: Icons.home_rounded,
             unselectedIcon: Icons.home_outlined,
             label: 'Home',
@@ -43,6 +50,7 @@ class NekoNavPill extends StatelessWidget {
             onTap: () => onSelect(0),
           ),
           _NavItem(
+            key: settingsKey,
             selectedIcon: Icons.settings_rounded,
             unselectedIcon: Icons.settings_outlined,
             label: 'Settings',
@@ -57,6 +65,7 @@ class NekoNavPill extends StatelessWidget {
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
+    super.key,
     required this.selectedIcon,
     required this.unselectedIcon,
     required this.label,

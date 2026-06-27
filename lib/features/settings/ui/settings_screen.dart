@@ -9,6 +9,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../shared/motion/page_transitions.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_pill_button.dart';
@@ -46,8 +47,29 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed != true) return;
-    await ref.read(authControllerProvider.notifier).signOut();
+    if (confirmed != true || !context.mounted) return;
+
+    // Hand off with the branded paw curtain: it sweeps closed over Settings,
+    // holds at full cover while we sign out AND wait for the auth state to
+    // clear (so the router has swapped to Welcome underneath), then sweeps open
+    // to reveal Welcome. Holding until the swap is done is what stops the old
+    // screen flashing during the reveal.
+    final authController = ref.read(authControllerProvider.notifier);
+    final auth = ref.read(firebaseAuthProvider);
+    unawaited(ref.read(feedbackServiceProvider).onAdvance());
+    await playPawCurtain(
+      context,
+      onCovered: () async {
+        await authController.signOut();
+        // Wait (up to ~640ms) for sign-out to propagate so Welcome is in place.
+        for (int i = 0; i < 40 && auth.currentUser != null; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 16));
+        }
+        // Brief settle so the router finishes redirecting to Welcome before the
+        // curtain opens onto it.
+        await Future<void>.delayed(const Duration(milliseconds: 90));
+      },
+    );
   }
 
   @override
