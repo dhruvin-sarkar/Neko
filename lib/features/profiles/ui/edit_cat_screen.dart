@@ -197,7 +197,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
         appBar: AppBar(leading: const BackButton(color: AppColors.textPrimary)),
         body: Center(
           child: (cat == null && stillLoading)
-              ? const CircularProgressIndicator(color: AppColors.primary)
+              ? CircularProgressIndicator(color: AppColors.primary)
               : Text(
                   "We can't find that cat to edit.",
                   style: AppTextStyles.headlineLarge,
@@ -318,7 +318,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
             Center(
               child: TextButton.icon(
                 onPressed: isSaving ? null : _delete,
-                icon: const Icon(
+                icon: Icon(
                   Icons.delete_outline_rounded,
                   color: AppColors.primaryDark,
                   size: 20,

@@ -21,10 +21,10 @@ class OnboardingProgressBar extends StatelessWidget {
           curve: Curves.easeOut,
           alignment: Alignment.centerLeft,
           widthFactor: fraction.clamp(0.0, 1.0),
-          child: const DecoratedBox(
+          child: DecoratedBox(
             decoration: BoxDecoration(
               color: AppColors.primary,
-              borderRadius: BorderRadius.all(Radius.circular(100)),
+              borderRadius: const BorderRadius.all(Radius.circular(100)),
             ),
           ),
         ),

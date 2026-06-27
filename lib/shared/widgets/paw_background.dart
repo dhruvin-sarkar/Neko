@@ -20,10 +20,12 @@ class PawBackground extends StatefulWidget {
 
 class _PawBackgroundState extends State<PawBackground>
     with SingleTickerProviderStateMixin {
-  // One slow loop = the pattern drifts exactly one tile, so it wraps seamlessly.
+  // One loop drifts the field exactly two tiles diagonally. The pattern (row
+  // stagger + per-paw tilt) repeats every two tiles, so a two-tile drift wraps
+  // perfectly with no jump when the controller repeats.
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 25),
+    duration: const Duration(seconds: 40),
   )..repeat();
 
   @override
@@ -60,26 +62,31 @@ class _PawPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // A rosy pink reads clearly on the amber (coral was too close in hue to
-    // show), but kept low-opacity so it stays texture, not noise.
+    // A rosy tint reads clearly on the warm background, kept low-opacity so it
+    // stays texture, not noise. Follows the active theme.
     final Paint paint = Paint()
-      ..color = const Color(0xFFFF5C8D).withValues(alpha: 0.22);
+      ..color = AppColors.pawPattern.withValues(alpha: 0.22);
 
     final double t = progress.value;
-    final double shiftX = t * _tile;
-    final double shiftY = t * _tile;
+    // Drift two tiles per loop so the (period-two) pattern wraps seamlessly.
+    final double shiftX = t * 2 * _tile;
+    final double shiftY = t * 2 * _tile;
 
     final int cols = (size.width / _tile).ceil() + 2;
     final int rows = (size.height / _tile).ceil() + 2;
 
-    for (int r = -1; r <= rows; r++) {
+    // Start two tiles back so the area the drift vacates stays filled.
+    for (int r = -2; r <= rows; r++) {
       // Offset every other row so the paws don't line up in a rigid grid.
       final double rowStagger = r.isEven ? 0 : _tile / 2;
-      for (int c = -1; c <= cols; c++) {
+      for (int c = -2; c <= cols; c++) {
         final double x = c * _tile + rowStagger + shiftX;
         final double y = r * _tile + shiftY;
-        // A small deterministic tilt per paw makes the field feel organic.
-        final double angle = (((r * 31 + c * 17) % 5) - 2) * 0.16;
+        // A small per-paw tilt makes the field feel organic. Keyed to the
+        // cell parity (period two) so it realigns exactly after the two-tile
+        // drift — the loop is therefore seamless.
+        final int h = (c % 2).abs() + (r % 2).abs() * 2;
+        final double angle = (h - 1.5) * 0.18;
         _drawPaw(canvas, Offset(x, y), angle, paint);
       }
     }

@@ -24,7 +24,7 @@ abstract final class PageTransitions {
   static const Duration _curtainDuration = Duration(milliseconds: 900);
 
   /// Panel fill for the curtain — the brand background colour.
-  static const Color _kCurtainColor = AppColors.primary;
+  static Color get _kCurtainColor => AppColors.primary;
 
   /// Tintable colour for the paw motif drawn on top of the panel.
   static const Color _kPawBrandColor = AppColors.snowWhite;
@@ -184,6 +184,44 @@ abstract final class PageTransitions {
     );
   }
 
+  /// The cat-profile reveal: the profile arrives crisp (fade + gentle scale-up)
+  /// while the avatar flies in via its Hero and Home recedes — blurred — behind
+  /// it. Keeping the incoming page sharp lets the avatar land cleanly; the
+  /// diffuse background is the screen being left (see [NekoPageTransitions
+  /// Builder], which blurs the shell as it's covered).
+  static CustomTransitionPage<void> profileReveal({
+    required LocalKey key,
+    required Widget child,
+  }) {
+    return CustomTransitionPage<void>(
+      key: key,
+      transitionDuration: const Duration(milliseconds: 380),
+      reverseTransitionDuration: const Duration(milliseconds: 320),
+      child: child,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        if (MediaQuery.of(context).disableAnimations) {
+          return FadeTransition(opacity: animation, child: child);
+        }
+        final Animation<double> fade = animation.drive(
+          CurveTween(curve: const Interval(0.35, 1.0, curve: Curves.easeOut)),
+        );
+        final Animation<double> scale = animation.drive(
+          Tween<double>(
+            begin: 0.96,
+            end: 1.0,
+          ).chain(CurveTween(curve: Curves.easeOutCubic)),
+        );
+        return FadeTransition(
+          opacity: _exitFade(secondaryAnimation),
+          child: FadeTransition(
+            opacity: fade,
+            child: ScaleTransition(scale: scale, child: child),
+          ),
+        );
+      },
+    );
+  }
+
   /// Incoming opacity for the fade-through: invisible until 30%, then eases in.
   static Animation<double> _enterFade(Animation<double> animation) =>
       animation.drive(
@@ -233,9 +271,53 @@ class NekoPageTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
-/// Wraps a tab branch so switching tabs plays a quick blur-in + fade: the new
-/// branch appears softly blurred and sharpens into focus. Preserves each
-/// branch's state (the child is the shell's IndexedStack).
+/// Eases the wrapped content *back* as another route is pushed over it — fading
+/// it out while softly blurring and shrinking it — so the screen recedes into
+/// the background instead of staying visible beneath the incoming one.
+///
+/// It reads the enclosing route's [ModalRoute.secondaryAnimation] directly, so
+/// it works for the Home shell (whose recede the theme's transitions builder
+/// can't reliably drive through go_router's shell page). Wrap a screen's body
+/// in this to get a clean, diffuse hand-off when pushing a detail route.
+class RecedeOnCover extends StatelessWidget {
+  const RecedeOnCover({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final Animation<double> anim =
+        ModalRoute.of(context)?.secondaryAnimation ?? kAlwaysDismissedAnimation;
+    return AnimatedBuilder(
+      animation: anim,
+      child: child,
+      builder: (context, child) {
+        final double s = anim.value.clamp(0.0, 1.0);
+        if (s <= 0.001) return child!;
+        // Recede over the first ~45% so the screen is gone well before the
+        // incoming detail content fades in (no overlap, no abrupt removal).
+        final double t = Curves.easeInOut.transform((s / 0.45).clamp(0.0, 1.0));
+        final double sigma = t * 10.0;
+        final Widget faded = Opacity(
+          opacity: 1.0 - t,
+          child: Transform.scale(scale: 1.0 - 0.04 * t, child: child),
+        );
+        if (sigma < 0.05) return faded;
+        return ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: sigma,
+            sigmaY: sigma,
+            tileMode: TileMode.decal,
+          ),
+          child: faded,
+        );
+      },
+    );
+  }
+}
+
+/// Wraps a tab branch so switching tabs plays a quick, clean cross-fade.
+/// Preserves each branch's state (the child is the shell's IndexedStack).
 class BlurBranchSwitcher extends StatefulWidget {
   const BlurBranchSwitcher({
     super.key,
@@ -243,7 +325,7 @@ class BlurBranchSwitcher extends StatefulWidget {
     required this.child,
   });
 
-  /// The currently active branch index; a change triggers the blur-in.
+  /// The currently active branch index; a change triggers the fade-in.
   final int index;
   final Widget child;
 
@@ -253,11 +335,9 @@ class BlurBranchSwitcher extends StatefulWidget {
 
 class _BlurBranchSwitcherState extends State<BlurBranchSwitcher>
     with SingleTickerProviderStateMixin {
-  static const double _maxSigma = 12.0;
-
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 320),
+    duration: const Duration(milliseconds: 240),
     value: 1,
   );
 
@@ -278,22 +358,14 @@ class _BlurBranchSwitcherState extends State<BlurBranchSwitcher>
   @override
   Widget build(BuildContext context) {
     if (MediaQuery.of(context).disableAnimations) return widget.child;
-    final Animation<double> eased = _controller.drive(
-      CurveTween(curve: Curves.easeOut),
-    );
-    return AnimatedBuilder(
-      animation: eased,
+    return FadeTransition(
+      opacity: _controller.drive(
+        Tween<double>(
+          begin: 0.55,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+      ),
       child: widget.child,
-      builder: (context, child) {
-        final double v = eased.value.clamp(0.0, 1.0);
-        final double sigma = (1.0 - v) * _maxSigma;
-        final Widget content = Opacity(opacity: 0.5 + 0.5 * v, child: child);
-        if (sigma < 0.05) return content;
-        return ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-          child: content,
-        );
-      },
     );
   }
 }
@@ -360,7 +432,8 @@ Path _halfPlaneAboveDiagonal(Size size, double back) {
   return _polygonPath(clipped);
 }
 
-/// Covered region growing from the start corner: where `x + y <= front`.
+/// Covered region growing from the start corner (the diagonal going-in):
+/// where `x + y <= front`, clipped to the screen.
 Path _halfPlaneBelowDiagonal(Size size, double front) {
   final List<Offset> clipped = _clipRectToHalfPlane(
     size,
@@ -550,9 +623,14 @@ class _PawCurtainPainter extends CustomPainter {
 ///
 /// Honors reduce-motion by skipping the overlay and running [onCovered]
 /// immediately.
+///
+/// When [instantCover] is true the cover appears full-screen from the first
+/// frame (no diagonal sweep-in) — used for sign-out, where the screen being
+/// left must never be visible. Otherwise the panel sweeps in diagonally.
 Future<void> playPawCurtain(
   BuildContext context, {
   required FutureOr<void> Function() onCovered,
+  bool instantCover = false,
 }) async {
   if (MediaQuery.of(context).disableAnimations) {
     await onCovered();
@@ -565,6 +643,7 @@ Future<void> playPawCurtain(
   entry = OverlayEntry(
     builder: (context) => _PawCurtainOverlay(
       onCovered: onCovered,
+      instantCover: instantCover,
       onComplete: () {
         if (entry.mounted) entry.remove();
         if (!done.isCompleted) done.complete();
@@ -576,13 +655,18 @@ Future<void> playPawCurtain(
 }
 
 /// The animated overlay used by [playPawCurtain]: sweeps closed, awaits
-/// [onCovered] while fully covering the screen, then sweeps open and fires
-/// [onComplete].
+/// [onCovered] while fully covering the screen, holds, then sweeps open and
+/// fires [onComplete].
 class _PawCurtainOverlay extends StatefulWidget {
-  const _PawCurtainOverlay({required this.onCovered, required this.onComplete});
+  const _PawCurtainOverlay({
+    required this.onCovered,
+    required this.onComplete,
+    this.instantCover = false,
+  });
 
   final FutureOr<void> Function() onCovered;
   final VoidCallback onComplete;
+  final bool instantCover;
 
   @override
   State<_PawCurtainOverlay> createState() => _PawCurtainOverlayState();
@@ -590,9 +674,12 @@ class _PawCurtainOverlay extends StatefulWidget {
 
 class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
     with TickerProviderStateMixin {
+  /// How long the fully-covered screen lingers before sweeping open.
+  static const Duration _holdDuration = Duration(milliseconds: 420);
+
   late final AnimationController _close = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 480),
+    duration: const Duration(milliseconds: 560),
   );
   late final AnimationController _open = AnimationController(
     vsync: this,
@@ -600,7 +687,7 @@ class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
   );
   late final CurvedAnimation _closeCurve = CurvedAnimation(
     parent: _close,
-    curve: Curves.easeInOutCubic,
+    curve: Curves.easeInOut,
   );
   late final CurvedAnimation _openCurve = CurvedAnimation(
     parent: _open,
@@ -622,25 +709,33 @@ class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
     if (_started) return;
     _started = true;
 
-    // 1. Sweep closed until the screen is fully covered.
+    // 1. Going-in: the panel sweeps in (or, for sign-out, covers instantly) and
+    // the paw trail walks across — until the screen is fully covered.
     await _close.forward();
     if (!mounted) return;
 
-    // 2. Hold at full cover while the caller swaps screens underneath. Guarded
-    // so a failure can't strand the curtain in the closed state.
-    try {
-      await widget.onCovered();
-    } on Object {
-      // ignore — we still open to reveal whatever screen is now current.
-    }
+    // 2. Hand off (navigate / sign out) while fully covered. Runs AFTER the
+    // cover completes — never during initState/build — so the navigation
+    // inside [onCovered] actually takes effect instead of being dropped.
+    await _runHandoff();
     if (!mounted) return;
 
-    // Let the newly-swapped screen settle for a frame before revealing it.
+    // 3. Hold the full-screen cover for a beat so the swap settles cleanly.
+    await Future<void>.delayed(_holdDuration);
+    if (!mounted) return;
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
 
-    // 3. Sweep open to reveal it.
+    // 4. Going-out: sweep open to reveal the now-current screen.
     await _open.forward();
+  }
+
+  Future<void> _runHandoff() async {
+    try {
+      await widget.onCovered();
+    } on Object {
+      // Ignore — we still open to reveal whatever screen is now current.
+    }
   }
 
   @override
@@ -660,6 +755,7 @@ class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
           painter: _OverlayCurtainPainter(
             close: _closeCurve,
             open: _openCurve,
+            instantCover: widget.instantCover,
             panelColor: PageTransitions._kCurtainColor,
             pawColor: PageTransitions._kPawBrandColor,
           ),
@@ -669,21 +765,24 @@ class _PawCurtainOverlayState extends State<_PawCurtainOverlay>
   }
 }
 
-/// Paints the overlay curtain: a diagonal panel that sweeps closed (covered
-/// region grows from the start corner), holds full-screen, then sweeps open
-/// (panel retreats off the opposite corner), with a walking paw trail.
+/// Paints the overlay curtain: the panel sweeps in diagonally (or covers the
+/// whole screen instantly when [instantCover] is set), holds full-screen with a
+/// walking paw trail, then sweeps open — retreating off the far corner — to
+/// reveal the new screen.
 class _OverlayCurtainPainter extends CustomPainter {
   _OverlayCurtainPainter({
     required this.close,
     required this.open,
     required this.panelColor,
     required this.pawColor,
+    this.instantCover = false,
   }) : super(repaint: Listenable.merge(<Listenable>[close, open]));
 
   final Animation<double> close;
   final Animation<double> open;
   final Color panelColor;
   final Color pawColor;
+  final bool instantCover;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -691,9 +790,17 @@ class _OverlayCurtainPainter extends CustomPainter {
     final double o = open.value;
     final double extent = size.width + size.height;
 
-    final Path panel = o <= 0
-        ? _halfPlaneBelowDiagonal(size, extent * c) // closing / holding
-        : _halfPlaneAboveDiagonal(size, extent * o); // opening
+    final Path panel;
+    if (o > 0) {
+      // Going-out: the panel retreats off the far corner to reveal the screen.
+      panel = _halfPlaneAboveDiagonal(size, extent * o);
+    } else if (instantCover) {
+      // Sign-out: cover the whole screen at once so it's never visible.
+      panel = Path()..addRect(Offset.zero & size);
+    } else {
+      // Going-in: the covered region grows diagonally from the start corner.
+      panel = _halfPlaneBelowDiagonal(size, extent * c);
+    }
     canvas.drawPath(panel, Paint()..color = panelColor);
 
     _paintPawTrail(canvas, size, c, o);

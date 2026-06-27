@@ -160,11 +160,11 @@ class _PlaceholderCircle extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.selectedFill,
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.pets_rounded, size: 64, color: AppColors.primary),
+      child: Icon(Icons.pets_rounded, size: 64, color: AppColors.primary),
     );
   }
 }

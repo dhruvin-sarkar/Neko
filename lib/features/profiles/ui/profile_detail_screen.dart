@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../features/tour/providers/tour_keys.dart';
 import '../../documents/ui/widgets/documents_section.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../providers/profile_provider.dart';
@@ -23,6 +24,7 @@ class ProfileDetailScreen extends ConsumerWidget {
       catProfilesProvider.select((v) => v.isLoading),
     );
     final CatProfile? cat = ref.watch(catByIdProvider(catId));
+    final TourKeys tourKeys = ref.watch(tourKeysProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -31,6 +33,7 @@ class ProfileDetailScreen extends ConsumerWidget {
         actions: [
           if (cat != null)
             IconButton(
+              key: tourKeys.profileEdit,
               tooltip: 'Edit',
               onPressed: () => context.push(Routes.editCat(catId)),
               icon: const Icon(
@@ -48,14 +51,19 @@ class ProfileDetailScreen extends ConsumerWidget {
           switchOutCurve: Curves.easeIn,
           child: cat == null
               ? (isLoading
-                    ? const Center(
-                        key: ValueKey('loading'),
+                    ? Center(
+                        key: const ValueKey('loading'),
                         child: CircularProgressIndicator(
                           color: AppColors.primary,
                         ),
                       )
                     : const _NotFound(key: ValueKey('not-found')))
-              : _CatProfileBody(key: ValueKey(cat.id), cat: cat),
+              : _CatProfileBody(
+                  key: ValueKey(cat.id),
+                  cat: cat,
+                  tourKeys: tourKeys,
+                  scrollController: ref.read(profileScrollControllerProvider),
+                ),
         ),
       ),
     );
@@ -63,9 +71,16 @@ class ProfileDetailScreen extends ConsumerWidget {
 }
 
 class _CatProfileBody extends StatelessWidget {
-  const _CatProfileBody({super.key, required this.cat});
+  const _CatProfileBody({
+    super.key,
+    required this.cat,
+    required this.tourKeys,
+    required this.scrollController,
+  });
 
   final CatProfile cat;
+  final TourKeys tourKeys;
+  final ScrollController scrollController;
 
   String get _ageLabel {
     if (cat.years > 0) {
@@ -106,6 +121,7 @@ class _CatProfileBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       children: <Widget>[
         // The avatar sits outside the staggered entrance so the Hero flight
@@ -144,47 +160,57 @@ class _CatProfileBody extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.cake_outlined,
-                      label: 'Age',
-                      value: _ageLabel,
+              KeyedSubtree(
+                key: tourKeys.profileStats,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            icon: Icons.cake_outlined,
+                            label: 'Age',
+                            value: _ageLabel,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _StatCard(
+                            icon: Icons.monitor_weight_outlined,
+                            label: 'Weight',
+                            value: '${cat.weightKg} kg',
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.monitor_weight_outlined,
-                      label: 'Weight',
-                      value: '${cat.weightKg} kg',
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StatCard(
+                            icon: Icons.directions_run_rounded,
+                            label: 'Activity',
+                            value: _activityLabel,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _StatCard(
+                            icon: Icons.local_fire_department_outlined,
+                            label: 'Daily target',
+                            value: '${cat.dailyCalorieTarget} kcal',
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.directions_run_rounded,
-                      label: 'Activity',
-                      value: _activityLabel,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _StatCard(
-                      icon: Icons.local_fire_department_outlined,
-                      label: 'Daily target',
-                      value: '${cat.dailyCalorieTarget} kcal',
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 32),
-              DocumentsSection(catId: cat.id),
+              KeyedSubtree(
+                key: tourKeys.profileDocuments,
+                child: DocumentsSection(catId: cat.id),
+              ),
             ]
             .animate(interval: 70.ms)
             .fadeIn(duration: 250.ms)

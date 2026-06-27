@@ -136,7 +136,7 @@ class DocumentsSection extends ConsumerWidget {
           children: [
             Text('Documents', style: AppTextStyles.headlineLarge),
             if (isBusy)
-              const SizedBox(
+              SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(
@@ -193,8 +193,8 @@ class _DocumentsLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 24),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
       child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
     );
   }

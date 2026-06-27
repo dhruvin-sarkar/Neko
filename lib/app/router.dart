@@ -21,8 +21,7 @@ import 'splash_gate_provider.dart';
 
 part 'router.g.dart';
 
-/// The app router. Auth gating lives entirely in [RouterNotifier.redirect] —
-/// no screen performs its own auth-based navigation.
+
 @Riverpod(keepAlive: true)
 GoRouter goRouter(Ref ref) {
   final RouterNotifier notifier = RouterNotifier(ref);
@@ -70,7 +69,7 @@ GoRouter goRouter(Ref ref) {
       ),
       GoRoute(
         path: Routes.profilePattern,
-        pageBuilder: (context, state) => PageTransitions.blurFade(
+        pageBuilder: (context, state) => PageTransitions.profileReveal(
           key: state.pageKey,
           child: ProfileDetailScreen(
             catId: state.pathParameters['catId'] ?? '',
@@ -129,13 +128,11 @@ class RouterNotifier extends ChangeNotifier {
     final bool onWelcome = location == Routes.welcome;
     final bool onAuth = Routes.isAuth(location);
 
-    // Keep the splash visible for a minimum time so it never flashes.
     if (!_ref.read(splashGateProvider)) {
       return onSplash ? null : Routes.splash;
     }
 
     final authValue = _ref.read(authStateChangesProvider);
-    // Auth state hasn't resolved yet — hold on the splash screen.
     if (!authValue.hasValue && !authValue.hasError) {
       return onSplash ? null : Routes.splash;
     }
@@ -148,7 +145,7 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     final onboardingValue = _ref.read(onboardingCompleteProvider);
-    // Onboarding status not resolved yet — keep waiting on splash.
+    // Onboarding status not resolved yet — keep waiting on splash
     if (!onboardingValue.hasValue && !onboardingValue.hasError) {
       return onSplash ? null : Routes.splash;
     }

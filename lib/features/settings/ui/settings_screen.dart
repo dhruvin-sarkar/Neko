@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/app_info.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../app/theme/neko_palette.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/motion/page_transitions.dart';
@@ -15,6 +16,7 @@ import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_pill_button.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../providers/theme_controller.dart';
 
 /// The Settings tab. Background and bottom nav pill are provided by [MainShell].
 class SettingsScreen extends ConsumerWidget {
@@ -59,6 +61,7 @@ class SettingsScreen extends ConsumerWidget {
     unawaited(ref.read(feedbackServiceProvider).onAdvance());
     await playPawCurtain(
       context,
+      instantCover: true,
       onCovered: () async {
         await authController.signOut();
         // Wait (up to ~640ms) for sign-out to propagate so Welcome is in place.
@@ -93,6 +96,8 @@ class SettingsScreen extends ConsumerWidget {
     final user = ref.watch(authStateChangesProvider).valueOrNull;
     final String? displayName = user?.displayName;
     final String? email = user?.email;
+    // Rebuild Settings (and re-skin it) when the colour theme changes.
+    ref.watch(themeControllerProvider);
 
     return SafeArea(
       bottom: false,
@@ -104,10 +109,24 @@ class SettingsScreen extends ConsumerWidget {
                   children: [
                     Text('Settings', style: AppTextStyles.displayLarge),
                     const SizedBox(height: 24),
-                    _AccountCard(displayName: displayName, email: email),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _AccountCard(
+                              displayName: displayName,
+                              email: email,
+                            ),
+                            const SizedBox(height: 16),
+                            const _ThemeCard(),
+                            const SizedBox(height: 16),
+                            _AboutCard(),
+                          ],
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 16),
-                    const _AboutCard(),
-                    const Spacer(),
                     NekoPillButton(
                       label: 'Sign out',
                       isLoading: isLoading,
@@ -118,6 +137,131 @@ class SettingsScreen extends ConsumerWidget {
                 .animate()
                 .fadeIn(duration: 280.ms)
                 .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic),
+      ),
+    );
+  }
+}
+
+/// The theme picker: a card of colour-scheme swatches the user can switch
+/// between. The active theme is ringed and checked.
+class _ThemeCard extends ConsumerWidget {
+  const _ThemeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final NekoPalette current = ref.watch(themeControllerProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.selectedFill,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.palette_outlined, color: AppColors.primary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Theme', style: AppTextStyles.bodyLarge),
+                    const SizedBox(height: 2),
+                    Text(current.label, style: AppTextStyles.caption),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 14,
+            runSpacing: 14,
+            children: [
+              for (final NekoPalette p in NekoPalettes.all)
+                _ThemeSwatch(
+                  palette: p,
+                  selected: p.id == current.id,
+                  onTap: () {
+                    unawaited(ref.read(feedbackServiceProvider).onSelect());
+                    ref.read(themeControllerProvider.notifier).select(p);
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A single tappable theme swatch: a circle of the theme's background with its
+/// accent dot, ringed + checked when active.
+class _ThemeSwatch extends StatelessWidget {
+  const _ThemeSwatch({
+    required this.palette,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final NekoPalette palette;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: palette.label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: palette.background,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? AppColors.almostBlack : Colors.black12,
+              width: selected ? 3 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: selected
+              ? Icon(Icons.check_rounded, color: palette.primary, size: 24)
+              : Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: palette.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -156,7 +300,7 @@ class _AccountCard extends StatelessWidget {
             width: 56,
             height: 56,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.selectedFill,
               shape: BoxShape.circle,
             ),
@@ -219,7 +363,7 @@ class _AboutCard extends StatelessWidget {
               color: AppColors.selectedFill,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.pets_rounded, color: AppColors.primary),
+            child: Icon(Icons.pets_rounded, color: AppColors.primary),
           ),
           const SizedBox(width: 14),
           Expanded(

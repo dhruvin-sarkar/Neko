@@ -112,15 +112,15 @@ abstract final class AppTheme {
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+      borderSide: BorderSide(color: AppColors.primary, width: 2),
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.primaryDark),
+      borderSide: BorderSide(color: AppColors.primaryDark),
     ),
     focusedErrorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.primaryDark, width: 2),
+      borderSide: BorderSide(color: AppColors.primaryDark, width: 2),
     ),
   );
 }

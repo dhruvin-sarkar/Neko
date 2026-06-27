@@ -12,6 +12,7 @@ import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../../onboarding/providers/onboarding_provider.dart';
+import '../../settings/providers/theme_controller.dart';
 import '../../tour/providers/tour_keys.dart';
 import '../../tour/ui/home_tour.dart';
 import '../providers/profile_provider.dart';
@@ -28,6 +29,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(themeControllerProvider);
     final cats = ref.watch(catProfilesProvider);
     final String? displayName = ref.watch(
       authStateChangesProvider.select((v) => v.valueOrNull?.displayName),

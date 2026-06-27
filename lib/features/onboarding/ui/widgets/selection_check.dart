@@ -16,7 +16,7 @@ class SelectionCheck extends StatelessWidget {
     return Container(
           width: size,
           height: size,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: AppColors.primary,
             shape: BoxShape.circle,
           ),

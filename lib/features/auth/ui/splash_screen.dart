@@ -35,7 +35,7 @@ class SplashScreen extends StatelessWidget {
                 )
                 .fadeIn(duration: 300.ms),
             const SizedBox(height: 40),
-            const SizedBox(
+            SizedBox(
               height: 24,
               width: 24,
               child: CircularProgressIndicator(

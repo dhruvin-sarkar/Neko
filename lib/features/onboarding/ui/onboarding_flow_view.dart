@@ -177,7 +177,7 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                 numberOfParticles: 30,
                 gravity: 0.2,
                 emissionFrequency: 0.05,
-                colors: const [
+                colors: [
                   AppColors.primary,
                   AppColors.success,
                   AppColors.warning,

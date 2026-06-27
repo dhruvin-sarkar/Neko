@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../features/settings/providers/theme_controller.dart';
 import '../shared/widgets/paw_background.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -13,13 +14,20 @@ class NekoApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
+    // Watching the theme keeps AppColors.palette current and rebuilds the
+    // Material theme (and the paw background) when the user switches themes.
+    ref.watch(themeControllerProvider);
     return MaterialApp.router(
       title: 'Neko',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: router,
-      builder: (context, child) =>
-          PawBackground(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => Consumer(
+        builder: (context, ref, _) {
+          ref.watch(themeControllerProvider);
+          return PawBackground(child: child ?? const SizedBox.shrink());
+        },
+      ),
     );
   }
 }

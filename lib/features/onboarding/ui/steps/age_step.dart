@@ -100,7 +100,7 @@ class _AgeStepState extends ConsumerState<AgeStep> {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: _pickBirthday,
-              icon: const Icon(
+              icon: Icon(
                 Icons.cake_outlined,
                 size: 18,
                 color: AppColors.primary,
@@ -186,7 +186,7 @@ class _BirthdayChip extends StatelessWidget {
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onRemove,
-            child: const Icon(
+            child: Icon(
               Icons.close_rounded,
               size: 18,
               color: AppColors.primary,

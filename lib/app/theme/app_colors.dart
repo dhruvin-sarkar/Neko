@@ -1,25 +1,25 @@
 import 'package:flutter/material.dart';
 
+import 'neko_palette.dart';
+
 /// The single source of truth for colour in the app.
 ///
-/// Coral is our brand accent (it plays the role Duolingo's green plays for
-/// them): it appears once per screen, on the main call-to-action. Pages sit on
-/// the warm amber background; white is reserved for the cards and fields that
-/// sit on top of it. I keep a few legacy names as aliases at the bottom so
-/// older widgets keep working while pointing at the same canonical values.
+/// Brand colours (the accent, the warm background, the banner, the paw tint)
+/// are read from the active [palette], which the theme picker swaps at runtime.
+/// Neutrals and semantic colours are constant so text contrast and the meaning
+/// of success/danger/info never change between themes.
 abstract final class AppColors {
   const AppColors._();
 
-  // Brand — coral
-  static const Color primary = Color(
-    0xFFFF6B6B,
-  ); // every CTA, logo, active state
-  static const Color primaryDark = Color(
-    0xFFCC4444,
-  ); // the 4px shadow under a coral button
-  static const Color primaryLight = Color(
-    0xFFFFE5E5,
-  ); // selected card fill, active tints
+  /// The active brand palette. Swapped by the theme controller; widgets read
+  /// the brand getters below, so changing this (and rebuilding) re-skins the
+  /// whole app.
+  static NekoPalette palette = NekoPalettes.coral;
+
+  // Brand — driven by the active palette.
+  static Color get primary => palette.primary; // every CTA, logo, active state
+  static Color get primaryDark => palette.primaryDark; // 4px button shadow
+  static Color get primaryLight => palette.primaryLight; // selected fills/tints
 
   // Semantic — success (the only place I use green)
   static const Color success = Color(0xFF58CC02);
@@ -47,9 +47,12 @@ abstract final class AppColors {
   static const Color cloudGray = Color(0xFFE5E5E5); // borders, dividers
   static const Color snowWhite = Color(0xFFFFFFFF); // card surfaces
 
-  // Surfaces
-  static const Color homeBg = Color(0xFFF5C275); // warm amber page background
-  static const Color darkBanner = Color(0xFF2F4F5E); // cat profile pill banners
+  // Surfaces — background and banner follow the active palette.
+  static Color get homeBg => palette.background; // warm page background
+  static Color get darkBanner => palette.banner; // cat profile pill banners
+
+  /// The tint of the drifting paw pattern behind every screen.
+  static Color get pawPattern => palette.pawPattern;
 
   /// A subtle neutral fill for elements layered on a white card (e.g. an icon
   /// tile) where plain white would be invisible against the card.
@@ -66,14 +69,14 @@ abstract final class AppColors {
   static const Color coatOther = Color(0xFFBDBDBD);
 
   // --- Legacy aliases (kept so existing widgets keep compiling) ---
-  static const Color background = homeBg; // every page sits on amber
+  static Color get background => homeBg; // every page sits on the bg
   static const Color surfaceCard = snowWhite;
   static const Color textPrimary = almostBlack;
   static const Color textSecondary = graphite;
   static const Color textDisabled = silver;
   static const Color border = cloudGray;
-  static const Color selectedFill = primaryLight;
-  static const Color selectedBorder = primary;
+  static Color get selectedFill => primaryLight;
+  static Color get selectedBorder => primary;
   static const Color disabledBtn = cloudGray;
 
   /// Maps a stored [colorType] string to its avatar colour, falling back to a

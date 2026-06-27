@@ -1,12 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Shared [GlobalKey]s marking the widgets the home tour spotlights.
-///
-/// The targets live in different parts of the tree — the greeting and cat
-/// list sit in `HomeScreen`, while the nav pill is owned by `MainShell` — so
-/// the keys are held centrally and handed to each widget through
-/// [tourKeysProvider]. The tour reads these same keys to anchor its spotlight.
 class TourKeys {
   /// The "Welcome back" greeting at the top of Home.
   final GlobalKey greeting = GlobalKey(debugLabel: 'tour_greeting');
@@ -22,15 +16,33 @@ class TourKeys {
 
   /// The Settings destination in the bottom nav pill.
   final GlobalKey navSettings = GlobalKey(debugLabel: 'tour_nav_settings');
+
+  // ── Cat profile detail screen ──
+
+  /// The block of stat cards (age, weight, activity, calories).
+  final GlobalKey profileStats = GlobalKey(debugLabel: 'tour_profile_stats');
+
+  /// The edit action in the profile app bar.
+  final GlobalKey profileEdit = GlobalKey(debugLabel: 'tour_profile_edit');
+
+  /// The Documents section (upload vet records, passports, etc.).
+  final GlobalKey profileDocuments = GlobalKey(
+    debugLabel: 'tour_profile_documents',
+  );
 }
 
 /// App-wide [TourKeys]. Kept alive so the keys are stable across rebuilds.
 final tourKeysProvider = Provider<TourKeys>((ref) => TourKeys());
 
-/// The Home scroll view's controller, shared so the guided tour can scroll a
-/// target (e.g. the add-cat button below a long cat list) into view before
-/// spotlighting it. Kept alive and disposed with the provider container.
 final homeScrollControllerProvider = Provider<ScrollController>((ref) {
+  final ScrollController controller = ScrollController();
+  ref.onDispose(controller.dispose);
+  return controller;
+});
+
+/// The cat profile detail screen's scroll controller, shared so the guided tour
+/// can scroll the Documents section into view before spotlighting it.
+final profileScrollControllerProvider = Provider<ScrollController>((ref) {
   final ScrollController controller = ScrollController();
   ref.onDispose(controller.dispose);
   return controller;

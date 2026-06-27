@@ -61,11 +61,11 @@ class _WelcomeMark extends StatelessWidget {
     final Widget fallback = Container(
       width: 132,
       height: 132,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.primaryLight,
         shape: BoxShape.circle,
       ),
-      child: const Icon(Icons.pets_rounded, size: 64, color: AppColors.primary),
+      child: Icon(Icons.pets_rounded, size: 64, color: AppColors.primary),
     );
 
     return Column(
