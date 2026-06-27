@@ -7,13 +7,23 @@ part of 'onboarding_status_provider.dart';
 // **************************************************************************
 
 String _$onboardingCompleteHash() =>
-    r'ff90c20c11c97cc062c7eba8eac19f7777a5cdc7';
+    r'96bc11319e91e303929bfd56d15a022c5416a4b6';
 
 /// Streams whether the signed-in user has finished onboarding.
 ///
-/// Emits `false` while signed out. Reads `users/{uid}.onboardingComplete`
-/// reactively so the router redirects automatically the moment the flag flips
-/// to `true` after the final onboarding step.
+/// Emits `false` while signed out. Resolution order:
+///   1. A locally-persisted flag (set the first time onboarding completes), so
+///      a returning user is taken straight into the app instantly and offline.
+///   2. The user's cats: anyone who already has a cat has, by definition,
+///      finished onboarding. The decision is driven by the cat stream, so it
+///      emits **only after** the cat list has actually loaded — a returning
+///      user is therefore never momentarily routed into the add-a-cat flow (and
+///      then stranded there, since `/onboarding` is intentionally sticky).
+///   3. For users with no cats, the per-user `users/{uid}.onboardingComplete`
+///      flag is consulted.
+///
+/// A positive result from (2) or (3) is cached locally so future launches
+/// short-circuit on (1).
 ///
 /// Copied from [onboardingComplete].
 @ProviderFor(onboardingComplete)

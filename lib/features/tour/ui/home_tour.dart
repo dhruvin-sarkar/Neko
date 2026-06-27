@@ -110,15 +110,11 @@ class _TourRunner {
   bool _done = false;
 
   Future<void> run() async {
-    final cats =
-        ref.read(catProfilesProvider).valueOrNull ?? const [];
+    final cats = ref.read(catProfilesProvider).valueOrNull ?? const [];
     final bool hasCats = cats.isNotEmpty;
     final String? catId = hasCats ? cats.first.id : null;
 
-    final List<_Step> homeIntro = <_Step>[
-      _greeting,
-      if (hasCats) _firstCat,
-    ];
+    final List<_Step> homeIntro = <_Step>[_greeting, if (hasCats) _firstCat];
     final List<_Step> profile = hasCats
         ? <_Step>[_profileStats, _profileEdit, _profileDocuments]
         : <_Step>[];
@@ -199,11 +195,13 @@ class _TourRunner {
   Future<bool> _showSegment(List<_Step> steps, int offset, int total) async {
     if (steps.isEmpty) return false;
     await _reveal(steps.first);
+    await _settle(steps.first.key);
     if (!context.mounted) return true;
 
     final Completer<bool> result = Completer<bool>();
     final List<TargetFocus> targets = <TargetFocus>[
-      for (int i = 0; i < steps.length; i++) _targetFor(steps, i, offset, total),
+      for (int i = 0; i < steps.length; i++)
+        _targetFor(steps, i, offset, total),
     ];
 
     unawaited(_feedback.onTap());
@@ -330,6 +328,29 @@ class _TourRunner {
         alignment: atBottom ? 0.65 : 0.2,
       );
       await Future<void>.delayed(const Duration(milliseconds: 40));
+    }
+  }
+
+  /// Waits until [key]'s on-screen position has settled before the coach mark
+  /// captures it. Content slides in on first build, and a staggered entrance
+  /// can hold a target at its start position for a beat — so I let the entrance
+  /// finish, then confirm the position is steady. Without this the spotlight
+  /// locks onto a stale, offset position.
+  Future<void> _settle(GlobalKey key) async {
+    final Stopwatch sw = Stopwatch()..start();
+    Offset? last;
+    while (sw.elapsedMilliseconds < 2000) {
+      final box = key.currentContext?.findRenderObject() as RenderBox?;
+      if (box != null && box.hasSize) {
+        final Offset pos = box.localToGlobal(Offset.zero);
+        if (sw.elapsedMilliseconds > 750 &&
+            last != null &&
+            (pos - last).distance < 0.5) {
+          return;
+        }
+        last = pos;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 32));
     }
   }
 

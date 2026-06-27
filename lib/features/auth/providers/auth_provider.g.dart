@@ -44,15 +44,28 @@ final authRepositoryProvider = Provider<AuthRepository>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef AuthRepositoryRef = ProviderRef<AuthRepository>;
-String _$authControllerHash() => r'5b175d98ef56175c851aa3b3356f9ebfc0f01a92';
+String _$googleAccountChangesHash() =>
+    r'a2e40118d481c21511972f605da2cf110f1411c5';
 
-/// Drives auth actions and exposes their progress as an [AsyncValue].
-///
-/// The UI calls these methods, watches this controller for loading/error
-/// state, and never navigates directly — a successful auth change flows
-/// through [authStateChangesProvider] and the router redirect handles routing.
-///
-/// Copied from [AuthController].
+/// See also [googleAccountChanges].
+@ProviderFor(googleAccountChanges)
+final googleAccountChangesProvider =
+    StreamProvider<GoogleSignInAccount?>.internal(
+      googleAccountChanges,
+      name: r'googleAccountChangesProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$googleAccountChangesHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef GoogleAccountChangesRef = StreamProviderRef<GoogleSignInAccount?>;
+String _$authControllerHash() => r'5674390f931bd0b1c4919039535c57107a95f8f4';
+
+/// See also [AuthController].
 @ProviderFor(AuthController)
 final authControllerProvider =
     AutoDisposeAsyncNotifierProvider<AuthController, void>.internal(

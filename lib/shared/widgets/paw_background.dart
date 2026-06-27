@@ -1,11 +1,14 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show ByteData, rootBundle;
 
 import '../../app/theme/app_colors.dart';
 
-/// The app-wide background: the warm amber fill with a faint pattern of cat
-/// paws that drifts slowly and diagonally, looping forever. It sits behind
-/// every screen (the screens themselves are transparent), so the motion is
-/// continuous as you move between pages.
+/// The app-wide background: the warm amber fill with a faint, repeating pattern
+/// of our paw image that drifts slowly and diagonally, looping forever. It sits
+/// behind every screen (the screens themselves are transparent), so the motion
+/// is continuous as you move between pages.
 ///
 /// Kept deliberately subtle — low opacity and a slow drift — so it reads as
 /// texture, never as something competing with the content.
@@ -28,9 +31,30 @@ class _PawBackgroundState extends State<PawBackground>
     duration: const Duration(seconds: 40),
   )..repeat();
 
+  // The paw artwork, decoded once and reused for every tile. Null until the
+  // asset finishes loading; we just paint the plain amber fill until then.
+  ui.Image? _pawImage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPaw();
+  }
+
+  Future<void> _loadPaw() async {
+    final ByteData data = await rootBundle.load('assets/images/paw.png');
+    final ui.Codec codec = await ui.instantiateImageCodec(
+      data.buffer.asUint8List(),
+    );
+    final ui.FrameInfo frame = await codec.getNextFrame();
+    if (!mounted) return;
+    setState(() => _pawImage = frame.image);
+  }
+
   @override
   void dispose() {
     _controller.dispose();
+    _pawImage?.dispose();
     super.dispose();
   }
 
@@ -42,7 +66,7 @@ class _PawBackgroundState extends State<PawBackground>
         children: [
           Positioned.fill(
             child: RepaintBoundary(
-              child: CustomPaint(painter: _PawPainter(_controller)),
+              child: CustomPaint(painter: _PawPainter(_controller, _pawImage)),
             ),
           ),
           widget.child,
@@ -53,19 +77,30 @@ class _PawBackgroundState extends State<PawBackground>
 }
 
 class _PawPainter extends CustomPainter {
-  _PawPainter(this.progress) : super(repaint: progress);
+  _PawPainter(this.progress, this.image) : super(repaint: progress);
 
   final Animation<double> progress;
+  final ui.Image? image;
 
   static const double _tile = 124;
-  static const double _pawSize = 24;
+  // The drawn size of each paw. The artwork carries its own detail, so I keep
+  // it a touch larger than the old vector paw but still small enough to read as
+  // a repeating texture.
+  static const double _pawSize = 46;
 
   @override
   void paint(Canvas canvas, Size size) {
-    // A rosy tint reads clearly on the warm background, kept low-opacity so it
-    // stays texture, not noise. Follows the active theme.
+    final ui.Image? img = image;
+    if (img == null) return;
+
+    // Modulate keeps the image's own colours but drops it to a low opacity so
+    // it stays texture, not noise.
     final Paint paint = Paint()
-      ..color = AppColors.pawPattern.withValues(alpha: 0.22);
+      ..filterQuality = FilterQuality.medium
+      ..colorFilter = ColorFilter.mode(
+        Colors.white.withValues(alpha: 0.16),
+        BlendMode.modulate,
+      );
 
     final double t = progress.value;
     // Drift two tiles per loop so the (period-two) pattern wraps seamlessly.
@@ -74,6 +109,13 @@ class _PawPainter extends CustomPainter {
 
     final int cols = (size.width / _tile).ceil() + 2;
     final int rows = (size.height / _tile).ceil() + 2;
+
+    final Rect src = Rect.fromLTWH(
+      0,
+      0,
+      img.width.toDouble(),
+      img.height.toDouble(),
+    );
 
     // Start two tiles back so the area the drift vacates stays filled.
     for (int r = -2; r <= rows; r++) {
@@ -87,44 +129,32 @@ class _PawPainter extends CustomPainter {
         // drift — the loop is therefore seamless.
         final int h = (c % 2).abs() + (r % 2).abs() * 2;
         final double angle = (h - 1.5) * 0.18;
-        _drawPaw(canvas, Offset(x, y), angle, paint);
+        _drawPaw(canvas, Offset(x, y), angle, src, img, paint);
       }
     }
   }
 
-  void _drawPaw(Canvas canvas, Offset center, double angle, Paint paint) {
+  void _drawPaw(
+    Canvas canvas,
+    Offset center,
+    double angle,
+    Rect src,
+    ui.Image img,
+    Paint paint,
+  ) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(angle);
-
-    const double s = _pawSize;
-    // Main pad.
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: const Offset(0, s * 0.34),
-        width: s * 0.95,
-        height: s * 0.8,
-      ),
-      paint,
+    final Rect dst = Rect.fromCenter(
+      center: Offset.zero,
+      width: _pawSize,
+      height: _pawSize,
     );
-    // Four toe beans in an arc above the pad.
-    const double tw = s * 0.3;
-    const double th = s * 0.4;
-    const List<Offset> toes = [
-      Offset(-s * 0.4, -s * 0.12),
-      Offset(-s * 0.14, -s * 0.36),
-      Offset(s * 0.14, -s * 0.36),
-      Offset(s * 0.4, -s * 0.12),
-    ];
-    for (final Offset toe in toes) {
-      canvas.drawOval(
-        Rect.fromCenter(center: toe, width: tw, height: th),
-        paint,
-      );
-    }
+    canvas.drawImageRect(img, src, dst, paint);
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant _PawPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _PawPainter oldDelegate) =>
+      oldDelegate.image != image;
 }

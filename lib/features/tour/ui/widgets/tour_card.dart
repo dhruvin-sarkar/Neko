@@ -93,16 +93,16 @@ class TourCard extends StatelessWidget {
     );
 
     return SizedBox(
-      width: available,
-      child: Padding(
-        padding: EdgeInsets.only(
-          left: cardLeft,
-          top: pointerUp ? 6 : 0,
-          bottom: pointerUp ? 0 : 6,
-        ),
-        child: SizedBox(width: cardWidth, child: column),
-      ),
-    )
+          width: available,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: cardLeft,
+              top: pointerUp ? 6 : 0,
+              bottom: pointerUp ? 0 : 6,
+            ),
+            child: SizedBox(width: cardWidth, child: column),
+          ),
+        )
         .animate()
         .fadeIn(duration: 260.ms, curve: Curves.easeOut)
         .slideY(
@@ -164,7 +164,18 @@ class TourCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Flexible(child: _StepDots(index: stepIndex, count: stepCount)),
+              // Scale the dots down rather than let them overflow when a step
+              // count is large enough to outgrow the space the controls leave.
+              Flexible(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: _StepDots(index: stepIndex, count: stepCount),
+                  ),
+                ),
+              ),
               const SizedBox(width: 8),
               Row(
                 mainAxisSize: MainAxisSize.min,
