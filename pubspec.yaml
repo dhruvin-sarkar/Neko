@@ -39,6 +39,9 @@ dependencies:
   # Environment secrets
   flutter_dotenv: ^5.1.0
 
+  # HTTP (AI chat completions)
+  http: ^1.2.2
+
   # Local key-value persistence (e.g. onboarding-complete flag)
   shared_preferences: ^2.3.2
 

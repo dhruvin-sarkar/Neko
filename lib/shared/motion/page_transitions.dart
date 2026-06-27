@@ -91,19 +91,26 @@ abstract final class PageTransitions {
     );
   }
 
-  /// Branded curtain handoff: a solid panel sweeps diagonally to fully cover
-  /// the screen at the midpoint (masking the page swap), a walking paw-print
-  /// trail crosses it, then the panel retreats off the opposite corner to
-  /// reveal the new page. The page being covered also fades out, so nothing
-  /// shows beside the panel. Honors reduce-motion with a quick fade.
+  /// Branded curtain handoff: a solid panel sweeps in diagonally to fully cover
+  /// the screen, optionally **holds** at full cover (so the incoming page can
+  /// finish laying out its elements), then retreats off the opposite corner to
+  /// reveal the now-ready page. A walking paw trail crosses during the sweep.
+  ///
+  /// [coverIn] is the progress at which the panel reaches full cover; [coverOut]
+  /// is where it begins to open. The gap between them is the hold. With the
+  /// defaults (both `0.5`) there's no hold. Honors reduce-motion with a fade.
   static CustomTransitionPage<void> pawCurtain({
     required LocalKey key,
     required Widget child,
+    Duration? duration,
+    double coverIn = 0.5,
+    double coverOut = 0.5,
   }) {
+    final Duration d = duration ?? _curtainDuration;
     return CustomTransitionPage<void>(
       key: key,
-      transitionDuration: _curtainDuration,
-      reverseTransitionDuration: _curtainDuration,
+      transitionDuration: d,
+      reverseTransitionDuration: d,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         if (MediaQuery.of(context).disableAnimations) {
@@ -116,13 +123,14 @@ abstract final class PageTransitions {
         final Widget content = Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            // Incoming page: masked (opacity 0) until the panel fully covers
-            // at the midpoint, then crisp on reveal.
+            // Incoming page: masked (opacity 0) until the panel fully covers,
+            // then crisp — so it's revealed only once it's laid out behind the
+            // panel.
             AnimatedBuilder(
               animation: animation,
               child: child,
               builder: (context, child) => Opacity(
-                opacity: _curtainContentOpacity(animation.value),
+                opacity: _curtainContentOpacity(animation.value, coverIn),
                 child: child,
               ),
             ),
@@ -134,6 +142,8 @@ abstract final class PageTransitions {
                     progress: animation,
                     panelColor: _kCurtainColor,
                     pawColor: _kPawBrandColor,
+                    coverIn: coverIn,
+                    coverOut: coverOut,
                   ),
                 ),
               ),
@@ -372,23 +382,18 @@ class _BlurBranchSwitcherState extends State<BlurBranchSwitcher>
 
 // ── Paw Curtain — pure helper functions ──
 
-/// Progress at which the panel is fully covering and the new screen is swapped
-/// in behind it. Through the whole cover phase the panel fills the entire
-/// screen (opaque), so the screen you're leaving is never visible behind it;
-/// after this point the panel sweeps diagonally away to reveal the new screen.
-const double _kCurtainCover = 0.26;
-
-/// Visible coverage: full through the cover phase, then recedes to zero as the
-/// panel opens. Used only to short-circuit painting once nothing is covered.
-double _curtainCoverage(double t) => t <= _kCurtainCover
+/// Visible coverage: full from the moment the panel reaches cover ([coverOut]),
+/// then recedes to zero as it opens. Used to short-circuit painting once
+/// nothing is covered.
+double _curtainCoverage(double t, double coverOut) => t <= coverOut
     ? 1.0
-    : (1.0 - (t - _kCurtainCover) / (1.0 - _kCurtainCover));
+    : (1.0 - (t - coverOut) / (1.0 - coverOut));
 
-/// Page-content alpha: fully masked (0.0) through the covering phase, then
-/// snaps to fully opaque exactly at the cover point — while the panel still
-/// covers the screen, so the flip is invisible and the previous screen can
-/// never show through.
-double _curtainContentOpacity(double t) => t <= _kCurtainCover ? 0.0 : 1.0;
+/// Page-content alpha: masked (0.0) while the panel sweeps in, then opaque from
+/// [coverIn] on — so the page is revealed (and held) only once it's fully
+/// covered, never while the previous screen could still peek through.
+double _curtainContentOpacity(double t, double coverIn) =>
+    t < coverIn ? 0.0 : 1.0;
 
 /// Linear interpolation helper.
 double _lerp(double a, double b, double t) => a + (b - a) * t;
@@ -408,17 +413,24 @@ Offset _pawMotifOffset(double t, Size size, {double inset = 48}) {
 
 // ── Diagonal half-plane panel geometry ──
 
-/// Builds the panel path for progress `t`. During the cover phase (t ≤ cover
-/// point) the panel fills the entire screen so the previous screen is never
-/// visible behind it. After the cover point the uncovered region grows so the
-/// panel retreats off the opposite corner, revealing the new page.
-Path _panelPath(Size size, double t) {
-  if (t <= _kCurtainCover) {
-    // Cover phase: fill the whole screen immediately (opaque cover).
+/// Builds the panel path for progress `t`. Up to [coverIn] the covered region
+/// grows diagonally from the start corner (going-in sweep); between [coverIn]
+/// and [coverOut] it holds full-screen (so the new page can finish laying out);
+/// after [coverOut] the panel retreats off the opposite corner to reveal it.
+Path _panelPath(Size size, double t, double coverIn, double coverOut) {
+  final double extent = size.width + size.height;
+  if (t <= coverIn) {
+    // Going-in: covered region grows diagonally to full cover.
+    final double front = extent * (coverIn <= 0 ? 1.0 : t / coverIn);
+    return _halfPlaneBelowDiagonal(size, front);
+  }
+  if (t <= coverOut) {
+    // Hold: stay fully covered while the incoming page renders.
     return Path()..addRect(Offset.zero & size);
   }
-  final double extent = size.width + size.height;
-  final double back = extent * ((t - _kCurtainCover) / (1.0 - _kCurtainCover));
+  // Going-out: the uncovered region grows, so the panel retreats off the
+  // opposite corner.
+  final double back = extent * ((t - coverOut) / (1.0 - coverOut));
   return _halfPlaneAboveDiagonal(size, back);
 }
 
@@ -536,20 +548,24 @@ class _PawCurtainPainter extends CustomPainter {
     required this.progress,
     required this.panelColor,
     required this.pawColor,
+    this.coverIn = 0.5,
+    this.coverOut = 0.5,
   }) : super(repaint: progress);
 
   final Animation<double> progress;
   final Color panelColor;
   final Color pawColor;
+  final double coverIn;
+  final double coverOut;
 
   @override
   void paint(Canvas canvas, Size size) {
     final double t = progress.value;
-    final double coverage = _curtainCoverage(t);
+    final double coverage = _curtainCoverage(t, coverOut);
     if (coverage <= 0) return;
 
     final Paint panelPaint = Paint()..color = panelColor;
-    canvas.drawPath(_panelPath(size, t), panelPaint);
+    canvas.drawPath(_panelPath(size, t, coverIn, coverOut), panelPaint);
 
     _paintPawTrail(canvas, size, t);
   }
@@ -563,15 +579,15 @@ class _PawCurtainPainter extends CustomPainter {
     final Offset normal = Offset(-math.sin(angle), math.cos(angle));
     final double sideStep = size.shortestSide * 0.05;
 
-    final double trailFade = t <= _kCurtainCover
+    final double trailFade = t <= coverIn
         ? 1.0
-        : (1.0 - (t - _kCurtainCover) / 0.30).clamp(0.0, 1.0).toDouble();
+        : (1.0 - (t - coverIn) / 0.30).clamp(0.0, 1.0).toDouble();
     if (trailFade <= 0) return;
 
     for (int i = 0; i < count; i++) {
       final double f = (i + 0.5) / count;
-      final double appearAt = _lerp(0.04, _kCurtainCover * 0.9, f);
-      final double a = ((t - appearAt) / (_kCurtainCover * 0.35))
+      final double appearAt = _lerp(0.04, coverIn * 0.9, f);
+      final double a = ((t - appearAt) / (coverIn * 0.35))
           .clamp(0.0, 1.0)
           .toDouble();
       if (a <= 0) continue;
@@ -595,7 +611,9 @@ class _PawCurtainPainter extends CustomPainter {
   bool shouldRepaint(_PawCurtainPainter old) =>
       old.progress.value != progress.value ||
       old.panelColor != panelColor ||
-      old.pawColor != pawColor;
+      old.pawColor != pawColor ||
+      old.coverIn != coverIn ||
+      old.coverOut != coverOut;
 }
 
 /// Plays the paw curtain as a full-screen overlay and navigates underneath it.

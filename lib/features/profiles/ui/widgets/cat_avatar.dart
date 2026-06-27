@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../onboarding/data/avatar_presets.dart';
 
-/// Circular cat avatar. Resolution order: uploaded photo (network) → bundled
-/// preset avatar (asset) → a solid circle in the cat's coat color with a white
-/// ring. Every source degrades to the coat-color fallback on error.
+/// Circular cat avatar. Resolves uploaded photo, then preset asset, then a
+/// solid coat-colour circle; every source falls back to the coat colour on
+/// error.
 class CatAvatar extends StatelessWidget {
   const CatAvatar({
     super.key,
@@ -24,8 +24,7 @@ class CatAvatar extends StatelessWidget {
   final double size;
   final double borderWidth;
 
-  /// When set, the avatar participates in a Hero shared-element transition
-  /// (e.g. flying from the home banner into the profile detail).
+  /// When set, the avatar joins a Hero shared-element transition.
   final Object? heroTag;
 
   @override
@@ -34,7 +33,7 @@ class CatAvatar extends StatelessWidget {
     if (heroTag == null) return avatar;
     return Hero(
       tag: heroTag!,
-      // Keep the avatar circular and crisp throughout the flight.
+      // Stay circular and crisp during the flight.
       flightShuttleBuilder: (_, _, _, _, toHero) => toHero.widget,
       child: avatar,
     );

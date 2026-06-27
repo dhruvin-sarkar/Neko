@@ -1,8 +1,9 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart' show XFile;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/errors/app_exception.dart';
@@ -33,14 +34,9 @@ class OnboardingRepository {
   final FirebaseStorage _storage;
   final String _userId;
 
-  /// Creates the cat document and flips `onboardingComplete` to `true` in a
-  /// single atomic batch, so a partial save can never leave the user stranded
-  /// between onboarding and home.
-  ///
-  /// If [photoPath] is provided, the image is uploaded to Storage first and its
-  /// download URL is stored on the cat. Photo upload is best-effort: a failed
-  /// upload still saves the cat (without a photo) rather than blocking
-  /// onboarding.
+  /// Creates the cat document and sets `onboardingComplete: true` in one atomic
+  /// batch. If [photoPath] is given, the image uploads first; a failed upload
+  /// still saves the cat without a photo rather than blocking onboarding.
   Future<void> completeOnboarding(
     CatProfile profile, {
     String? photoPath,
@@ -76,6 +72,8 @@ class OnboardingRepository {
   }
 
   /// Uploads the avatar and returns its download URL, or `null` on failure.
+  /// Reads bytes via [XFile] and uses `putData` so it works on web too, where
+  /// `dart:io` `File` is unavailable and the path is a blob URL.
   Future<String?> _uploadAvatar({
     required String catId,
     required String path,
@@ -84,8 +82,9 @@ class OnboardingRepository {
       final Reference ref = _storage.ref(
         'users/$_userId/cats/$catId/avatar.jpg',
       );
-      await ref.putFile(
-        File(path),
+      final Uint8List bytes = await XFile(path).readAsBytes();
+      await ref.putData(
+        bytes,
         SettableMetadata(contentType: 'image/jpeg'),
       );
       return await ref.getDownloadURL();

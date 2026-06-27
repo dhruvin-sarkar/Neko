@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -125,12 +126,14 @@ class _PhotoPreview extends StatelessWidget {
     final String? path = photoPath;
     if (path != null) {
       return ClipOval(
-        child: Image.file(
-          File(path),
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-        ),
+        child: kIsWeb
+            ? Image.network(path, width: size, height: size, fit: BoxFit.cover)
+            : Image.file(
+                File(path),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+              ),
       );
     }
 

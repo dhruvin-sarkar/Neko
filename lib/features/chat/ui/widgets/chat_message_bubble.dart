@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -83,7 +84,7 @@ class _Attachments extends StatelessWidget {
             child: SizedBox(
               width: 120,
               height: 90,
-              child: a.isImage && File(a.path).existsSync()
+              child: a.isImage && !kIsWeb && File(a.path).existsSync()
                   ? Image.file(File(a.path), fit: BoxFit.cover)
                   : Container(
                       color: AppColors.surfaceMuted,

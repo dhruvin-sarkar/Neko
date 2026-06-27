@@ -8,6 +8,7 @@ import '../features/auth/ui/login_screen.dart';
 import '../features/auth/ui/register_screen.dart';
 import '../features/auth/ui/splash_screen.dart';
 import '../features/auth/ui/welcome_screen.dart';
+import '../features/chat/ui/chat_screen.dart';
 import '../features/onboarding/providers/onboarding_status_provider.dart';
 import '../features/onboarding/ui/onboarding_screen.dart';
 import '../features/profiles/ui/edit_cat_screen.dart';
@@ -64,6 +65,11 @@ GoRouter goRouter(Ref ref) {
         path: Routes.onboarding,
         pageBuilder: (context, state) => PageTransitions.pawCurtain(
           key: state.pageKey,
+          // Longer, with a hold at full cover so the onboarding screen finishes
+          // laying out every element before the curtain sweeps away.
+          duration: const Duration(milliseconds: 1400),
+          coverIn: 0.30,
+          coverOut: 0.62,
           child: const OnboardingScreen(),
         ),
       ),
@@ -94,6 +100,14 @@ GoRouter goRouter(Ref ref) {
               GoRoute(
                 path: Routes.home,
                 builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.chat,
+                builder: (context, state) => const ChatScreen(),
               ),
             ],
           ),

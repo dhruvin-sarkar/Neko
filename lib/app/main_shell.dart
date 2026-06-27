@@ -20,6 +20,9 @@ class MainShell extends ConsumerWidget {
     final tourKeys = ref.read(tourKeysProvider);
     // Rebuild the shell (and its nav pill) when the colour theme changes.
     ref.watch(themeControllerProvider);
+    // Hide the floating nav pill while a keyboard is up (e.g. typing in chat)
+    // so the composer sits directly above the keyboard.
+    final bool keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
     return RecedeOnCover(
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -27,29 +30,32 @@ class MainShell extends ConsumerWidget {
           index: navigationShell.currentIndex,
           child: navigationShell,
         ),
-        bottomNavigationBar: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.only(top: 8, bottom: 16),
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              heightFactor: 1,
-              child: NekoNavPill(
-                homeKey: tourKeys.navHome,
-                settingsKey: tourKeys.navSettings,
-                selectedIndex: navigationShell.currentIndex,
-                onSelect: (index) {
-                  unawaited(ref.read(feedbackServiceProvider).onTap());
-                  navigationShell.goBranch(
-                    index,
-                    // Re-tapping the active tab returns it to its root.
-                    initialLocation: index == navigationShell.currentIndex,
-                  );
-                },
+        bottomNavigationBar: keyboardOpen
+            ? null
+            : SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 16),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    heightFactor: 1,
+                    child: NekoNavPill(
+                      homeKey: tourKeys.navHome,
+                      settingsKey: tourKeys.navSettings,
+                      selectedIndex: navigationShell.currentIndex,
+                      onSelect: (index) {
+                        unawaited(ref.read(feedbackServiceProvider).onTap());
+                        navigationShell.goBranch(
+                          index,
+                          // Re-tapping the active tab returns it to its root.
+                          initialLocation:
+                              index == navigationShell.currentIndex,
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-        ),
       ),
     );
   }

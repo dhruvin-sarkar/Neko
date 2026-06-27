@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/chat_service.dart';
 import '../models/chat_attachment.dart';
+import '../models/chat_conversation.dart';
 import '../models/chat_message.dart';
+import 'chat_history_provider.dart';
 
-/// Immutable snapshot of the conversation.
+/// Immutable snapshot of the active conversation.
 @immutable
 class ChatState {
   const ChatState({
@@ -27,8 +29,9 @@ class ChatState {
       );
 }
 
-/// Owns the conversation: appends the user's message, streams the assistant's
-/// reply in, and supports stopping mid-generation.
+/// Owns the active conversation: appends the user's message, streams the
+/// assistant's reply, supports stopping mid-generation, and saves finished
+/// conversations into the persisted history.
 final chatControllerProvider = NotifierProvider<ChatController, ChatState>(
   ChatController.new,
 );
@@ -36,15 +39,16 @@ final chatControllerProvider = NotifierProvider<ChatController, ChatState>(
 class ChatController extends Notifier<ChatState> {
   StreamSubscription<String>? _sub;
   int _seq = 0;
+  late String _conversationId;
 
   @override
   ChatState build() {
+    _conversationId = _nextId();
     ref.onDispose(() => _sub?.cancel());
     return const ChatState();
   }
 
-  String _nextId() =>
-      '${DateTime.now().microsecondsSinceEpoch}-${_seq++}';
+  String _nextId() => '${DateTime.now().microsecondsSinceEpoch}-${_seq++}';
 
   /// Sends [text] (+ any [attachments]) and streams the assistant's reply.
   Future<void> send(String text, List<ChatAttachment> attachments) async {
@@ -81,20 +85,21 @@ class ChatController extends Notifier<ChatState> {
             _setAssistant(assistantId, buffer.toString(), streaming: true);
           },
           onDone: () {
+            final String text = buffer.toString().trim();
             _setAssistant(
               assistantId,
-              buffer.toString().trimRight(),
+              text.isEmpty ? '…' : text,
               streaming: false,
             );
             state = state.copyWith(isGenerating: false);
             _sub = null;
+            _saveCurrent();
           },
-          onError: (_) {
-            _setAssistant(
-              assistantId,
-              'Sorry — something went wrong. Please try again.',
-              streaming: false,
-            );
+          onError: (Object error) {
+            final String message = error is ChatException
+                ? error.message
+                : 'Sorry — something went wrong. Please try again.';
+            _setAssistant(assistantId, message, streaming: false);
             state = state.copyWith(isGenerating: false);
             _sub = null;
           },
@@ -124,12 +129,45 @@ class ChatController extends Notifier<ChatState> {
           m.isStreaming ? m.copyWith(isStreaming: false) : m,
       ],
     );
+    _saveCurrent();
   }
 
-  /// Clears the conversation.
-  void clear() {
+  /// Archives the current conversation (if any) and starts a fresh one.
+  void newChat() {
     _sub?.cancel();
     _sub = null;
+    _saveCurrent();
+    _conversationId = _nextId();
     state = const ChatState();
+  }
+
+  /// Loads a saved [conversation] as the active one.
+  void load(ChatConversation conversation) {
+    _sub?.cancel();
+    _sub = null;
+    _saveCurrent();
+    _conversationId = conversation.id;
+    state = ChatState(messages: List<ChatMessage>.of(conversation.messages));
+  }
+
+  void _saveCurrent() {
+    if (state.messages.isEmpty) return;
+    final String title = state.messages
+        .firstWhere(
+          (m) => m.isUser && m.content.trim().isNotEmpty,
+          orElse: () => state.messages.first,
+        )
+        .content
+        .trim();
+    ref
+        .read(chatHistoryProvider.notifier)
+        .upsert(
+          ChatConversation(
+            id: _conversationId,
+            title: title.isEmpty ? 'Conversation' : title,
+            updatedAt: DateTime.now(),
+            messages: state.messages,
+          ),
+        );
   }
 }

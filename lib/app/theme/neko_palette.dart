@@ -1,11 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-/// A selectable colour scheme for the app.
-///
-/// Only the *brand* colours change between themes — the accent (coral, ocean,
-/// etc.), the warm page background, the dark banner, and the paw-pattern tint.
-/// Neutrals (text, borders) and semantic colours (success/danger/info) stay
-/// constant so contrast and meaning are preserved across every theme.
+/// A selectable brand colour scheme. Only brand colours change between themes;
+/// neutrals and semantic colours stay constant.
 @immutable
 class NekoPalette {
   const NekoPalette({
@@ -19,32 +15,32 @@ class NekoPalette {
     required this.pawPattern,
   });
 
-  /// Stable identifier persisted to storage.
+  /// Persisted identifier.
   final String id;
 
-  /// Human-friendly name shown in the theme picker.
+  /// Name shown in the theme picker.
   final String label;
 
-  /// The brand accent — every CTA, logo, and active state.
+  /// Brand accent: CTAs, logo, active states.
   final Color primary;
 
-  /// The 4px drop shadow under a primary button.
+  /// Drop shadow under a primary button.
   final Color primaryDark;
 
-  /// Selected card fill / active tints.
+  /// Selected fills and active tints.
   final Color primaryLight;
 
-  /// The warm page background the whole app sits on.
+  /// Page background.
   final Color background;
 
-  /// The dark pill-banner colour (cat banners, snackbars).
+  /// Dark pill-banner colour.
   final Color banner;
 
-  /// The tint of the drifting paw pattern in the background.
+  /// Tint of the drifting paw pattern.
   final Color pawPattern;
 }
 
-/// The built-in themes. [coral] is the original default.
+/// Built-in themes; [coral] is the default.
 abstract final class NekoPalettes {
   const NekoPalettes._();
 
@@ -59,48 +55,51 @@ abstract final class NekoPalettes {
     pawPattern: Color(0xFFFF5C8D),
   );
 
+  // Every theme shares Coral's warm accent-on-soft-background look, varying
+  // only the background hue.
+
   static const NekoPalette ocean = NekoPalette(
     id: 'ocean',
     label: 'Seaside',
-    primary: Color(0xFFFF7043), // warm coral-orange that pops on teal
-    primaryDark: Color(0xFFC9482A),
-    primaryLight: Color(0xFFFFE0D6),
-    background: Color(0xFF5FB7D4), // teal-blue
-    banner: Color(0xFF1F4654),
-    pawPattern: Color(0xFFFF7A4D), // warm coral paws contrast the teal
+    primary: Color(0xFFFF7B62),
+    primaryDark: Color(0xFFD4543C),
+    primaryLight: Color(0xFFFFE3DB),
+    background: Color(0xFF7FC3C2), // muted seafoam
+    banner: Color(0xFF234A50),
+    pawPattern: Color(0xFFFF9478),
   );
 
   static const NekoPalette forest = NekoPalette(
     id: 'forest',
     label: 'Meadow',
-    primary: Color(0xFFE8568A), // berry pink against the green
-    primaryDark: Color(0xFFB62E63),
-    primaryLight: Color(0xFFFCD9E6),
-    background: Color(0xFF8DCB79), // leaf green
-    banner: Color(0xFF2C4030),
-    pawPattern: Color(0xFFE8568A), // berry-pink paws contrast the green
+    primary: Color(0xFFE96F57), // terracotta-rose
+    primaryDark: Color(0xFFBE4A36),
+    primaryLight: Color(0xFFFBE1DA),
+    background: Color(0xFFAEC982), // dusty sage
+    banner: Color(0xFF33442C),
+    pawPattern: Color(0xFFF2906F),
   );
 
   static const NekoPalette lavender = NekoPalette(
     id: 'lavender',
     label: 'Twilight',
-    primary: Color(0xFFFFB72B), // golden accent on lavender
-    primaryDark: Color(0xFFCC8A12),
-    primaryLight: Color(0xFFFFEFC9),
-    background: Color(0xFFB79CE0), // soft lavender
-    banner: Color(0xFF38304E),
-    pawPattern: Color(0xFFFFC24B), // golden paws contrast the lavender
+    primary: Color(0xFFFFA63D), // amber-gold
+    primaryDark: Color(0xFFD17E1A),
+    primaryLight: Color(0xFFFFEBD2),
+    background: Color(0xFFB3A2D6), // dusty lavender
+    banner: Color(0xFF382F4E),
+    pawPattern: Color(0xFFFFBC63),
   );
 
   static const NekoPalette blush = NekoPalette(
     id: 'blush',
     label: 'Bubblegum',
-    primary: Color(0xFF2BB5A8), // teal accent on pink
-    primaryDark: Color(0xFF178C82),
-    primaryLight: Color(0xFFCFF2EE),
-    background: Color(0xFFF4A0C0), // bubblegum pink
-    banner: Color(0xFF4E2E3E),
-    pawPattern: Color(0xFF2BB5A8), // teal paws contrast the pink
+    primary: Color(0xFFFF7E63), // warm coral
+    primaryDark: Color(0xFFD5573C),
+    primaryLight: Color(0xFFFFE3DB),
+    background: Color(0xFFF2A6BC), // dusty rose
+    banner: Color(0xFF4A2733),
+    pawPattern: Color(0xFFFF9B7B),
   );
 
   /// All themes, in display order.
@@ -112,7 +111,7 @@ abstract final class NekoPalettes {
     blush,
   ];
 
-  /// Resolves a palette by [id], falling back to [coral].
+  /// Returns the palette for [id], or [coral] if unknown.
   static NekoPalette byId(String? id) {
     for (final NekoPalette p in all) {
       if (p.id == id) return p;

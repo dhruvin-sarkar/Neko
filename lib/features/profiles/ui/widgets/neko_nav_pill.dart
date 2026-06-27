@@ -11,6 +11,7 @@ class NekoNavPill extends StatelessWidget {
     required this.selectedIndex,
     required this.onSelect,
     this.homeKey,
+    this.chatKey,
     this.settingsKey,
   });
 
@@ -19,12 +20,13 @@ class NekoNavPill extends StatelessWidget {
 
   /// Optional keys used by the first-run guided tour to spotlight each item.
   final Key? homeKey;
+  final Key? chatKey;
   final Key? settingsKey;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 168,
+      width: 232,
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -50,12 +52,20 @@ class NekoNavPill extends StatelessWidget {
             onTap: () => onSelect(0),
           ),
           _NavItem(
+            key: chatKey,
+            selectedIcon: Icons.auto_awesome_rounded,
+            unselectedIcon: Icons.auto_awesome_outlined,
+            label: 'Neko Assistant',
+            selected: selectedIndex == 1,
+            onTap: () => onSelect(1),
+          ),
+          _NavItem(
             key: settingsKey,
             selectedIcon: Icons.settings_rounded,
             unselectedIcon: Icons.settings_outlined,
             label: 'Settings',
-            selected: selectedIndex == 1,
-            onTap: () => onSelect(1),
+            selected: selectedIndex == 2,
+            onTap: () => onSelect(2),
           ),
         ],
       ),

@@ -9,6 +9,7 @@ abstract final class Routes {
   static const String onboarding = '/onboarding';
   static const String home = '/home';
   static const String settings = '/settings';
+  static const String chat = '/chat';
 
   /// Path pattern for the cat detail route (used when registering the route).
   static const String profilePattern = '/profile/:catId';
