@@ -279,38 +279,43 @@ class _BreedGrid extends StatelessWidget {
       // Re-stagger when the category or search-mode changes, but not on every
       // keystroke (which would replay the whole grid animation as you type).
       key: ValueKey<String>('$category-${query.isEmpty ? 'all' : 'search'}'),
-      child: GridView.builder(
-        padding: const EdgeInsets.only(bottom: 8),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          mainAxisExtent: 104,
-        ),
-        itemCount: total,
-        itemBuilder: (context, index) {
-          final bool isCustom = offerCustom && index == breeds.length;
-          return AnimationConfiguration.staggeredGrid(
-            position: index,
-            columnCount: 2,
-            duration: const Duration(milliseconds: 280),
-            child: FadeInAnimation(
-              child: SlideAnimation(
-                verticalOffset: 18,
-                child: isCustom
-                    ? _CustomBreedCard(
-                        query: query,
-                        onTap: () => onSelect(query),
-                      )
-                    : _BreedCard(
-                        breed: breeds[index],
-                        selected: selectedBreed == breeds[index].name,
-                        onTap: () => onSelect(breeds[index].name),
-                      ),
+      // Clamp text scaling for these dense, fixed-height cards so an extreme OS
+      // font scale can't clip a breed name; up to 1.3× is still honoured.
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: GridView.builder(
+          padding: const EdgeInsets.only(bottom: 8),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            mainAxisExtent: 104,
+          ),
+          itemCount: total,
+          itemBuilder: (context, index) {
+            final bool isCustom = offerCustom && index == breeds.length;
+            return AnimationConfiguration.staggeredGrid(
+              position: index,
+              columnCount: 2,
+              duration: const Duration(milliseconds: 280),
+              child: FadeInAnimation(
+                child: SlideAnimation(
+                  verticalOffset: 18,
+                  child: isCustom
+                      ? _CustomBreedCard(
+                          query: query,
+                          onTap: () => onSelect(query),
+                        )
+                      : _BreedCard(
+                          breed: breeds[index],
+                          selected: selectedBreed == breeds[index].name,
+                          onTap: () => onSelect(breeds[index].name),
+                        ),
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
