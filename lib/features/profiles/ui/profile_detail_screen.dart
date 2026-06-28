@@ -30,17 +30,14 @@ class ProfileDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        leading: const BackButton(color: AppColors.textPrimary),
+        leading: BackButton(color: AppColors.textPrimary),
         actions: [
           if (cat != null)
             IconButton(
               key: tourKeys.profileEdit,
               tooltip: 'Edit',
               onPressed: () => context.push(Routes.editCat(catId)),
-              icon: const Icon(
-                Icons.edit_outlined,
-                color: AppColors.textPrimary,
-              ),
+              icon: Icon(Icons.edit_outlined, color: AppColors.textPrimary),
             ),
         ],
       ),

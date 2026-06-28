@@ -195,7 +195,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     if (_original == null) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        appBar: AppBar(leading: const BackButton(color: AppColors.textPrimary)),
+        appBar: AppBar(leading: BackButton(color: AppColors.textPrimary)),
         body: Center(
           child: (cat == null && stillLoading)
               ? const NekoLoader()
@@ -210,7 +210,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        leading: const BackButton(color: AppColors.textPrimary),
+        leading: BackButton(color: AppColors.textPrimary),
         title: Text(
           'Edit ${_name.text.trim()}',
           style: AppTextStyles.headlineLarge,

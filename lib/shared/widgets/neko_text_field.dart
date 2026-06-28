@@ -83,8 +83,8 @@ class _NekoTextFieldState extends State<NekoTextField> {
       );
     }
     if (widget.showValidCheck && isValid) {
-      return const Padding(
-        padding: EdgeInsets.only(right: 16),
+      return Padding(
+        padding: const EdgeInsets.only(right: 16),
         child: Icon(Icons.check_circle, color: AppColors.success, size: 22),
       );
     }

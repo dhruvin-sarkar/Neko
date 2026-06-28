@@ -127,7 +127,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 IconButton(
                   tooltip: 'Chat history',
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.history_rounded,
                     color: AppColors.textPrimary,
                   ),
@@ -135,10 +135,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 IconButton(
                   tooltip: 'New chat',
-                  icon: const Icon(
-                    Icons.edit_square,
-                    color: AppColors.textPrimary,
-                  ),
+                  icon: Icon(Icons.edit_square, color: AppColors.textPrimary),
                   onPressed: () {
                     unawaited(ref.read(feedbackServiceProvider).onTap());
                     ref.read(chatControllerProvider.notifier).newChat();
@@ -269,9 +266,8 @@ class _HistorySheet extends ConsumerWidget {
                   ),
                   if (history.isNotEmpty)
                     TextButton(
-                      onPressed: () => ref
-                          .read(chatHistoryProvider.notifier)
-                          .clearAll(),
+                      onPressed: () =>
+                          ref.read(chatHistoryProvider.notifier).clearAll(),
                       child: Text(
                         'Clear all',
                         style: AppTextStyles.bodyMedium.copyWith(
@@ -306,9 +302,8 @@ class _HistorySheet extends ConsumerWidget {
                           ref.read(chatControllerProvider.notifier).load(c);
                           Navigator.of(context).pop();
                         },
-                        onDelete: () => ref
-                            .read(chatHistoryProvider.notifier)
-                            .remove(c.id),
+                        onDelete: () =>
+                            ref.read(chatHistoryProvider.notifier).remove(c.id),
                       );
                     },
                   ),
@@ -376,7 +371,7 @@ class _HistoryTile extends StatelessWidget {
             ),
             IconButton(
               tooltip: 'Delete',
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline_rounded,
                 color: AppColors.textDisabled,
                 size: 20,

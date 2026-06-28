@@ -89,7 +89,7 @@ class _Attachments extends StatelessWidget {
                   : Container(
                       color: AppColors.surfaceMuted,
                       alignment: Alignment.center,
-                      child: const Icon(
+                      child: Icon(
                         Icons.insert_drive_file_outlined,
                         color: AppColors.graphite,
                       ),
@@ -135,7 +135,8 @@ class _TypingDotsState extends State<_TypingDots>
             mainAxisSize: MainAxisSize.min,
             children: List<Widget>.generate(3, (i) {
               final double t = ((_c.value + i * 0.2) % 1.0);
-              final double opacity = 0.3 + 0.7 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
+              final double opacity =
+                  0.3 + 0.7 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
               return Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: Opacity(

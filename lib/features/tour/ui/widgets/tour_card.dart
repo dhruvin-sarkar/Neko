@@ -244,7 +244,7 @@ class _BackButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
-        child: const SizedBox(
+        child: SizedBox(
           width: 38,
           height: 38,
           child: Icon(

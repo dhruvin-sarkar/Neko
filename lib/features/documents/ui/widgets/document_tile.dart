@@ -78,7 +78,7 @@ class DocumentTile extends StatelessWidget {
             IconButton(
               onPressed: onDelete,
               tooltip: 'Delete',
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline_rounded,
                 color: AppColors.textSecondary,
               ),

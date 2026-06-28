@@ -27,7 +27,7 @@ abstract final class PageTransitions {
   static Color get _kCurtainColor => AppColors.primary;
 
   /// Tintable colour for the paw motif drawn on top of the panel.
-  static const Color _kPawBrandColor = AppColors.snowWhite;
+  static const Color _kPawBrandColor = Color(0xFFFFFFFF);
 
   // ── Blur Fade Transition (Profile ⇄ Home) ──
   static const Duration _blurDuration = Duration(milliseconds: 360);
@@ -152,7 +152,10 @@ abstract final class PageTransitions {
         );
 
         // When another page pushes over this one, fade it out cleanly.
-        return FadeTransition(opacity: _exitFade(secondaryAnimation), child: content);
+        return FadeTransition(
+          opacity: _exitFade(secondaryAnimation),
+          child: content,
+        );
       },
     );
   }
@@ -189,7 +192,10 @@ abstract final class PageTransitions {
             );
           },
         );
-        return FadeTransition(opacity: _exitFade(secondaryAnimation), child: content);
+        return FadeTransition(
+          opacity: _exitFade(secondaryAnimation),
+          child: content,
+        );
       },
     );
   }
@@ -385,9 +391,8 @@ class _BlurBranchSwitcherState extends State<BlurBranchSwitcher>
 /// Visible coverage: full from the moment the panel reaches cover ([coverOut]),
 /// then recedes to zero as it opens. Used to short-circuit painting once
 /// nothing is covered.
-double _curtainCoverage(double t, double coverOut) => t <= coverOut
-    ? 1.0
-    : (1.0 - (t - coverOut) / (1.0 - coverOut));
+double _curtainCoverage(double t, double coverOut) =>
+    t <= coverOut ? 1.0 : (1.0 - (t - coverOut) / (1.0 - coverOut));
 
 /// Page-content alpha: masked (0.0) while the panel sweeps in, then opaque from
 /// [coverIn] on — so the page is revealed (and held) only once it's fully

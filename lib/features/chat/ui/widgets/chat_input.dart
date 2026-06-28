@@ -270,7 +270,7 @@ class _PreviewItem extends StatelessWidget {
                           !kIsWeb &&
                           File(a.path).existsSync()
                       ? Image.file(File(a.path), fit: BoxFit.cover)
-                      : const Center(
+                      : Center(
                           child: Icon(
                             Icons.insert_drive_file_outlined,
                             color: AppColors.graphite,

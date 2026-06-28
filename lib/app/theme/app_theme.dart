@@ -14,13 +14,16 @@ abstract final class AppTheme {
   const AppTheme._();
 
   static ThemeData get light {
+    final Brightness brightness = AppColors.isDark
+        ? Brightness.dark
+        : Brightness.light;
     final ColorScheme colorScheme =
         ColorScheme.fromSeed(
           seedColor: AppColors.primary,
-          brightness: Brightness.light,
+          brightness: brightness,
         ).copyWith(
           primary: AppColors.primary,
-          onPrimary: Colors.white,
+          onPrimary: AppColors.textOnPrimary,
           surface: AppColors.surfaceCard,
           onSurface: AppColors.textPrimary,
         );
@@ -82,7 +85,7 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           minimumSize: const Size(double.infinity, 56),
-          side: const BorderSide(color: AppColors.border, width: 1.5),
+          side: BorderSide(color: AppColors.border, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
@@ -104,11 +107,11 @@ abstract final class AppTheme {
     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(color: AppColors.border),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.border),
+      borderSide: BorderSide(color: AppColors.border),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
