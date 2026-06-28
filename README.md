@@ -35,7 +35,7 @@ answers cat-care questions, and Settings lets you switch themes at any time.
 - State management: Riverpod (with code generation)
 - Routing: GoRouter
 - Models: Freezed + json_serializable
-- Local storage: Hive + path_provider (profile pictures, documents, preferences)
+- Local storage: SharedPreferences (preferences, theme, chat history, onboarding flags) + Hive + path_provider (on-device profile photos and documents)
 - Remote: Firebase Firestore (cat profiles) + Firebase Auth
 - Animation: Lottie, flutter_staggered_animations, flutter_animate, and a custom
   spring-physics button (NekoButton)
@@ -55,7 +55,8 @@ Settings.
 - Firestore rules restrict every read and write to the signed-in user's own
   `users/{uid}` tree; everything else is denied (see `firestore.rules`).
 - No API keys are committed. Secrets load from `.env` at runtime (see
-  `.env.example`); `.env` and `google-services.json` are gitignored.
+  `.env.example`); `.env`, `google-services.json`, and the Android release
+  keystore (`*.jks`) are gitignored.
 - See `SECURITY_SCAN.md` for the security scan instructions and manual measures.
 
 ## Team

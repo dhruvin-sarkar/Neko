@@ -25,8 +25,9 @@ _To be filled in by the team after running the scan:_
   signed-in user's own `users/{uid}` tree. A catch-all rule denies everything
   else, for authenticated and unauthenticated requests alike. No public reads.
 - **No committed secrets**: Firebase config and the Hack Club AI key load from
-  `.env` at runtime via `flutter_dotenv`. `.env` and `google-services.json` are
-  gitignored; `.env.example` ships placeholders only.
+  `.env` at runtime via `flutter_dotenv`. `.env`, `google-services.json`, and the
+  Android release keystore (`*.jks`) are gitignored; `.env.example` ships
+  placeholders only.
 - **No secrets in source**: a grep of `lib/` for keys/tokens returns no hardcoded
   values — the only references read from `dotenv`.
 - **No PII in logs**: there are no raw `print`/`debugPrint` calls; logging goes
