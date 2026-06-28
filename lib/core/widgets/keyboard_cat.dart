@@ -30,11 +30,13 @@ class _KeyboardCatState extends State<KeyboardCat>
   }
 
   void _setVisible(bool value) {
-    if (value == _visible) return;
+    // Idempotent so it can run every frame: this also stops the loop if the OS
+    // reduce-motion setting flips on while the cat is already showing.
     _visible = value;
-    if (value && !_reduceMotion) {
+    final bool shouldPlay = value && !_reduceMotion;
+    if (shouldPlay && !_lottie.isAnimating) {
       _lottie.repeat();
-    } else {
+    } else if (!shouldPlay && _lottie.isAnimating) {
       _lottie.stop();
     }
   }

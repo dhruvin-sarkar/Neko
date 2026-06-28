@@ -52,7 +52,12 @@ class CatAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.catColorFor(colorType),
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.snowWhite, width: borderWidth),
+        // A bright ring frames the avatar on dark themes (it sits on the dark
+        // banner); on light themes the surface tone keeps it subtle.
+        border: Border.all(
+          color: AppColors.isDark ? Colors.white : AppColors.snowWhite,
+          width: borderWidth,
+        ),
       ),
     );
 
