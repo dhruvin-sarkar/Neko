@@ -52,6 +52,15 @@ abstract final class AppColors {
   static Color get navInactive => palette.navInactive;
   static bool get isDark => palette.isDark;
 
+  /// Drop-shadow tints — theme-aware so elevation stays readable on dark
+  /// palettes (a flat black shadow disappears on a near-black background).
+  static Color get shadowSoft =>
+      palette.isDark ? const Color(0x4D000000) : const Color(0x1F000000);
+  static Color get shadowMedium =>
+      palette.isDark ? const Color(0x66000000) : const Color(0x42000000);
+  static Color get shadowStrong =>
+      palette.isDark ? const Color(0x80000000) : const Color(0x61000000);
+
   /// The tint of the drifting paw pattern behind every screen.
   static Color get pawPattern => palette.pawPattern;
 
@@ -63,6 +72,10 @@ abstract final class AppColors {
   static const Color coatCalico = Color(0xFFC8A882);
   static const Color coatGrey = Color(0xFF9E9E9E);
   static const Color coatTortoiseshell = Color(0xFFB8651B);
+  static const Color coatCream = Color(0xFFE8C9A0);
+  static const Color coatSilver = Color(0xFFB0BEC5);
+  static const Color coatLilac = Color(0xFFB39DDB);
+  static const Color coatChocolate = Color(0xFF5D4037);
   static const Color coatOther = Color(0xFFBDBDBD);
 
   // --- Semantic aliases (kept so existing widgets keep compiling) ---
@@ -80,13 +93,17 @@ abstract final class AppColors {
   /// neutral so unexpected data never breaks the UI.
   static Color catColorFor(String colorType) {
     return switch (colorType) {
-      'ginger' => coatGinger,
-      'black' => coatBlack,
-      'white' => coatWhite,
-      'tabby' => coatTabby,
+      'gingerTabby' || 'ginger' => coatGinger,
+      'creamBeige' => coatCream,
+      'midnightBlack' || 'tuxedo' || 'black' => coatBlack,
+      'snowWhite' || 'white' => coatWhite,
+      'russianBlue' || 'grey' => coatGrey,
+      'silverTabby' => coatSilver,
+      'lilacLavender' => coatLilac,
       'calico' => coatCalico,
-      'grey' => coatGrey,
       'tortoiseshell' => coatTortoiseshell,
+      'sealPoint' || 'tabby' => coatTabby,
+      'chocolateBrown' => coatChocolate,
       _ => coatOther,
     };
   }

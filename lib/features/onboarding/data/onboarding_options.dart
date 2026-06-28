@@ -24,37 +24,38 @@ abstract final class OnboardingOptions {
     'Other',
   ];
 
-  // The twelve coats, each mapped to one of the 12 cat-coat themes. Selecting
-  // a coat re-themes the whole app to match. `value` stays one of the avatar
-  // colour keys so the no-photo avatar still renders sensibly.
+  // The twelve coats, each mapped to one of the 12 cat-coat themes. Selecting a
+  // coat re-themes the whole app to match. `value` is unique per coat (it equals
+  // the themeId) and is stored as the cat's `colorType`; the no-photo avatar
+  // colour is derived from it via [AppColors.catColorFor].
   static const List<CoatOption> coats = <CoatOption>[
     CoatOption(
-      value: 'ginger',
+      value: 'gingerTabby',
       label: 'Orange Tabby',
       circleColor: Color(0xFFFF6B35),
       themeId: 'gingerTabby',
     ),
     CoatOption(
-      value: 'black',
+      value: 'midnightBlack',
       label: 'Solid Black',
       circleColor: Color(0xFF1A1A2E),
       themeId: 'midnightBlack',
     ),
     CoatOption(
-      value: 'white',
+      value: 'snowWhite',
       label: 'Snow White',
       circleColor: Color(0xFFE8EBFF),
       themeId: 'snowWhite',
       needsBorder: true,
     ),
     CoatOption(
-      value: 'grey',
+      value: 'russianBlue',
       label: 'Grey / Blue',
       circleColor: Color(0xFF5C7E94),
       themeId: 'russianBlue',
     ),
     CoatOption(
-      value: 'ginger',
+      value: 'creamBeige',
       label: 'Cream',
       circleColor: Color(0xFFE8A838),
       themeId: 'creamBeige',
@@ -72,31 +73,31 @@ abstract final class OnboardingOptions {
       themeId: 'tortoiseshell',
     ),
     CoatOption(
-      value: 'tabby',
+      value: 'sealPoint',
       label: 'Seal Point',
       circleColor: Color(0xFF6D4C41),
       themeId: 'sealPoint',
     ),
     CoatOption(
-      value: 'tabby',
+      value: 'chocolateBrown',
       label: 'Chocolate',
       circleColor: Color(0xFF5D4037),
       themeId: 'chocolateBrown',
     ),
     CoatOption(
-      value: 'grey',
+      value: 'silverTabby',
       label: 'Silver',
       circleColor: Color(0xFF5C7A8C),
       themeId: 'silverTabby',
     ),
     CoatOption(
-      value: 'grey',
+      value: 'lilacLavender',
       label: 'Lilac',
       circleColor: Color(0xFF9575CD),
       themeId: 'lilacLavender',
     ),
     CoatOption(
-      value: 'black',
+      value: 'tuxedo',
       label: 'Tuxedo',
       circleColor: Color(0xFF212121),
       themeId: 'tuxedo',

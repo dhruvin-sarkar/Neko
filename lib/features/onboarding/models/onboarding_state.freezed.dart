@@ -166,7 +166,7 @@ class __$$OnboardingStateImplCopyWithImpl<$Res>
 
 class _$OnboardingStateImpl implements _OnboardingState {
   const _$OnboardingStateImpl({
-    this.step = 0,
+    this.step = 1,
     this.draft = const OnboardingDraft(),
     this.isSaving = false,
     this.errorMessage,

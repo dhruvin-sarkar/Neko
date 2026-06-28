@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/errors/app_exception.dart';
@@ -22,8 +24,36 @@ const int _lastStep = 7;
 /// `onboardingComplete` flag atomically, after which the router redirects.
 @riverpod
 class OnboardingNotifier extends _$OnboardingNotifier {
+  // Tracks disposal so async [save] never writes state after the notifier is
+  // gone (Riverpod 2.x has no `ref.mounted`).
+  bool _disposed = false;
+  String? _uid;
+
   @override
-  OnboardingState build() => const OnboardingState(step: 1);
+  OnboardingState build() {
+    ref.onDispose(() => _disposed = true);
+    _uid = ref.read(authStateChangesProvider).valueOrNull?.uid;
+    final String? uid = _uid;
+    if (uid != null) {
+      final saved = ref.read(onboardingPersistenceProvider).loadDraft(uid);
+      if (saved != null) {
+        return OnboardingState(step: saved.step, draft: saved.draft);
+      }
+    }
+    return const OnboardingState(step: 1);
+  }
+
+  /// Persists the current draft + step so the flow can resume after a cold
+  /// start. Called when the step changes (captures every completed step).
+  void _persist() {
+    final String? uid = _uid;
+    if (uid == null || _disposed) return;
+    unawaited(
+      ref
+          .read(onboardingPersistenceProvider)
+          .saveDraft(uid, state.draft, state.step),
+    );
+  }
 
   void setName(String name) =>
       state = state.copyWith(draft: state.draft.copyWith(name: name));
@@ -62,15 +92,27 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   );
 
   void nextStep() {
-    if (state.step < _lastStep) state = state.copyWith(step: state.step + 1);
+    if (state.step < _lastStep) {
+      state = state.copyWith(step: state.step + 1);
+      _persist();
+    }
   }
 
   void previousStep() {
-    if (state.step > 1) state = state.copyWith(step: state.step - 1);
+    if (state.step > 1) {
+      state = state.copyWith(step: state.step - 1);
+      _persist();
+    }
   }
 
   /// Resets the flow to a clean draft — used when adding another cat.
-  void reset() => state = const OnboardingState(step: 1);
+  void reset() {
+    final String? uid = _uid;
+    if (uid != null) {
+      unawaited(ref.read(onboardingPersistenceProvider).clearDraft(uid));
+    }
+    state = const OnboardingState(step: 1);
+  }
 
   /// Persists the collected cat and marks onboarding complete.
   ///
@@ -101,12 +143,16 @@ class OnboardingNotifier extends _$OnboardingNotifier {
       await ref
           .read(onboardingRepositoryProvider)
           .completeOnboarding(profile, photoPath: draft.photoPath);
+      if (_disposed) return true;
       // Persist completion locally so a returning user skips onboarding even
       // before Firestore echoes the flag back (and while offline).
       final String? uid = ref.read(authStateChangesProvider).valueOrNull?.uid;
       if (uid != null) {
-        await ref.read(onboardingPersistenceProvider).setComplete(uid);
+        final persistence = ref.read(onboardingPersistenceProvider);
+        await persistence.setComplete(uid);
+        await persistence.clearDraft(uid);
       }
+      if (_disposed) return true;
       state = state.copyWith(isSaving: false);
       return true;
     } on AppException catch (e) {
@@ -120,7 +166,6 @@ class OnboardingNotifier extends _$OnboardingNotifier {
 StepConfig stepConfigOf(OnboardingState state) {
   final draft = state.draft;
   final bool canContinue = switch (state.step) {
-    0 => true,
     1 => Validators.catName(draft.name) == null,
     2 => true, // photo is optional
     3 => draft.breed != null,

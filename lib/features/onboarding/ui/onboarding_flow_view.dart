@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_text_styles.dart';
 import '../../../shared/motion/page_transitions.dart';
 import '../../../shared/services/feedback_service.dart';
+import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../models/step_config.dart';
 import '../providers/onboarding_provider.dart';
 import 'steps/activity_step.dart';
@@ -69,14 +72,45 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
     );
   }
 
-  /// The back arrow goes to the previous question, or — if we're already on the
-  /// first one — exits onboarding entirely (e.g. cancelling "add another cat"
-  /// and returning to Home).
-  void _onBack() {
+  /// Back goes to the previous question; on the first step it pops the route if
+  /// possible (cancelling "add another cat" → Home) or, for a first-time user
+  /// with nothing to pop, confirms before abandoning setup and signing out.
+  Future<void> _handleBack() async {
     if (ref.read(onboardingNotifierProvider).step > 1) {
       ref.read(onboardingNotifierProvider.notifier).previousStep();
-    } else if (context.canPop()) {
+      return;
+    }
+    if (context.canPop()) {
       context.pop();
+      return;
+    }
+    final bool? leave = await showNekoDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Leave setup?', style: AppTextStyles.headlineLarge),
+        content: Text(
+          "Your progress so far will be discarded and you'll be signed out.",
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Keep setting up'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(
+              'Leave',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.primaryDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (leave == true) {
+      await ref.read(authControllerProvider.notifier).signOut();
     }
   }
 
@@ -96,12 +130,10 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
     final StepConfig config = stepConfigOf(state);
     final bool forward = state.step >= _lastStep;
     _lastStep = state.step;
-    final notifier = ref.read(onboardingNotifierProvider.notifier);
-
     return PopScope(
-      canPop: state.step <= 1,
+      canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) notifier.previousStep();
+        if (!didPop) unawaited(_handleBack());
       },
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -114,7 +146,7 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                 child: Column(
                   children: [
                     OnboardingTopBar(
-                      onBack: _onBack,
+                      onBack: _handleBack,
                       showProgress: config.showProgress,
                       fraction: config.progressFraction,
                     ),

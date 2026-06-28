@@ -7,7 +7,7 @@ part of 'onboarding_provider.dart';
 // **************************************************************************
 
 String _$onboardingNotifierHash() =>
-    r'48754a69d281437d1c62d0a06c3d54a6d4801910';
+    r'7d0712adbeaafbbcfb848f828371eccab12f7e35';
 
 /// Holds the in-progress cat draft and step position for the onboarding flow.
 ///

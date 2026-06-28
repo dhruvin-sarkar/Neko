@@ -15,6 +15,10 @@ final _privateConstructorUsedError = UnsupportedError(
   'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
 );
 
+OnboardingDraft _$OnboardingDraftFromJson(Map<String, dynamic> json) {
+  return _OnboardingDraft.fromJson(json);
+}
+
 /// @nodoc
 mixin _$OnboardingDraft {
   String get name => throw _privateConstructorUsedError;
@@ -27,6 +31,9 @@ mixin _$OnboardingDraft {
   String? get activityLevel => throw _privateConstructorUsedError;
   String? get photoPath => throw _privateConstructorUsedError;
   String? get avatarPreset => throw _privateConstructorUsedError;
+
+  /// Serializes this OnboardingDraft to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
   /// Create a copy of OnboardingDraft
   /// with the given fields replaced by the non-null parameter values.
@@ -226,7 +233,7 @@ class __$$OnboardingDraftImplCopyWithImpl<$Res>
 }
 
 /// @nodoc
-
+@JsonSerializable()
 class _$OnboardingDraftImpl extends _OnboardingDraft {
   const _$OnboardingDraftImpl({
     this.name = '',
@@ -240,6 +247,9 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
     this.photoPath,
     this.avatarPreset,
   }) : super._();
+
+  factory _$OnboardingDraftImpl.fromJson(Map<String, dynamic> json) =>
+      _$$OnboardingDraftImplFromJson(json);
 
   @override
   @JsonKey()
@@ -295,6 +305,7 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
                 other.avatarPreset == avatarPreset));
   }
 
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
     runtimeType,
@@ -320,6 +331,11 @@ class _$OnboardingDraftImpl extends _OnboardingDraft {
         this,
         _$identity,
       );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$OnboardingDraftImplToJson(this);
+  }
 }
 
 abstract class _OnboardingDraft extends OnboardingDraft {
@@ -336,6 +352,9 @@ abstract class _OnboardingDraft extends OnboardingDraft {
     final String? avatarPreset,
   }) = _$OnboardingDraftImpl;
   const _OnboardingDraft._() : super._();
+
+  factory _OnboardingDraft.fromJson(Map<String, dynamic> json) =
+      _$OnboardingDraftImpl.fromJson;
 
   @override
   String get name;

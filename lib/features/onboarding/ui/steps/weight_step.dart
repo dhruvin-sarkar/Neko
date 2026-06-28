@@ -48,6 +48,7 @@ class _WeightStepState extends ConsumerState<WeightStep> {
         const SizedBox(height: 28),
         NekoTextField(
           controller: _controller,
+          autofocus: true,
           hint: '4.5',
           suffixText: 'kg',
           keyboardType: const TextInputType.numberWithOptions(decimal: true),

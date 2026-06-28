@@ -39,12 +39,12 @@ class _AgeStepState extends ConsumerState<AgeStep> {
   }
 
   void _update() {
+    // Clamp to sane ranges so e.g. "99 months" can't be stored as ~8 years.
+    final int years = (int.tryParse(_years.text) ?? 0).clamp(0, 30);
+    final int months = (int.tryParse(_months.text) ?? 0).clamp(0, 11);
     ref
         .read(onboardingNotifierProvider.notifier)
-        .setAge(
-          years: int.tryParse(_years.text) ?? 0,
-          months: int.tryParse(_months.text) ?? 0,
-        );
+        .setAge(years: years, months: months);
   }
 
   Future<void> _pickBirthday() async {
@@ -82,6 +82,7 @@ class _AgeStepState extends ConsumerState<AgeStep> {
                 label: 'Years',
                 controller: _years,
                 onChanged: _update,
+                autofocus: true,
               ),
             ),
             const SizedBox(width: 16),
@@ -133,16 +134,19 @@ class _AgeField extends StatelessWidget {
     required this.label,
     required this.controller,
     required this.onChanged,
+    this.autofocus = false,
   });
 
   final String label;
   final TextEditingController controller;
   final VoidCallback onChanged;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      autofocus: autofocus,
       keyboardType: TextInputType.number,
       style: AppTextStyles.bodyLarge,
       cursorColor: AppColors.primary,
