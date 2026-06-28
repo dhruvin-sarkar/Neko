@@ -10,5 +10,11 @@ service cloud.firestore {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
     }
+
+    // Explicit catch-all deny: nothing outside a user's own tree is reachable,
+    // by anyone, authenticated or not.
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
