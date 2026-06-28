@@ -52,7 +52,7 @@ class _KeyboardCatState extends State<KeyboardCat>
         widget.child,
         Positioned(
           left: 0,
-          right: 0,
+          right: 12,
           bottom: inset,
           child: IgnorePointer(
             child: AnimatedSlide(
@@ -62,12 +62,15 @@ class _KeyboardCatState extends State<KeyboardCat>
               child: AnimatedOpacity(
                 opacity: keyboardOpen ? 1 : 0,
                 duration: Duration(milliseconds: keyboardOpen ? 200 : 150),
-                child: Center(
+                // Peeks from the far right, above the keyboard, big enough to
+                // read but kept off the centre so it never covers what you type.
+                child: Align(
+                  alignment: Alignment.bottomRight,
                   child: RepaintBoundary(
                     child: Lottie.asset(
                       'assets/animations/cat_typing.json',
                       controller: _lottie,
-                      width: 80,
+                      width: 120,
                       onLoaded: (composition) {
                         _lottie.duration = composition.duration;
                         if (_visible) _lottie.repeat();
