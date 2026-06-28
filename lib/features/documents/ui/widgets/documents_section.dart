@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -55,21 +55,24 @@ class DocumentsSection extends ConsumerWidget {
     CatDocument doc,
   ) async {
     unawaited(ref.read(feedbackServiceProvider).onTap());
-    final Uri? uri = Uri.tryParse(doc.storageUrl);
-    bool opened = false;
-    if (uri != null) {
-      try {
-        opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } on Object catch (e, st) {
-        AppLogger.warning('Could not open document', e, st);
+    try {
+      final OpenResult result = await OpenFilex.open(doc.path);
+      if (result.type != ResultType.done && context.mounted) {
+        NekoSnackBar.show(
+          context,
+          "We couldn't open that document.",
+          error: true,
+        );
       }
-    }
-    if (!opened && context.mounted) {
-      NekoSnackBar.show(
-        context,
-        "We couldn't open that document.",
-        error: true,
-      );
+    } on Object catch (e, st) {
+      AppLogger.warning('Could not open document', e, st);
+      if (context.mounted) {
+        NekoSnackBar.show(
+          context,
+          "We couldn't open that document.",
+          error: true,
+        );
+      }
     }
   }
 
@@ -175,7 +178,7 @@ class DocumentsSection extends ConsumerWidget {
               NekoButton.secondary(
                 label: 'Upload a document',
                 icon: Icons.upload_file_outlined,
-                onTap: isBusy ? null : () => _add(context, ref),
+                onPressed: isBusy ? null : () => _add(context, ref),
               ),
             ],
           ),

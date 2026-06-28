@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -15,10 +14,6 @@ FirebaseAuth firebaseAuth(Ref ref) => FirebaseAuth.instance;
 /// The Cloud Firestore singleton.
 @Riverpod(keepAlive: true)
 FirebaseFirestore firestore(Ref ref) => FirebaseFirestore.instance;
-
-/// The Firebase Storage singleton.
-@Riverpod(keepAlive: true)
-FirebaseStorage firebaseStorage(Ref ref) => FirebaseStorage.instance;
 
 /// Streams the current authentication state. Emits `null` when signed out.
 ///

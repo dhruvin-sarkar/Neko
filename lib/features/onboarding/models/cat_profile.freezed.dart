@@ -30,7 +30,6 @@ mixin _$CatProfile {
   String get activityLevel => throw _privateConstructorUsedError;
   @TimestampConverter()
   DateTime? get birthday => throw _privateConstructorUsedError;
-  String? get photoUrl => throw _privateConstructorUsedError;
   String? get avatarPreset => throw _privateConstructorUsedError;
   int get dailyCalorieTarget => throw _privateConstructorUsedError;
   @TimestampConverter()
@@ -62,7 +61,6 @@ abstract class $CatProfileCopyWith<$Res> {
     String colorType,
     String activityLevel,
     @TimestampConverter() DateTime? birthday,
-    String? photoUrl,
     String? avatarPreset,
     int dailyCalorieTarget,
     @TimestampConverter() DateTime? createdAt,
@@ -92,7 +90,6 @@ class _$CatProfileCopyWithImpl<$Res, $Val extends CatProfile>
     Object? colorType = null,
     Object? activityLevel = null,
     Object? birthday = freezed,
-    Object? photoUrl = freezed,
     Object? avatarPreset = freezed,
     Object? dailyCalorieTarget = null,
     Object? createdAt = freezed,
@@ -131,10 +128,6 @@ class _$CatProfileCopyWithImpl<$Res, $Val extends CatProfile>
                 ? _value.birthday
                 : birthday // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
-            photoUrl: freezed == photoUrl
-                ? _value.photoUrl
-                : photoUrl // ignore: cast_nullable_to_non_nullable
-                      as String?,
             avatarPreset: freezed == avatarPreset
                 ? _value.avatarPreset
                 : avatarPreset // ignore: cast_nullable_to_non_nullable
@@ -171,7 +164,6 @@ abstract class _$$CatProfileImplCopyWith<$Res>
     String colorType,
     String activityLevel,
     @TimestampConverter() DateTime? birthday,
-    String? photoUrl,
     String? avatarPreset,
     int dailyCalorieTarget,
     @TimestampConverter() DateTime? createdAt,
@@ -200,7 +192,6 @@ class __$$CatProfileImplCopyWithImpl<$Res>
     Object? colorType = null,
     Object? activityLevel = null,
     Object? birthday = freezed,
-    Object? photoUrl = freezed,
     Object? avatarPreset = freezed,
     Object? dailyCalorieTarget = null,
     Object? createdAt = freezed,
@@ -239,10 +230,6 @@ class __$$CatProfileImplCopyWithImpl<$Res>
             ? _value.birthday
             : birthday // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
-        photoUrl: freezed == photoUrl
-            ? _value.photoUrl
-            : photoUrl // ignore: cast_nullable_to_non_nullable
-                  as String?,
         avatarPreset: freezed == avatarPreset
             ? _value.avatarPreset
             : avatarPreset // ignore: cast_nullable_to_non_nullable
@@ -272,7 +259,6 @@ class _$CatProfileImpl extends _CatProfile {
     required this.colorType,
     required this.activityLevel,
     @TimestampConverter() this.birthday,
-    this.photoUrl,
     this.avatarPreset,
     this.dailyCalorieTarget = 0,
     @TimestampConverter() this.createdAt,
@@ -299,8 +285,6 @@ class _$CatProfileImpl extends _CatProfile {
   @TimestampConverter()
   final DateTime? birthday;
   @override
-  final String? photoUrl;
-  @override
   final String? avatarPreset;
   @override
   @JsonKey()
@@ -311,7 +295,7 @@ class _$CatProfileImpl extends _CatProfile {
 
   @override
   String toString() {
-    return 'CatProfile(id: $id, name: $name, breed: $breed, ageMonths: $ageMonths, weightKg: $weightKg, colorType: $colorType, activityLevel: $activityLevel, birthday: $birthday, photoUrl: $photoUrl, avatarPreset: $avatarPreset, dailyCalorieTarget: $dailyCalorieTarget, createdAt: $createdAt)';
+    return 'CatProfile(id: $id, name: $name, breed: $breed, ageMonths: $ageMonths, weightKg: $weightKg, colorType: $colorType, activityLevel: $activityLevel, birthday: $birthday, avatarPreset: $avatarPreset, dailyCalorieTarget: $dailyCalorieTarget, createdAt: $createdAt)';
   }
 
   @override
@@ -332,8 +316,6 @@ class _$CatProfileImpl extends _CatProfile {
                 other.activityLevel == activityLevel) &&
             (identical(other.birthday, birthday) ||
                 other.birthday == birthday) &&
-            (identical(other.photoUrl, photoUrl) ||
-                other.photoUrl == photoUrl) &&
             (identical(other.avatarPreset, avatarPreset) ||
                 other.avatarPreset == avatarPreset) &&
             (identical(other.dailyCalorieTarget, dailyCalorieTarget) ||
@@ -354,7 +336,6 @@ class _$CatProfileImpl extends _CatProfile {
     colorType,
     activityLevel,
     birthday,
-    photoUrl,
     avatarPreset,
     dailyCalorieTarget,
     createdAt,
@@ -384,7 +365,6 @@ abstract class _CatProfile extends CatProfile {
     required final String colorType,
     required final String activityLevel,
     @TimestampConverter() final DateTime? birthday,
-    final String? photoUrl,
     final String? avatarPreset,
     final int dailyCalorieTarget,
     @TimestampConverter() final DateTime? createdAt,
@@ -411,8 +391,6 @@ abstract class _CatProfile extends CatProfile {
   @override
   @TimestampConverter()
   DateTime? get birthday;
-  @override
-  String? get photoUrl;
   @override
   String? get avatarPreset;
   @override

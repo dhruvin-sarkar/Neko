@@ -15,21 +15,13 @@ final _privateConstructorUsedError = UnsupportedError(
   'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
 );
 
-CatDocument _$CatDocumentFromJson(Map<String, dynamic> json) {
-  return _CatDocument.fromJson(json);
-}
-
 /// @nodoc
 mixin _$CatDocument {
-  String get id => throw _privateConstructorUsedError;
+  String get path => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String get type => throw _privateConstructorUsedError;
-  String get storageUrl => throw _privateConstructorUsedError;
-  @TimestampConverter()
-  DateTime? get uploadedAt => throw _privateConstructorUsedError;
-
-  /// Serializes this CatDocument to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  int get sizeBytes => throw _privateConstructorUsedError;
+  DateTime? get savedAt => throw _privateConstructorUsedError;
 
   /// Create a copy of CatDocument
   /// with the given fields replaced by the non-null parameter values.
@@ -46,11 +38,11 @@ abstract class $CatDocumentCopyWith<$Res> {
   ) = _$CatDocumentCopyWithImpl<$Res, CatDocument>;
   @useResult
   $Res call({
-    String id,
+    String path,
     String name,
     String type,
-    String storageUrl,
-    @TimestampConverter() DateTime? uploadedAt,
+    int sizeBytes,
+    DateTime? savedAt,
   });
 }
 
@@ -69,17 +61,17 @@ class _$CatDocumentCopyWithImpl<$Res, $Val extends CatDocument>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? path = null,
     Object? name = null,
     Object? type = null,
-    Object? storageUrl = null,
-    Object? uploadedAt = freezed,
+    Object? sizeBytes = null,
+    Object? savedAt = freezed,
   }) {
     return _then(
       _value.copyWith(
-            id: null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
+            path: null == path
+                ? _value.path
+                : path // ignore: cast_nullable_to_non_nullable
                       as String,
             name: null == name
                 ? _value.name
@@ -89,13 +81,13 @@ class _$CatDocumentCopyWithImpl<$Res, $Val extends CatDocument>
                 ? _value.type
                 : type // ignore: cast_nullable_to_non_nullable
                       as String,
-            storageUrl: null == storageUrl
-                ? _value.storageUrl
-                : storageUrl // ignore: cast_nullable_to_non_nullable
-                      as String,
-            uploadedAt: freezed == uploadedAt
-                ? _value.uploadedAt
-                : uploadedAt // ignore: cast_nullable_to_non_nullable
+            sizeBytes: null == sizeBytes
+                ? _value.sizeBytes
+                : sizeBytes // ignore: cast_nullable_to_non_nullable
+                      as int,
+            savedAt: freezed == savedAt
+                ? _value.savedAt
+                : savedAt // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
           )
           as $Val,
@@ -113,11 +105,11 @@ abstract class _$$CatDocumentImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    String id,
+    String path,
     String name,
     String type,
-    String storageUrl,
-    @TimestampConverter() DateTime? uploadedAt,
+    int sizeBytes,
+    DateTime? savedAt,
   });
 }
 
@@ -135,17 +127,17 @@ class __$$CatDocumentImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? id = null,
+    Object? path = null,
     Object? name = null,
     Object? type = null,
-    Object? storageUrl = null,
-    Object? uploadedAt = freezed,
+    Object? sizeBytes = null,
+    Object? savedAt = freezed,
   }) {
     return _then(
       _$CatDocumentImpl(
-        id: null == id
-            ? _value.id
-            : id // ignore: cast_nullable_to_non_nullable
+        path: null == path
+            ? _value.path
+            : path // ignore: cast_nullable_to_non_nullable
                   as String,
         name: null == name
             ? _value.name
@@ -155,13 +147,13 @@ class __$$CatDocumentImplCopyWithImpl<$Res>
             ? _value.type
             : type // ignore: cast_nullable_to_non_nullable
                   as String,
-        storageUrl: null == storageUrl
-            ? _value.storageUrl
-            : storageUrl // ignore: cast_nullable_to_non_nullable
-                  as String,
-        uploadedAt: freezed == uploadedAt
-            ? _value.uploadedAt
-            : uploadedAt // ignore: cast_nullable_to_non_nullable
+        sizeBytes: null == sizeBytes
+            ? _value.sizeBytes
+            : sizeBytes // ignore: cast_nullable_to_non_nullable
+                  as int,
+        savedAt: freezed == savedAt
+            ? _value.savedAt
+            : savedAt // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
       ),
     );
@@ -169,34 +161,31 @@ class __$$CatDocumentImplCopyWithImpl<$Res>
 }
 
 /// @nodoc
-@JsonSerializable()
+
 class _$CatDocumentImpl implements _CatDocument {
   const _$CatDocumentImpl({
-    required this.id,
+    required this.path,
     required this.name,
     required this.type,
-    required this.storageUrl,
-    @TimestampConverter() this.uploadedAt,
+    this.sizeBytes = 0,
+    this.savedAt,
   });
 
-  factory _$CatDocumentImpl.fromJson(Map<String, dynamic> json) =>
-      _$$CatDocumentImplFromJson(json);
-
   @override
-  final String id;
+  final String path;
   @override
   final String name;
   @override
   final String type;
   @override
-  final String storageUrl;
+  @JsonKey()
+  final int sizeBytes;
   @override
-  @TimestampConverter()
-  final DateTime? uploadedAt;
+  final DateTime? savedAt;
 
   @override
   String toString() {
-    return 'CatDocument(id: $id, name: $name, type: $type, storageUrl: $storageUrl, uploadedAt: $uploadedAt)';
+    return 'CatDocument(path: $path, name: $name, type: $type, sizeBytes: $sizeBytes, savedAt: $savedAt)';
   }
 
   @override
@@ -204,19 +193,17 @@ class _$CatDocumentImpl implements _CatDocument {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$CatDocumentImpl &&
-            (identical(other.id, id) || other.id == id) &&
+            (identical(other.path, path) || other.path == path) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.type, type) || other.type == type) &&
-            (identical(other.storageUrl, storageUrl) ||
-                other.storageUrl == storageUrl) &&
-            (identical(other.uploadedAt, uploadedAt) ||
-                other.uploadedAt == uploadedAt));
+            (identical(other.sizeBytes, sizeBytes) ||
+                other.sizeBytes == sizeBytes) &&
+            (identical(other.savedAt, savedAt) || other.savedAt == savedAt));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode =>
-      Object.hash(runtimeType, id, name, type, storageUrl, uploadedAt);
+      Object.hash(runtimeType, path, name, type, sizeBytes, savedAt);
 
   /// Create a copy of CatDocument
   /// with the given fields replaced by the non-null parameter values.
@@ -225,36 +212,27 @@ class _$CatDocumentImpl implements _CatDocument {
   @pragma('vm:prefer-inline')
   _$$CatDocumentImplCopyWith<_$CatDocumentImpl> get copyWith =>
       __$$CatDocumentImplCopyWithImpl<_$CatDocumentImpl>(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$CatDocumentImplToJson(this);
-  }
 }
 
 abstract class _CatDocument implements CatDocument {
   const factory _CatDocument({
-    required final String id,
+    required final String path,
     required final String name,
     required final String type,
-    required final String storageUrl,
-    @TimestampConverter() final DateTime? uploadedAt,
+    final int sizeBytes,
+    final DateTime? savedAt,
   }) = _$CatDocumentImpl;
 
-  factory _CatDocument.fromJson(Map<String, dynamic> json) =
-      _$CatDocumentImpl.fromJson;
-
   @override
-  String get id;
+  String get path;
   @override
   String get name;
   @override
   String get type;
   @override
-  String get storageUrl;
+  int get sizeBytes;
   @override
-  @TimestampConverter()
-  DateTime? get uploadedAt;
+  DateTime? get savedAt;
 
   /// Create a copy of CatDocument
   /// with the given fields replaced by the non-null parameter values.

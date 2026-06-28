@@ -9,14 +9,13 @@ import '../models/cat_document.dart';
 
 part 'document_provider.g.dart';
 
-/// Streams a cat's documents (newest first). Emits empty while signed out.
+/// A cat's documents (newest first). Empty while signed out. Re-reads on demand;
+/// the action controller invalidates it after an upload or delete.
 @riverpod
-Stream<List<CatDocument>> documents(Ref ref, String catId) {
+Future<List<CatDocument>> documents(Ref ref, String catId) async {
   final user = ref.watch(authStateChangesProvider).valueOrNull;
-  if (user == null) {
-    return Stream<List<CatDocument>>.value(const <CatDocument>[]);
-  }
-  return ref.watch(documentRepositoryProvider(catId)).watchAll();
+  if (user == null) return const <CatDocument>[];
+  return ref.watch(documentRepositoryProvider(catId)).getAll();
 }
 
 /// Drives document upload/delete actions and exposes progress as [AsyncValue].
@@ -38,6 +37,7 @@ class DocumentActionController extends _$DocumentActionController {
           .read(documentRepositoryProvider(catId))
           .upload(path: path, name: name, type: type),
     );
+    if (!state.hasError) ref.invalidate(documentsProvider(catId));
   }
 
   Future<void> delete({
@@ -49,5 +49,6 @@ class DocumentActionController extends _$DocumentActionController {
     state = await AsyncValue.guard(
       () => ref.read(documentRepositoryProvider(catId)).delete(document),
     );
+    if (!state.hasError) ref.invalidate(documentsProvider(catId));
   }
 }

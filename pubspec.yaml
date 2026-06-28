@@ -27,7 +27,6 @@ dependencies:
   firebase_core: ^2.28.0
   firebase_auth: ^4.16.0
   cloud_firestore: ^4.13.0
-  firebase_storage: ^11.6.0
   google_sign_in: ^6.2.1
 
   # Cat photo capture / selection
@@ -35,6 +34,9 @@ dependencies:
 
   # Document picking (vet records, passports, etc.)
   file_picker: ^8.1.4
+
+  # Opening on-device documents in the platform's default viewer
+  open_filex: ^4.5.0
 
   # Environment secrets
   flutter_dotenv: ^5.1.0
@@ -95,5 +97,4 @@ flutter:
     - assets/images/
     - assets/images/avatars/
     - assets/sounds/
-    - assets/audio/
     - assets/animations/

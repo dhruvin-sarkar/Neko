@@ -44,25 +44,6 @@ final firestoreProvider = Provider<FirebaseFirestore>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef FirestoreRef = ProviderRef<FirebaseFirestore>;
-String _$firebaseStorageHash() => r'4d34fbbd82ac849c74805e19a05079afa5e20cad';
-
-/// The Firebase Storage singleton.
-///
-/// Copied from [firebaseStorage].
-@ProviderFor(firebaseStorage)
-final firebaseStorageProvider = Provider<FirebaseStorage>.internal(
-  firebaseStorage,
-  name: r'firebaseStorageProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$firebaseStorageHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
-);
-
-@Deprecated('Will be removed in 3.0. Use Ref instead')
-// ignore: unused_element
-typedef FirebaseStorageRef = ProviderRef<FirebaseStorage>;
 String _$authStateChangesHash() => r'fbc1119daa6ac470aeac4f186072c2b179f82dc5';
 
 /// Streams the current authentication state. Emits `null` when signed out.

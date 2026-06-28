@@ -6,9 +6,10 @@ part of 'profile_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$profileRepositoryHash() => r'891e45a1f65070aa7941b9893b03dd0e2efc1d2e';
+String _$profileRepositoryHash() => r'1ba11923e62f28003d05ebf18fdb30b9df7402a1';
 
-/// Repository for the current user's cats.
+/// Repository for the current user's cats. Profile data lives in Firestore;
+/// media (photos, documents) lives on-device via [LocalStorageService].
 ///
 /// Copied from [profileRepository].
 @ProviderFor(profileRepository)

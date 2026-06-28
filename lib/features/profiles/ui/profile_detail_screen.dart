@@ -122,7 +122,7 @@ class _CatProfileBody extends StatelessWidget {
         Center(
           child: CatAvatar(
             colorType: cat.colorType,
-            photoUrl: cat.photoUrl,
+            catId: cat.id,
             avatarPreset: cat.avatarPreset,
             size: 112,
             borderWidth: 3,

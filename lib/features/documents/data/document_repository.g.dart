@@ -7,7 +7,7 @@ part of 'document_repository.dart';
 // **************************************************************************
 
 String _$documentRepositoryHash() =>
-    r'943a4506adde69936656a1952c8f2357d5e61fb3';
+    r'd74194ecd92963ccd0eb029186ac554aef4098fc';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -30,22 +30,26 @@ class _SystemHash {
   }
 }
 
-/// Repository for one cat's documents, scoped to the current user.
+/// Repository for one cat's documents, stored on-device via
+/// [LocalStorageService] (no Firebase Storage — a deliberate cost decision).
 ///
 /// Copied from [documentRepository].
 @ProviderFor(documentRepository)
 const documentRepositoryProvider = DocumentRepositoryFamily();
 
-/// Repository for one cat's documents, scoped to the current user.
+/// Repository for one cat's documents, stored on-device via
+/// [LocalStorageService] (no Firebase Storage — a deliberate cost decision).
 ///
 /// Copied from [documentRepository].
 class DocumentRepositoryFamily extends Family<DocumentRepository> {
-  /// Repository for one cat's documents, scoped to the current user.
+  /// Repository for one cat's documents, stored on-device via
+  /// [LocalStorageService] (no Firebase Storage — a deliberate cost decision).
   ///
   /// Copied from [documentRepository].
   const DocumentRepositoryFamily();
 
-  /// Repository for one cat's documents, scoped to the current user.
+  /// Repository for one cat's documents, stored on-device via
+  /// [LocalStorageService] (no Firebase Storage — a deliberate cost decision).
   ///
   /// Copied from [documentRepository].
   DocumentRepositoryProvider call(String catId) {
@@ -74,12 +78,14 @@ class DocumentRepositoryFamily extends Family<DocumentRepository> {
   String? get name => r'documentRepositoryProvider';
 }
 
-/// Repository for one cat's documents, scoped to the current user.
+/// Repository for one cat's documents, stored on-device via
+/// [LocalStorageService] (no Firebase Storage — a deliberate cost decision).
 ///
 /// Copied from [documentRepository].
 class DocumentRepositoryProvider
     extends AutoDisposeProvider<DocumentRepository> {
-  /// Repository for one cat's documents, scoped to the current user.
+  /// Repository for one cat's documents, stored on-device via
+  /// [LocalStorageService] (no Firebase Storage — a deliberate cost decision).
   ///
   /// Copied from [documentRepository].
   DocumentRepositoryProvider(String catId)

@@ -1,32 +1,29 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../../core/utils/timestamp_converter.dart';
-
 part 'cat_document.freezed.dart';
-part 'cat_document.g.dart';
 
-/// A stored document for a cat (vaccination card, passport, etc.), mirroring
-/// `users/{uid}/cats/{catId}/documents/{docId}` in Firestore.
+/// A stored document for a cat (vaccination card, passport, etc.), kept on the
+/// device via `LocalStorageService`. [path] is the absolute file path and also
+/// serves as the document's unique key.
 @freezed
 class CatDocument with _$CatDocument {
   const factory CatDocument({
-    required String id,
+    required String path,
     required String name,
     required String type,
-    required String storageUrl,
-    @TimestampConverter() DateTime? uploadedAt,
+    @Default(0) int sizeBytes,
+    DateTime? savedAt,
   }) = _CatDocument;
 
-  factory CatDocument.fromJson(Map<String, dynamic> json) =>
-      _$CatDocumentFromJson(json);
-
-  factory CatDocument.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final Map<String, dynamic> data = doc.data() ?? <String, dynamic>{};
-    return CatDocument.fromJson(<String, dynamic>{...data, 'id': doc.id});
-  }
+  /// Builds from a `LocalStorageService` metadata map
+  /// (`{path, docType, filename, savedAt, sizeBytes}`).
+  factory CatDocument.fromLocal(Map<String, dynamic> m) => CatDocument(
+    path: (m['path'] as String?) ?? '',
+    name: (m['filename'] as String?) ?? 'Document',
+    type: (m['docType'] as String?) ?? 'other',
+    sizeBytes: ((m['sizeBytes'] as num?) ?? 0).toInt(),
+    savedAt: DateTime.tryParse((m['savedAt'] as String?) ?? ''),
+  );
 }
 
 /// The fixed set of document types the user can choose from.

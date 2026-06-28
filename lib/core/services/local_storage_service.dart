@@ -67,9 +67,22 @@ class LocalStorageService {
     return await File(path).exists() ? path : null;
   }
 
+  /// Synchronous best-effort path lookup for widgets that can't await (e.g.
+  /// [CatAvatar]). Returns the stored path without a disk check — callers load
+  /// it through `Image.file` and fall back on error. Null before [init] or when
+  /// no picture is stored.
+  static String? profilePicturePathSync(String catId) {
+    final Box<dynamic>? box = _box;
+    if (box == null) return null;
+    final Object? path = box.get('pfp_$catId');
+    return path is String ? path : null;
+  }
+
   // ── Documents ──
 
-  /// Saves a document and records its metadata. Returns the saved file path.
+  /// Saves a document and records its metadata. [filename] is the human-facing
+  /// display name; the on-disk name is made unique with a timestamp so two
+  /// documents sharing a display name never collide. Returns the saved path.
   static Future<String?> saveDocument({
     required String catId,
     required String docType,
@@ -79,11 +92,12 @@ class LocalStorageService {
     try {
       final Directory dir = Directory('${_catDir(catId)}/docs/$docType');
       await dir.create(recursive: true);
-      final String path = '${dir.path}/$filename';
+      final String safe = filename.replaceAll(RegExp(r'[^\w.\- ]'), '_');
+      final String onDisk = '${DateTime.now().millisecondsSinceEpoch}_$safe';
+      final String path = '${dir.path}/$onDisk';
       await File(path).writeAsBytes(bytes, flush: true);
 
       final List<Map<String, dynamic>> docs = await getDocuments(catId);
-      docs.removeWhere((Map<String, dynamic> d) => d['path'] == path);
       docs.add(<String, dynamic>{
         'path': path,
         'docType': docType,

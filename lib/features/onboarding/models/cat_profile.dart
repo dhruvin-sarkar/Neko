@@ -20,7 +20,6 @@ class CatProfile with _$CatProfile {
     required String colorType,
     required String activityLevel,
     @TimestampConverter() DateTime? birthday,
-    String? photoUrl,
     String? avatarPreset,
     @Default(0) int dailyCalorieTarget,
     @TimestampConverter() DateTime? createdAt,
@@ -44,10 +43,13 @@ class CatProfile with _$CatProfile {
     final String age = years > 0
         ? '$years year${years == 1 ? '' : 's'}${months > 0 ? ', $months month${months == 1 ? '' : 's'}' : ''}'
         : '$months month${months == 1 ? '' : 's'}';
+    final String weight = weightKg == weightKg.roundToDouble()
+        ? weightKg.toStringAsFixed(0)
+        : weightKg.toStringAsFixed(1);
     return 'Cat: $name\n'
         'Breed: $breed\n'
         'Age: $age\n'
-        'Weight: ${weightKg}kg\n'
+        'Weight: ${weight}kg\n'
         'Activity: $activityLevel\n'
         'Daily calorie target: $dailyCalorieTarget kcal';
   }

@@ -7,7 +7,7 @@ part of 'onboarding_repository.dart';
 // **************************************************************************
 
 String _$onboardingRepositoryHash() =>
-    r'7530c533658da3be87f4a7c15ec14c4536ced8a3';
+    r'ec0ddfe40ac7ad92bc91b07540ad4bcd9ad7a7b9';
 
 /// Repository scoped to the current user for completing onboarding.
 ///

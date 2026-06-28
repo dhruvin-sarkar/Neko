@@ -31,7 +31,7 @@ class DocumentTile extends StatelessWidget {
 
   String get _subtitle {
     final String typeLabel = DocumentTypes.label(document.type);
-    final DateTime? date = document.uploadedAt;
+    final DateTime? date = document.savedAt;
     if (date == null) return typeLabel;
     return '$typeLabel · ${_formatDate(date)}';
   }

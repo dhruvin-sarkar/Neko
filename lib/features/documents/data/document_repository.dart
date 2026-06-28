@@ -1,127 +1,83 @@
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/errors/app_exception.dart';
-import '../../../core/providers/firebase_providers.dart';
+import '../../../core/services/local_storage_service.dart';
 import '../../../core/utils/logger.dart';
 import '../models/cat_document.dart';
 
 part 'document_repository.g.dart';
 
-/// Repository for one cat's documents, scoped to the current user.
+/// Repository for one cat's documents, stored on-device via
+/// [LocalStorageService] (no Firebase Storage — a deliberate cost decision).
 @riverpod
 DocumentRepository documentRepository(Ref ref, String catId) =>
-    DocumentRepository(
-      firestore: ref.watch(firestoreProvider),
-      storage: ref.watch(firebaseStorageProvider),
-      userId: ref.watch(currentUserProvider).uid,
-      catId: catId,
-    );
+    DocumentRepository(catId);
 
 class DocumentRepository {
-  DocumentRepository({
-    required FirebaseFirestore firestore,
-    required FirebaseStorage storage,
-    required String userId,
-    required String catId,
-  }) : _docsRef = firestore
-           .collection('users')
-           .doc(userId)
-           .collection('cats')
-           .doc(catId)
-           .collection('documents'),
-       _storageBase = storage.ref('users/$userId/cats/$catId/documents');
+  DocumentRepository(this._catId);
 
-  final CollectionReference<Map<String, dynamic>> _docsRef;
-  final Reference _storageBase;
+  final String _catId;
 
-  Stream<List<CatDocument>> watchAll() => _docsRef.snapshots().map((snap) {
-    final List<CatDocument> docs = snap.docs
-        .map(CatDocument.fromFirestore)
-        .toList();
-    // Newest first; a just-uploaded doc has a pending server timestamp, so I
-    // sort on the client (rather than orderBy) to keep it visible right away.
+  /// All stored documents for this cat, newest first.
+  Future<List<CatDocument>> getAll() async {
+    final List<Map<String, dynamic>> raw =
+        await LocalStorageService.getDocuments(_catId);
+    final List<CatDocument> docs = raw.map(CatDocument.fromLocal).toList();
     docs.sort((a, b) {
-      final DateTime? ad = a.uploadedAt;
-      final DateTime? bd = b.uploadedAt;
+      final DateTime? ad = a.savedAt;
+      final DateTime? bd = b.savedAt;
       if (ad == null && bd == null) return 0;
-      if (ad == null) return -1; // pending upload — show it first
+      if (ad == null) return -1; // just-saved (pending stamp) — show first
       if (bd == null) return 1;
       return bd.compareTo(ad);
     });
     return docs;
-  });
+  }
 
-  /// Uploads the file at [path] to Storage and records its metadata.
+  /// Saves the file at [path] on-device under [type] with display [name].
   Future<void> upload({
     required String path,
     required String name,
     required String type,
   }) async {
     try {
-      final File file = File(path);
-      final String extension = _extensionOf(path);
-      final String objectName =
-          '${DateTime.now().millisecondsSinceEpoch}.$extension';
-      final Reference ref = _storageBase.child(objectName);
-
-      await ref.putFile(
-        file,
-        SettableMetadata(contentType: _contentTypeFor(extension)),
+      final bytes = await File(path).readAsBytes();
+      final String ext = _extensionOf(path);
+      final String display = name.trim().isEmpty
+          ? DocumentTypes.label(type)
+          : name.trim();
+      final String? saved = await LocalStorageService.saveDocument(
+        catId: _catId,
+        docType: type,
+        bytes: bytes,
+        filename: '$display.$ext',
       );
-      final String url = await ref.getDownloadURL();
-
-      final DocumentReference<Map<String, dynamic>> docRef = _docsRef.doc();
-      await docRef.set(<String, dynamic>{
-        'id': docRef.id,
-        'name': name.trim().isEmpty ? DocumentTypes.label(type) : name.trim(),
-        'type': type,
-        'storageUrl': url,
-        'uploadedAt': FieldValue.serverTimestamp(),
-      });
+      if (saved == null) {
+        throw const AppException(
+          "We couldn't save that document. Please try again.",
+        );
+      }
+    } on AppException {
+      rethrow;
     } on Object catch (e, st) {
-      AppLogger.error('Document upload failed', e, st);
+      AppLogger.error('Document save failed', e, st);
       throw const AppException(
-        "We couldn't upload that document. Please try again.",
+        "We couldn't save that document. Please try again.",
       );
     }
   }
 
-  /// Removes a document's Firestore record and its Storage object.
+  /// Removes a document (file + index entry).
   Future<void> delete(CatDocument document) async {
-    try {
-      await _docsRef.doc(document.id).delete();
-      try {
-        await FirebaseStorage.instance.refFromURL(document.storageUrl).delete();
-      } on Object catch (e, st) {
-        // The metadata is gone; a leftover Storage object is non-fatal.
-        AppLogger.warning('Document storage cleanup failed', e, st);
-      }
-    } on Object catch (e, st) {
-      AppLogger.error('Document delete failed', e, st);
-      throw const AppException(
-        "We couldn't remove that document. Please try again.",
-      );
-    }
+    await LocalStorageService.deleteDocument(_catId, document.path);
   }
 
   String _extensionOf(String path) {
     final int dot = path.lastIndexOf('.');
     if (dot == -1 || dot == path.length - 1) return 'dat';
     return path.substring(dot + 1).toLowerCase();
-  }
-
-  String _contentTypeFor(String extension) {
-    return switch (extension) {
-      'pdf' => 'application/pdf',
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      'heic' => 'image/heic',
-      _ => 'image/jpeg',
-    };
   }
 }

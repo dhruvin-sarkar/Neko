@@ -6,7 +6,7 @@ part of 'document_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$documentsHash() => r'8b554c2d6709b1e550e5aaa91cde052e75080fb5';
+String _$documentsHash() => r'3c476c41926525664a3f558036ffaf9dcb6a3d00';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -29,22 +29,26 @@ class _SystemHash {
   }
 }
 
-/// Streams a cat's documents (newest first). Emits empty while signed out.
+/// A cat's documents (newest first). Empty while signed out. Re-reads on demand;
+/// the action controller invalidates it after an upload or delete.
 ///
 /// Copied from [documents].
 @ProviderFor(documents)
 const documentsProvider = DocumentsFamily();
 
-/// Streams a cat's documents (newest first). Emits empty while signed out.
+/// A cat's documents (newest first). Empty while signed out. Re-reads on demand;
+/// the action controller invalidates it after an upload or delete.
 ///
 /// Copied from [documents].
 class DocumentsFamily extends Family<AsyncValue<List<CatDocument>>> {
-  /// Streams a cat's documents (newest first). Emits empty while signed out.
+  /// A cat's documents (newest first). Empty while signed out. Re-reads on demand;
+  /// the action controller invalidates it after an upload or delete.
   ///
   /// Copied from [documents].
   const DocumentsFamily();
 
-  /// Streams a cat's documents (newest first). Emits empty while signed out.
+  /// A cat's documents (newest first). Empty while signed out. Re-reads on demand;
+  /// the action controller invalidates it after an upload or delete.
   ///
   /// Copied from [documents].
   DocumentsProvider call(String catId) {
@@ -71,11 +75,13 @@ class DocumentsFamily extends Family<AsyncValue<List<CatDocument>>> {
   String? get name => r'documentsProvider';
 }
 
-/// Streams a cat's documents (newest first). Emits empty while signed out.
+/// A cat's documents (newest first). Empty while signed out. Re-reads on demand;
+/// the action controller invalidates it after an upload or delete.
 ///
 /// Copied from [documents].
-class DocumentsProvider extends AutoDisposeStreamProvider<List<CatDocument>> {
-  /// Streams a cat's documents (newest first). Emits empty while signed out.
+class DocumentsProvider extends AutoDisposeFutureProvider<List<CatDocument>> {
+  /// A cat's documents (newest first). Empty while signed out. Re-reads on demand;
+  /// the action controller invalidates it after an upload or delete.
   ///
   /// Copied from [documents].
   DocumentsProvider(String catId)
@@ -105,7 +111,7 @@ class DocumentsProvider extends AutoDisposeStreamProvider<List<CatDocument>> {
 
   @override
   Override overrideWith(
-    Stream<List<CatDocument>> Function(DocumentsRef provider) create,
+    FutureOr<List<CatDocument>> Function(DocumentsRef provider) create,
   ) {
     return ProviderOverride(
       origin: this,
@@ -122,7 +128,7 @@ class DocumentsProvider extends AutoDisposeStreamProvider<List<CatDocument>> {
   }
 
   @override
-  AutoDisposeStreamProviderElement<List<CatDocument>> createElement() {
+  AutoDisposeFutureProviderElement<List<CatDocument>> createElement() {
     return _DocumentsProviderElement(this);
   }
 
@@ -142,13 +148,13 @@ class DocumentsProvider extends AutoDisposeStreamProvider<List<CatDocument>> {
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin DocumentsRef on AutoDisposeStreamProviderRef<List<CatDocument>> {
+mixin DocumentsRef on AutoDisposeFutureProviderRef<List<CatDocument>> {
   /// The parameter `catId` of this provider.
   String get catId;
 }
 
 class _DocumentsProviderElement
-    extends AutoDisposeStreamProviderElement<List<CatDocument>>
+    extends AutoDisposeFutureProviderElement<List<CatDocument>>
     with DocumentsRef {
   _DocumentsProviderElement(super.provider);
 
@@ -157,7 +163,7 @@ class _DocumentsProviderElement
 }
 
 String _$documentActionControllerHash() =>
-    r'726b15fef393fdbf0e386c82e71bdd33b7eaa6e0';
+    r'da9a4de1fe1080e7dcf71d498961793a7aba5d3a';
 
 /// Drives document upload/delete actions and exposes progress as [AsyncValue].
 ///

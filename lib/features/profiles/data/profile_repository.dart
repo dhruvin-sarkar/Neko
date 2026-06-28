@@ -1,45 +1,37 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../core/errors/app_exception.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/services/local_storage_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../onboarding/models/cat_profile.dart';
 
 part 'profile_repository.g.dart';
 
-/// Repository for the current user's cats.
+/// Repository for the current user's cats. Profile data lives in Firestore;
+/// media (photos, documents) lives on-device via [LocalStorageService].
 @riverpod
 ProfileRepository profileRepository(Ref ref) => ProfileRepository(
   firestore: ref.watch(firestoreProvider),
-  storage: ref.watch(firebaseStorageProvider),
   userId: ref.watch(currentUserProvider).uid,
 );
 
 class ProfileRepository {
   ProfileRepository({
     required FirebaseFirestore firestore,
-    required FirebaseStorage storage,
     required String userId,
-  }) : _firestore = firestore,
-       _storage = storage,
-       _userId = userId,
-       _catsRef = firestore.collection('users').doc(userId).collection('cats');
+  }) : _catsRef = firestore.collection('users').doc(userId).collection('cats');
 
-  final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
-  final String _userId;
   final CollectionReference<Map<String, dynamic>> _catsRef;
 
   /// Streams the user's cats, oldest first.
   ///
-  /// I sort on the client rather than with `orderBy('createdAt')` in the query:
-  /// a just-saved cat has a server timestamp that's still null locally, and a
-  /// `createdAt` order-by would drop it from the results until the server
-  /// confirms — so the new cat wouldn't show up on Home right after onboarding.
-  /// Sorting here keeps pending writes visible (newest, at the end).
+  /// Sorted on the client rather than via `orderBy('createdAt')`: a just-saved
+  /// cat has a still-null server timestamp locally, and an order-by would drop
+  /// it from results until the server confirms — so it wouldn't show on Home
+  /// right after onboarding. Sorting here keeps pending writes visible (last).
   Stream<List<CatProfile>> watchAll() => _catsRef.snapshots().map((snap) {
     final List<CatProfile> cats = snap.docs
         .map(CatProfile.fromFirestore)
@@ -69,48 +61,17 @@ class ProfileRepository {
     }
   }
 
-  /// Permanently removes a cat: its document metadata, the cat document itself,
-  /// and (best-effort) its Storage files. The Firestore deletes are atomic; a
-  /// leftover Storage object is non-fatal and only logged.
+  /// Permanently removes a cat: its Firestore document and its on-device media
+  /// (profile photo + documents). The local cleanup is best-effort.
   Future<void> delete(String catId) async {
     try {
-      final QuerySnapshot<Map<String, dynamic>> docs = await _catsRef
-          .doc(catId)
-          .collection('documents')
-          .get();
-
-      final WriteBatch batch = _firestore.batch();
-      for (final QueryDocumentSnapshot<Map<String, dynamic>> doc in docs.docs) {
-        batch.delete(doc.reference);
-      }
-      batch.delete(_catsRef.doc(catId));
-      await batch.commit();
-
-      await _deleteStorageFolder(catId);
+      await _catsRef.doc(catId).delete();
+      await LocalStorageService.clearCatData(catId);
     } on Object catch (e, st) {
       AppLogger.error('Failed to delete cat', e, st);
       throw const AppException(
         "We couldn't remove that cat. Please try again.",
       );
-    }
-  }
-
-  /// Best-effort removal of a cat's Storage files (avatar + documents). Failures
-  /// here never surface to the user — the metadata is already gone.
-  Future<void> _deleteStorageFolder(String catId) async {
-    Future<void> deleteAllIn(Reference ref) async {
-      final ListResult result = await ref.listAll();
-      for (final Reference item in result.items) {
-        await item.delete();
-      }
-    }
-
-    try {
-      final Reference base = _storage.ref('users/$_userId/cats/$catId');
-      await deleteAllIn(base);
-      await deleteAllIn(base.child('documents'));
-    } on Object catch (e, st) {
-      AppLogger.warning('Cat storage cleanup failed (non-fatal)', e, st);
     }
   }
 }

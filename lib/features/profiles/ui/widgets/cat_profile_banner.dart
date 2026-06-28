@@ -29,7 +29,7 @@ class CatProfileBanner extends StatelessWidget {
           children: [
             CatAvatar(
               colorType: cat.colorType,
-              photoUrl: cat.photoUrl,
+              catId: cat.id,
               avatarPreset: cat.avatarPreset,
               heroTag: 'cat-avatar-${cat.id}',
             ),
