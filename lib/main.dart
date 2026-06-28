@@ -44,12 +44,22 @@ void main() {
       try {
         await dotenv.load(fileName: '.env');
       } on Object catch (e) {
-        AppLogger.warning('Could not load .env; continuing without it', e);
+        // The app needs .env for its Firebase + AI config, so this isn't really
+        // recoverable — log it loudly rather than pretending otherwise.
+        AppLogger.error('Could not load .env — app config is missing', e);
       }
 
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      } on Object catch (e, st) {
+        // Missing/invalid config: show a clear message instead of crashing the
+        // zone on a clean install.
+        AppLogger.error('Firebase failed to initialise', e, st);
+        runApp(const _ConfigErrorApp());
+        return;
+      }
 
       SystemChrome.setSystemUIOverlayStyle(
         const SystemUiOverlayStyle(
@@ -97,4 +107,29 @@ void main() {
       AppLogger.error('Uncaught zone error', error, stack);
     },
   );
+}
+
+/// A minimal fallback shown when the app can't initialise its backend (e.g. a
+/// missing `.env` / Firebase config) — clearer than an opaque startup crash.
+class _ConfigErrorApp extends StatelessWidget {
+  const _ConfigErrorApp();
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: Text(
+              "Neko can't start because its configuration is missing.\n\n"
+              'Add the .env file (see .env.example) and relaunch.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
