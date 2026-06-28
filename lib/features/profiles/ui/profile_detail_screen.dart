@@ -117,42 +117,13 @@ class _CatProfileBody extends StatelessWidget {
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
       children: <Widget>[
-        // The avatar sits outside the staggered entrance so the Hero flight
-        // from the home banner lands on a settled target (no post-flight pop).
-        Center(
-          child: CatAvatar(
-            colorType: cat.colorType,
-            catId: cat.id,
-            avatarPreset: cat.avatarPreset,
-            size: 112,
-            borderWidth: 3,
-            heroTag: 'cat-avatar-${cat.id}',
-          ),
-        ),
-        const SizedBox(height: 20),
+        // The avatar (and name/breed) sit in a grounded header card, outside
+        // the staggered entrance, so the Hero flight from the home banner lands
+        // inside a designed surface — the hand-off reads as the banner opening
+        // up, not an avatar floating onto the page.
+        _ProfileHeader(cat: cat, addedLabel: _addedLabel),
+        const SizedBox(height: 24),
         ...<Widget>[
-              Text(
-                cat.name,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.displayLarge,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                cat.breed,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              if (_addedLabel != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  _addedLabel!,
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.caption,
-                ),
-              ],
-              const SizedBox(height: 32),
               KeyedSubtree(
                 key: tourKeys.profileStats,
                 child: Column(
@@ -209,6 +180,69 @@ class _CatProfileBody extends StatelessWidget {
             .fadeIn(duration: 250.ms)
             .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
       ],
+    );
+  }
+}
+
+/// The grounded profile header: the Hero avatar, name and breed inside a soft
+/// elevated card. Gives the avatar a designed place to land after its flight
+/// from the home banner.
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.cat, required this.addedLabel});
+
+  final CatProfile cat;
+  final String? addedLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowSoft,
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CatAvatar(
+            colorType: cat.colorType,
+            catId: cat.id,
+            avatarPreset: cat.avatarPreset,
+            size: 112,
+            borderWidth: 3,
+            heroTag: 'cat-avatar-${cat.id}',
+          ),
+          const SizedBox(height: 16),
+          Text(
+            cat.name,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.displayLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            cat.breed,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyLarge.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          if (addedLabel != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              addedLabel!,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.caption,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

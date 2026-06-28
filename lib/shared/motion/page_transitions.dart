@@ -213,19 +213,23 @@ abstract final class PageTransitions {
   }) {
     return CustomTransitionPage<void>(
       key: key,
-      transitionDuration: const Duration(milliseconds: 380),
-      reverseTransitionDuration: const Duration(milliseconds: 320),
+      transitionDuration: const Duration(milliseconds: 420),
+      reverseTransitionDuration: const Duration(milliseconds: 300),
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         if (MediaQuery.of(context).disableAnimations) {
           return FadeTransition(opacity: animation, child: child);
         }
+        // The page fades in early (0–55%) so it's already present when the
+        // avatar Hero lands inside the header card — the avatar arrives into a
+        // settled screen rather than onto bare background. A gentle scale-up
+        // makes it read as the banner expanding open.
         final Animation<double> fade = animation.drive(
-          CurveTween(curve: const Interval(0.35, 1.0, curve: Curves.easeOut)),
+          CurveTween(curve: const Interval(0.0, 0.55, curve: Curves.easeOut)),
         );
         final Animation<double> scale = animation.drive(
           Tween<double>(
-            begin: 0.96,
+            begin: 0.94,
             end: 1.0,
           ).chain(CurveTween(curve: Curves.easeOutCubic)),
         );
