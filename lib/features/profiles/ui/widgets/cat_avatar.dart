@@ -33,7 +33,9 @@ class CatAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget avatar = _buildAvatar();
+    // Decorative — the cat's name is always shown beside the avatar — so keep it
+    // out of the semantics tree rather than announcing a bare image node.
+    final Widget avatar = ExcludeSemantics(child: _buildAvatar());
     if (heroTag == null) return avatar;
     return Hero(
       tag: heroTag!,
@@ -81,6 +83,8 @@ class CatAvatar extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
+          cacheWidth: (size * 3).round(),
+          cacheHeight: (size * 3).round(),
           errorBuilder: (_, _, _) => fallback,
         ),
       );

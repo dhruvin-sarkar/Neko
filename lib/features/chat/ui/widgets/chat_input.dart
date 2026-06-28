@@ -209,16 +209,20 @@ class _AttachmentTray extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final int count = attachments.length + (isUploading ? 1 : 0);
     return Container(
       height: 92,
       padding: const EdgeInsets.only(bottom: 8, left: 4, top: 4),
-      child: ListView(
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        children: [
-          for (final ChatAttachment a in attachments)
-            _PreviewItem(attachment: a, onRemove: () => onRemove(a)),
-          if (isUploading) const _PreviewItem(uploading: true),
-        ],
+        itemCount: count,
+        itemBuilder: (context, index) {
+          if (index >= attachments.length) {
+            return const _PreviewItem(uploading: true);
+          }
+          final ChatAttachment a = attachments[index];
+          return _PreviewItem(attachment: a, onRemove: () => onRemove(a));
+        },
       ),
     );
   }
@@ -250,21 +254,14 @@ class _PreviewItem extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: uploading
                 ? const Center(child: NekoLoader.small())
-                : (a != null &&
-                          a.isImage &&
-                          !kIsWeb &&
-                          File(a.path).existsSync()
+                : (a != null && a.isImage && !kIsWeb
                       ? Image.file(
                           File(a.path),
                           fit: BoxFit.cover,
                           cacheWidth: 360,
+                          errorBuilder: (_, _, _) => const _FileGlyph(),
                         )
-                      : Center(
-                          child: Icon(
-                            Icons.insert_drive_file_outlined,
-                            color: AppColors.graphite,
-                          ),
-                        )),
+                      : const _FileGlyph()),
           ),
           if (!uploading && onRemove != null)
             Positioned(
@@ -297,6 +294,18 @@ class _PreviewItem extends StatelessWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// The fallback glyph for a non-image or unreadable attachment.
+class _FileGlyph extends StatelessWidget {
+  const _FileGlyph();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Icon(Icons.insert_drive_file_outlined, color: AppColors.graphite),
     );
   }
 }
