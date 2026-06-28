@@ -15,6 +15,7 @@ import '../../../shared/widgets/neko_dialog.dart';
 import '../../../core/widgets/neko_button.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../../shared/widgets/neko_text_field.dart';
+import '../../onboarding/data/breed_catalog.dart';
 import '../../onboarding/data/calorie_calculator.dart';
 import '../../onboarding/data/onboarding_options.dart';
 import '../../onboarding/models/cat_profile.dart';
@@ -231,9 +232,12 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
             _Dropdown(
               label: 'Breed',
               value: _breed,
-              items: OnboardingOptions.breeds
+              items: BreedCatalog.allSorted
                   .map(
-                    (b) => DropdownMenuItem<String>(value: b, child: Text(b)),
+                    (b) => DropdownMenuItem<String>(
+                      value: b.name,
+                      child: Text(b.name),
+                    ),
                   )
                   .toList(),
               onChanged: (v) => setState(() => _breed = v),
@@ -353,10 +357,22 @@ class _Dropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? current = value;
+    // Tolerate a stored value that isn't one of [items] — a custom-typed breed,
+    // or a legacy/blank coat that defaulted to 'other'. Without this, the
+    // dropdown asserts (exactly one item must match its value) and the screen
+    // crashes the moment it opens.
+    final List<DropdownMenuItem<String>> safeItems =
+        (current == null || items.any((i) => i.value == current))
+        ? items
+        : <DropdownMenuItem<String>>[
+            ...items,
+            DropdownMenuItem<String>(value: current, child: Text(current)),
+          ];
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      initialValue: current,
       isExpanded: true,
-      items: items,
+      items: safeItems,
       onChanged: onChanged,
       style: AppTextStyles.bodyLarge,
       decoration: InputDecoration(labelText: label),
