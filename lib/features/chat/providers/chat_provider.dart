@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../onboarding/models/cat_profile.dart';
+import '../../profiles/providers/profile_provider.dart';
 import '../data/chat_service.dart';
 import '../models/chat_attachment.dart';
 import '../models/chat_conversation.dart';
@@ -75,10 +77,17 @@ class ChatController extends Notifier<ChatState> {
       isGenerating: true,
     );
 
+    // Give the model this owner's cat profile(s) so replies are personalised.
+    final List<CatProfile> cats =
+        ref.read(catProfilesProvider).valueOrNull ?? const <CatProfile>[];
+    final String? catContext = cats.isEmpty
+        ? null
+        : cats.map((CatProfile c) => c.toAIContext()).join('\n\n');
+
     final StringBuffer buffer = StringBuffer();
     _sub = ref
         .read(chatServiceProvider)
-        .streamReply(state.messages)
+        .streamReply(state.messages, catContext: catContext)
         .listen(
           (token) {
             buffer.write(token);

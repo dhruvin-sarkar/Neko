@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -13,7 +14,7 @@ import '../models/chat_message.dart';
 /// Contract for the AI backend: send the [history] and stream the reply token
 /// by token.
 abstract class ChatService {
-  Stream<String> streamReply(List<ChatMessage> history);
+  Stream<String> streamReply(List<ChatMessage> history, {String? catContext});
 }
 
 /// Raised when the AI request fails; shown to the user as a friendly note.
@@ -59,7 +60,10 @@ class HackClubChatService implements ChatService {
       dotenv.get('AI_MODEL', fallback: 'google/gemini-3-flash-preview');
 
   @override
-  Stream<String> streamReply(List<ChatMessage> history) async* {
+  Stream<String> streamReply(
+    List<ChatMessage> history, {
+    String? catContext,
+  }) async* {
     final String apiKey = _apiKey;
     if (apiKey.isEmpty || apiKey == _placeholderKey) {
       throw const ChatException(
@@ -68,8 +72,19 @@ class HackClubChatService implements ChatService {
       );
     }
 
+    // Fold the owner's cat profile(s) into the system prompt so Neko gives
+    // advice specific to this cat rather than generic answers.
+    final String systemContent =
+        (catContext == null || catContext.trim().isEmpty)
+        ? _systemPrompt
+        : '$_systemPrompt\n\n'
+              "Here is the owner's cat profile. Personalise every answer to it "
+              '(reference the cat by name; tailor advice to their breed, age, '
+              'weight, and activity). Do not recite these details back verbatim '
+              'unless asked.\n$catContext';
+
     final List<Map<String, dynamic>> messages = <Map<String, dynamic>>[
-      {'role': 'system', 'content': _systemPrompt},
+      {'role': 'system', 'content': systemContent},
     ];
     for (final ChatMessage m in history) {
       // Skip the empty assistant placeholder appended while we wait for a reply.
@@ -100,8 +115,18 @@ class HackClubChatService implements ChatService {
     }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      // Drain the body to free the connection, but never log it in full — an
+      // upstream error body can echo request context. Status only in release;
+      // a short snippet in debug for diagnosis.
       final String body = await response.stream.bytesToString();
-      AppLogger.warning('AI HTTP ${response.statusCode}: $body');
+      if (kDebugMode) {
+        final String snippet = body.length > 200
+            ? '${body.substring(0, 200)}…'
+            : body;
+        AppLogger.warning('AI HTTP ${response.statusCode}: $snippet');
+      } else {
+        AppLogger.warning('AI HTTP ${response.statusCode}');
+      }
       throw const ChatException();
     }
 
