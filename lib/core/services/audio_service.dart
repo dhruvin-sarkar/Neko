@@ -55,11 +55,11 @@ enum SoundId {
 class AudioService {
   AudioService._();
 
-  /// Loudest the ambient purr may ever get — it must stay a background texture.
-  static const double _maxAmbient = 0.3;
+  /// Loudest the ambient purr may ever get.
+  static const double _maxAmbient = 0.5;
 
   static double _sfxVolume = 0.35;
-  static double _ambientVolume = 0.12;
+  static double _ambientVolume = 0.22;
   static bool _muted = false;
 
   static final Map<SoundId, AudioPlayer> _players = <SoundId, AudioPlayer>{};

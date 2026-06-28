@@ -7,7 +7,7 @@ part 'splash_gate_provider.g.dart';
 /// Minimum time the splash screen stays visible so it never flashes — also
 /// gives auth and the onboarding-status confirmation room to settle before the
 /// router commits to a destination.
-const Duration _minSplashDuration = Duration(milliseconds: 1200);
+const Duration _minSplashDuration = Duration(milliseconds: 800);
 
 /// Becomes `true` once the minimum splash duration has elapsed. The router
 /// keeps the app on `/splash` until this is `true` (and auth has resolved).
