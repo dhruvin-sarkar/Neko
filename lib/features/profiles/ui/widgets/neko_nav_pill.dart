@@ -4,6 +4,10 @@ import 'package:lottie/lottie.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/neko_motion.dart';
 
+/// The pill width (and the cat's travel track), shared by the state and the
+/// pill widget.
+const double _kPillWidth = 232;
+
 /// The custom bottom navigation pill: a white rounded pill where the selected
 /// destination sits inside a filled coral circle (Duolingo-style). A little cat
 /// perches on top of the pill, above the active tab, and slides across when you
@@ -32,7 +36,6 @@ class NekoNavPill extends StatefulWidget {
 
 class _NekoNavPillState extends State<NekoNavPill>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  static const double _pillWidth = 232;
   static const double _catSize = 74;
   // Centres of the three tabs within the pill (8px padding + spaceEvenly).
   static const List<double> _tabCenters = <double>[50, 116, 182];
@@ -83,14 +86,20 @@ class _NekoNavPillState extends State<NekoNavPill>
       }
     });
     return SizedBox(
-      width: _pillWidth,
+      width: _kPillWidth,
       // Room above the pill for the perched cat (now larger and more visible).
       height: 64 + 56,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
         children: [
-          _buildPill(),
+          _NavPill(
+            selectedIndex: widget.selectedIndex,
+            onSelect: widget.onSelect,
+            homeKey: widget.homeKey,
+            chatKey: widget.chatKey,
+            settingsKey: widget.settingsKey,
+          ),
           AnimatedPositioned(
             duration: NekoMotion.standard,
             curve: Curves.easeOutBack,
@@ -115,10 +124,28 @@ class _NekoNavPillState extends State<NekoNavPill>
       ),
     );
   }
+}
 
-  Widget _buildPill() {
+/// The rounded pill itself with its three destinations.
+class _NavPill extends StatelessWidget {
+  const _NavPill({
+    required this.selectedIndex,
+    required this.onSelect,
+    this.homeKey,
+    this.chatKey,
+    this.settingsKey,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+  final Key? homeKey;
+  final Key? chatKey;
+  final Key? settingsKey;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      width: _pillWidth,
+      width: _kPillWidth,
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -136,28 +163,28 @@ class _NekoNavPillState extends State<NekoNavPill>
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _NavItem(
-            key: widget.homeKey,
+            key: homeKey,
             selectedIcon: Icons.home_rounded,
             unselectedIcon: Icons.home_outlined,
             label: 'Home',
-            selected: widget.selectedIndex == 0,
-            onTap: () => widget.onSelect(0),
+            selected: selectedIndex == 0,
+            onTap: () => onSelect(0),
           ),
           _NavItem(
-            key: widget.chatKey,
+            key: chatKey,
             selectedIcon: Icons.auto_awesome_rounded,
             unselectedIcon: Icons.auto_awesome_outlined,
             label: 'Neko Assistant',
-            selected: widget.selectedIndex == 1,
-            onTap: () => widget.onSelect(1),
+            selected: selectedIndex == 1,
+            onTap: () => onSelect(1),
           ),
           _NavItem(
-            key: widget.settingsKey,
+            key: settingsKey,
             selectedIcon: Icons.settings_rounded,
             unselectedIcon: Icons.settings_outlined,
             label: 'Settings',
-            selected: widget.selectedIndex == 2,
-            onTap: () => widget.onSelect(2),
+            selected: selectedIndex == 2,
+            onTap: () => onSelect(2),
           ),
         ],
       ),

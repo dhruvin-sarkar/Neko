@@ -97,17 +97,55 @@ class _BreedStepState extends ConsumerState<BreedStep> {
           ),
         ),
         const SizedBox(height: 16),
-        _searchBar(),
+        _SearchBar(
+          controller: _searchCtrl,
+          focusNode: _focus,
+          onChanged: _onSearchChanged,
+          onClear: _clearSearch,
+        ),
         const SizedBox(height: 12),
-        if (!searching) _categoryChips(),
-        if (!searching) const SizedBox(height: 12),
-        Expanded(child: _grid(results, selected, offerCustom)),
+        if (!searching) ...[
+          _CategoryChips(
+            selected: _category,
+            onSelect: (BreedCategory? c) {
+              AudioService.playClickSoft();
+              setState(() => _category = c);
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
+        Expanded(
+          child: _BreedGrid(
+            breeds: results,
+            selectedBreed: selected,
+            offerCustom: offerCustom,
+            query: _query,
+            category: _category,
+            onSelect: _select,
+          ),
+        ),
       ],
     );
   }
+}
 
-  Widget _searchBar() {
-    final bool focused = _focus.hasFocus;
+/// The rounded search field for filtering breeds.
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool focused = focusNode.hasFocus;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 160),
       height: 54,
@@ -126,9 +164,9 @@ class _BreedStepState extends ConsumerState<BreedStep> {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
-              controller: _searchCtrl,
-              focusNode: _focus,
-              onChanged: _onSearchChanged,
+              controller: controller,
+              focusNode: focusNode,
+              onChanged: onChanged,
               textInputAction: TextInputAction.search,
               style: AppTextStyles.bodyMedium,
               cursorColor: AppColors.primary,
@@ -143,10 +181,10 @@ class _BreedStepState extends ConsumerState<BreedStep> {
             ),
           ),
           AnimatedOpacity(
-            opacity: _searchCtrl.text.isNotEmpty ? 1 : 0,
+            opacity: controller.text.isNotEmpty ? 1 : 0,
             duration: const Duration(milliseconds: 150),
             child: GestureDetector(
-              onTap: _clearSearch,
+              onTap: onClear,
               behavior: HitTestBehavior.opaque,
               child: Icon(
                 Icons.close_rounded,
@@ -159,8 +197,17 @@ class _BreedStepState extends ConsumerState<BreedStep> {
       ),
     );
   }
+}
 
-  Widget _categoryChips() {
+/// The horizontal row of breed-category filter chips.
+class _CategoryChips extends StatelessWidget {
+  const _CategoryChips({required this.selected, required this.onSelect});
+
+  final BreedCategory? selected;
+  final ValueChanged<BreedCategory?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
     final List<BreedCategory?> cats = <BreedCategory?>[
       null,
       ...BreedCategory.values,
@@ -173,12 +220,9 @@ class _BreedStepState extends ConsumerState<BreedStep> {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final BreedCategory? c = cats[index];
-          final bool active = c == _category;
+          final bool active = c == selected;
           return GestureDetector(
-            onTap: () {
-              AudioService.playClickSoft();
-              setState(() => _category = c);
-            },
+            onTap: () => onSelect(c),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               alignment: Alignment.center,
@@ -206,15 +250,35 @@ class _BreedStepState extends ConsumerState<BreedStep> {
       ),
     );
   }
+}
 
-  Widget _grid(List<CatBreed> breeds, String? selected, bool offerCustom) {
+/// The grid of breed cards, plus a pinned custom-breed card and empty state.
+class _BreedGrid extends StatelessWidget {
+  const _BreedGrid({
+    required this.breeds,
+    required this.selectedBreed,
+    required this.offerCustom,
+    required this.query,
+    required this.category,
+    required this.onSelect,
+  });
+
+  final List<CatBreed> breeds;
+  final String? selectedBreed;
+  final bool offerCustom;
+  final String query;
+  final BreedCategory? category;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
     final int total = breeds.length + (offerCustom ? 1 : 0);
-    if (total == 0) return _emptyState();
+    if (total == 0) return const _BreedEmptyState();
 
     return AnimationLimiter(
       // Re-stagger when the category or search-mode changes, but not on every
       // keystroke (which would replay the whole grid animation as you type).
-      key: ValueKey<String>('$_category-${_query.isEmpty ? 'all' : 'search'}'),
+      key: ValueKey<String>('$category-${query.isEmpty ? 'all' : 'search'}'),
       child: GridView.builder(
         padding: const EdgeInsets.only(bottom: 8),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -235,13 +299,13 @@ class _BreedStepState extends ConsumerState<BreedStep> {
                 verticalOffset: 18,
                 child: isCustom
                     ? _CustomBreedCard(
-                        query: _query,
-                        onTap: () => _select(_query),
+                        query: query,
+                        onTap: () => onSelect(query),
                       )
                     : _BreedCard(
                         breed: breeds[index],
-                        selected: selected == breeds[index].name,
-                        onTap: () => _select(breeds[index].name),
+                        selected: selectedBreed == breeds[index].name,
+                        onTap: () => onSelect(breeds[index].name),
                       ),
               ),
             ),
@@ -250,8 +314,14 @@ class _BreedStepState extends ConsumerState<BreedStep> {
       ),
     );
   }
+}
 
-  Widget _emptyState() {
+/// Shown when a category filter has no breeds (rare; the catalogue is full).
+class _BreedEmptyState extends StatelessWidget {
+  const _BreedEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: SingleChildScrollView(
         child: Column(

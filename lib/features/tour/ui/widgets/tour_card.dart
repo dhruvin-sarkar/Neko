@@ -53,8 +53,6 @@ class TourCard extends StatelessWidget {
   /// Width available to lay the card out within (usually the screen width).
   final double? availableWidth;
 
-  bool get _isLast => stepIndex == stepCount - 1;
-
   @override
   Widget build(BuildContext context) {
     final double available =
@@ -84,7 +82,16 @@ class TourCard extends StatelessWidget {
       ),
     );
 
-    final Widget card = _buildCard();
+    final Widget card = _CardBody(
+      icon: icon,
+      title: title,
+      body: body,
+      stepIndex: stepIndex,
+      stepCount: stepCount,
+      onNext: onNext,
+      onSkip: onSkip,
+      onBack: onBack,
+    );
 
     final Widget column = Column(
       mainAxisSize: MainAxisSize.min,
@@ -118,8 +125,34 @@ class TourCard extends StatelessWidget {
           curve: Curves.easeOutBack,
         );
   }
+}
 
-  Widget _buildCard() {
+/// The card surface: icon, title, body, step dots, and the Back/Skip/Next row.
+class _CardBody extends StatelessWidget {
+  const _CardBody({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.stepIndex,
+    required this.stepCount,
+    required this.onNext,
+    required this.onSkip,
+    this.onBack,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final int stepIndex;
+  final int stepCount;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+  final VoidCallback? onBack;
+
+  bool get _isLast => stepIndex == stepCount - 1;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
       decoration: BoxDecoration(
