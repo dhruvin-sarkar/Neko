@@ -106,7 +106,7 @@ class NekoButton extends StatelessWidget {
     final Color platform = primary
         ? (color != null ? _darken(color!) : AppColors.primaryDark)
         : AppColors.cloudGray;
-    final Color fg = primary ? Colors.white : AppColors.primary;
+    final Color fg = primary ? AppColors.textOnPrimary : AppColors.primary;
 
     return ChicletAnimatedButton(
       onPressed: _interactive ? onPressed : null,

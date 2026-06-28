@@ -185,7 +185,7 @@ class _NavItem extends StatelessWidget {
           ),
           child: Icon(
             selected ? selectedIcon : unselectedIcon,
-            color: selected ? Colors.white : AppColors.textSecondary,
+            color: selected ? AppColors.textOnPrimary : AppColors.navInactive,
             size: 26,
           ),
         ),

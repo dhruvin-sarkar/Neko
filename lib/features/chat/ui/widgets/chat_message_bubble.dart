@@ -25,7 +25,7 @@ class ChatMessageBubble extends StatelessWidget {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
         ),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
@@ -50,11 +50,15 @@ class ChatMessageBubble extends StatelessWidget {
                   child: _Attachments(attachments: message.attachments),
                 ),
               if (message.content.isNotEmpty)
-                Text(
-                  message.content,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: textColor,
-                    height: 1.35,
+                Semantics(
+                  // Announce the assistant's reply to screen readers as it lands.
+                  liveRegion: !isUser,
+                  child: Text(
+                    message.content,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: textColor,
+                      height: 1.35,
+                    ),
                   ),
                 )
               else if (message.isStreaming)
@@ -126,6 +130,30 @@ class _TypingDotsState extends State<_TypingDots>
 
   @override
   Widget build(BuildContext context) {
+    // Respect the OS "reduce motion" setting: show static dots, not the pulse.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      if (_c.isAnimating) _c.stop();
+      return SizedBox(
+        height: 18,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List<Widget>.generate(
+            3,
+            (i) => Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return SizedBox(
       height: 18,
       child: AnimatedBuilder(

@@ -139,24 +139,29 @@ class _TypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.selectedFill : AppColors.surfaceCard,
-          borderRadius: BorderRadius.circular(100),
-          border: Border.all(
-            color: selected ? AppColors.selectedBorder : AppColors.border,
-            width: selected ? 2 : 1,
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.selectedFill : AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(100),
+            border: Border.all(
+              color: selected ? AppColors.selectedBorder : AppColors.border,
+              width: selected ? 2 : 1,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: selected ? AppColors.primaryDark : AppColors.textPrimary,
+          child: Text(
+            label,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: selected ? AppColors.primaryDark : AppColors.textPrimary,
+            ),
           ),
         ),
       ),

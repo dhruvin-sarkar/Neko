@@ -125,6 +125,7 @@ class _PhotoPreview extends StatelessWidget {
                 fit: BoxFit.cover,
                 cacheWidth: 480,
                 cacheHeight: 480,
+                errorBuilder: (_, _, _) => const _PlaceholderCircle(size: size),
               )
             : Image.file(
                 File(path),
@@ -133,6 +134,7 @@ class _PhotoPreview extends StatelessWidget {
                 fit: BoxFit.cover,
                 cacheWidth: 480,
                 cacheHeight: 480,
+                errorBuilder: (_, _, _) => const _PlaceholderCircle(size: size),
               ),
       );
     }

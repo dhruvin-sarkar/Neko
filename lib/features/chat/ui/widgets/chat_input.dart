@@ -198,10 +198,10 @@ class _ActionButton extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.arrow_upward_rounded,
           size: 18,
-          color: Colors.white,
+          color: AppColors.textOnPrimary,
         ),
         onPressed: disabled ? null : onSend,
         visualDensity: VisualDensity.compact,
@@ -283,18 +283,30 @@ class _PreviewItem extends StatelessWidget {
           ),
           if (!uploading && onRemove != null)
             Positioned(
-              top: -6,
-              right: -6,
-              child: GestureDetector(
-                onTap: onRemove,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: AppColors.darkBanner,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.snowWhite, width: 1.5),
+              top: -8,
+              right: -8,
+              child: Semantics(
+                button: true,
+                label: 'Remove attachment',
+                child: GestureDetector(
+                  onTap: onRemove,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: AppColors.darkBanner,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.snowWhite,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: const Icon(Icons.close, size: 12, color: Colors.white),
                 ),
               ),
             ),
