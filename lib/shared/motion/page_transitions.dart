@@ -27,8 +27,9 @@ abstract final class PageTransitions {
   /// Panel fill for the curtain — the brand background colour.
   static Color get _kCurtainColor => AppColors.primary;
 
-  /// Tintable colour for the paw motif drawn on top of the panel.
-  static const Color _kPawBrandColor = Color(0xFFFFFFFF);
+  /// Tintable colour for the paw motif drawn on top of the panel — the
+  /// on-primary token so it reads on the brand-coloured panel in every theme.
+  static Color get _kPawBrandColor => AppColors.textOnPrimary;
 
   // ── Blur Fade Transition (Profile ⇄ Home) ──
   static const Duration _blurDuration = Duration(milliseconds: 360);
@@ -898,14 +899,32 @@ class _OverlayCurtainPainter extends CustomPainter {
       final double side = i.isEven ? 1.0 : -1.0;
       final Offset center = base + normal * (sideStep * side);
 
+      final double alpha = a * trailFade;
       canvas.save();
       canvas.translate(center.dx, center.dy);
       canvas.rotate(angle + math.pi / 2 + side * 0.12);
-      canvas.translate(-center.dx, -center.dy);
-      canvas.drawPath(
-        _pawPath(center, pawScale),
-        Paint()..color = pawColor.withValues(alpha: a * trailFade),
-      );
+      final ui.Image? img = _pawCurtainImage;
+      if (img != null) {
+        // Same paw artwork as the route curtain and the background.
+        final double s = pawScale * 2.4;
+        final Paint paint = Paint()
+          ..filterQuality = FilterQuality.medium
+          ..colorFilter = ColorFilter.mode(
+            pawColor.withValues(alpha: alpha),
+            BlendMode.srcIn,
+          );
+        canvas.drawImageRect(
+          img,
+          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+          Rect.fromCenter(center: Offset.zero, width: s, height: s),
+          paint,
+        );
+      } else {
+        canvas.drawPath(
+          _pawPath(Offset.zero, pawScale),
+          Paint()..color = pawColor.withValues(alpha: alpha),
+        );
+      }
       canvas.restore();
     }
   }
