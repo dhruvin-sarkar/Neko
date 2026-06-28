@@ -10,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/neko_app.dart';
+import 'core/services/audio_service.dart';
+import 'core/services/local_storage_service.dart';
 import 'core/utils/logger.dart';
 import 'features/onboarding/data/onboarding_persistence.dart';
 import 'firebase_options.dart';
@@ -59,6 +61,12 @@ void main() {
       // Pre-load UI sounds so the first tap is low-latency. The same container
       // backs the app, so the initialized service is the one widgets use.
       final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+      // On-device media store (profile pictures + documents) and the new SFX
+      // layer. Both are best-effort and never block startup on failure.
+      await LocalStorageService.init();
+      await AudioService.init();
+
       final ProviderContainer container = ProviderContainer(
         overrides: <Override>[
           sharedPreferencesProvider.overrideWithValue(prefs),

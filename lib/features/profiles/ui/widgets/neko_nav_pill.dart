@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../../app/theme/app_colors.dart';
 
 /// The custom bottom navigation pill: a white rounded pill where the selected
-/// destination sits inside a filled coral circle (Duolingo-style), echoing the
-/// app's brand accent.
-class NekoNavPill extends StatelessWidget {
+/// destination sits inside a filled coral circle (Duolingo-style). A little cat
+/// perches on top of the pill, above the active tab, and slides across when you
+/// switch tabs.
+class NekoNavPill extends StatefulWidget {
   const NekoNavPill({
     super.key,
     required this.selectedIndex,
@@ -24,9 +26,82 @@ class NekoNavPill extends StatelessWidget {
   final Key? settingsKey;
 
   @override
+  State<NekoNavPill> createState() => _NekoNavPillState();
+}
+
+class _NekoNavPillState extends State<NekoNavPill>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
+  static const double _pillWidth = 232;
+  static const double _catSize = 48;
+  // Centres of the three tabs within the pill (8px padding + spaceEvenly).
+  static const List<double> _tabCenters = <double>[50, 116, 182];
+
+  late final AnimationController _cat = AnimationController(vsync: this);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _cat.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pause the cat while the app isn't in the foreground to save battery.
+    if (state == AppLifecycleState.resumed) {
+      if (_cat.duration != null && !_cat.isAnimating) _cat.repeat();
+    } else {
+      _cat.stop();
+    }
+  }
+
+  double get _catLeft => _tabCenters[widget.selectedIndex] - _catSize / 2;
+
+  @override
   Widget build(BuildContext context) {
+    return SizedBox(
+      width: _pillWidth,
+      // Room above the pill for the perched cat (it sits at top: -30).
+      height: 64 + 34,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          _buildPill(),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutBack,
+            left: _catLeft,
+            bottom: 50,
+            child: IgnorePointer(
+              child: RepaintBoundary(
+                child: Lottie.asset(
+                  'assets/animations/loader_cat.json',
+                  controller: _cat,
+                  width: _catSize,
+                  height: _catSize,
+                  onLoaded: (composition) {
+                    _cat.duration = composition.duration;
+                    _cat.repeat();
+                  },
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPill() {
     return Container(
-      width: 232,
+      width: _pillWidth,
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
@@ -44,28 +119,28 @@ class NekoNavPill extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _NavItem(
-            key: homeKey,
+            key: widget.homeKey,
             selectedIcon: Icons.home_rounded,
             unselectedIcon: Icons.home_outlined,
             label: 'Home',
-            selected: selectedIndex == 0,
-            onTap: () => onSelect(0),
+            selected: widget.selectedIndex == 0,
+            onTap: () => widget.onSelect(0),
           ),
           _NavItem(
-            key: chatKey,
+            key: widget.chatKey,
             selectedIcon: Icons.auto_awesome_rounded,
             unselectedIcon: Icons.auto_awesome_outlined,
             label: 'Neko Assistant',
-            selected: selectedIndex == 1,
-            onTap: () => onSelect(1),
+            selected: widget.selectedIndex == 1,
+            onTap: () => widget.onSelect(1),
           ),
           _NavItem(
-            key: settingsKey,
+            key: widget.settingsKey,
             selectedIcon: Icons.settings_rounded,
             unselectedIcon: Icons.settings_outlined,
             label: 'Settings',
-            selected: selectedIndex == 2,
-            onTap: () => onSelect(2),
+            selected: widget.selectedIndex == 2,
+            onTap: () => widget.onSelect(2),
           ),
         ],
       ),

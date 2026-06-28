@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:zo_animated_border/zo_animated_border.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
@@ -107,49 +108,65 @@ class _NekoTextFieldState extends State<NekoTextField> {
         final bool focused = _focusNode.hasFocus;
         final bool obscured = _obscured.value;
 
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: focused
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.18),
-                      blurRadius: 16,
-                      offset: const Offset(0, 2),
+        // On focus (when the input is valid), a soft coral gradient traces the
+        // border — a single, calm "this field is active" cue. No extra glow or
+        // shadow stacked on top. Errors keep the theme's red border instead.
+        final bool showGradient = focused && error == null;
+
+        final Widget field = TextFormField(
+          controller: widget.controller,
+          focusNode: _focusNode,
+          autofocus: widget.autofocus,
+          obscureText: widget.obscureText && obscured,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          maxLength: widget.maxLength,
+          inputFormatters: widget.inputFormatters,
+          validator: widget.validator,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          style: AppTextStyles.bodyLarge,
+          cursorColor: AppColors.primary,
+          onChanged: widget.onChanged,
+          onFieldSubmitted: widget.onSubmitted,
+          decoration: InputDecoration(
+            labelText: widget.label,
+            hintText: widget.hint,
+            counterText: '',
+            floatingLabelStyle: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.primary,
+            ),
+            errorStyle: AppTextStyles.caption.copyWith(
+              color: AppColors.primaryDark,
+            ),
+            suffixIcon: _suffix(obscured: obscured, isValid: isValid),
+            // When the gradient trace is showing, hide the field's own focus
+            // line so the two don't double up on the same edge.
+            focusedBorder: showGradient
+                ? OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(
+                      color: Colors.transparent,
+                      width: 2,
                     ),
-                  ]
+                  )
                 : null,
           ),
-          child: TextFormField(
-            controller: widget.controller,
-            focusNode: _focusNode,
-            autofocus: widget.autofocus,
-            obscureText: widget.obscureText && obscured,
-            keyboardType: widget.keyboardType,
-            textInputAction: widget.textInputAction,
-            maxLength: widget.maxLength,
-            inputFormatters: widget.inputFormatters,
-            validator: widget.validator,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            style: AppTextStyles.bodyLarge,
-            cursorColor: AppColors.primary,
-            onChanged: widget.onChanged,
-            onFieldSubmitted: widget.onSubmitted,
-            decoration: InputDecoration(
-              labelText: widget.label,
-              hintText: widget.hint,
-              counterText: '',
-              floatingLabelStyle: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.primary,
-              ),
-              errorStyle: AppTextStyles.caption.copyWith(
-                color: AppColors.primaryDark,
-              ),
-              suffixIcon: _suffix(obscured: obscured, isValid: isValid),
-            ),
-          ),
+        );
+
+        if (!showGradient) return field;
+
+        return ZoAnimatedGradientBorder(
+          borderRadius: 16,
+          borderThickness: 2,
+          glowOpacity: 0.3,
+          animationCurve: Curves.linear,
+          animationDuration: const Duration(milliseconds: 2800),
+          gradientColor: <Color>[
+            AppColors.primary,
+            AppColors.primaryLight,
+            AppColors.primary,
+          ],
+          child: field,
         );
       },
     );

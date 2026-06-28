@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/widgets/neko_button.dart';
 import '../../../../shared/services/feedback_service.dart';
 import '../../../../shared/services/image_picker_service.dart';
 import '../../data/avatar_presets.dart';
@@ -63,49 +64,39 @@ class PhotoStep extends ConsumerWidget {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _pick(ref, ImageSource.camera),
-                icon: const Icon(Icons.photo_camera_outlined),
-                label: const Text('Camera'),
+              child: NekoButton.secondary(
+                label: 'Camera',
+                icon: Icons.photo_camera_outlined,
+                onTap: () => _pick(ref, ImageSource.camera),
               ),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _pick(ref, ImageSource.gallery),
-                icon: const Icon(Icons.photo_library_outlined),
-                label: const Text('Gallery'),
+              child: NekoButton.secondary(
+                label: 'Gallery',
+                icon: Icons.photo_library_outlined,
+                onTap: () => _pick(ref, ImageSource.gallery),
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         Center(
-          child: TextButton(
-            onPressed: () {
+          child: NekoButton.ghost(
+            label: hasAvatar ? 'Choose a different avatar' : 'Maybe later',
+            onTap: () {
               unawaited(ref.read(feedbackServiceProvider).onTap());
               AvatarPickerSheet.show(context);
             },
-            child: Text(
-              hasAvatar ? 'Choose a different avatar' : 'Maybe later',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.primary,
-              ),
-            ),
           ),
         ),
         if (hasAvatar)
           Center(
-            child: TextButton(
-              onPressed: () => ref
+            child: NekoButton.ghost(
+              label: 'Remove',
+              onTap: () => ref
                   .read(onboardingNotifierProvider.notifier)
                   .setPhotoPath(null),
-              child: Text(
-                'Remove',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.primaryDark,
-                ),
-              ),
             ),
           ),
       ],

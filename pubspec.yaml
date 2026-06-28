@@ -49,6 +49,11 @@ dependencies:
   google_fonts: ^6.2.1
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
+  lottie: ^3.1.0
+  animated_text_kit: ^4.2.3
+  flutter_staggered_animations: ^1.1.1
+  zo_animated_border: ^1.0.7
+  flutter_styled_toast: ^2.2.1
 
   # Opening stored documents in the device's default viewer/browser
   url_launcher: ^6.3.1
@@ -59,7 +64,12 @@ dependencies:
   # Motion, tactile buttons, and sound
   flutter_animate: ^4.5.0
   chiclet: ^1.2.1
-  audioplayers: ^6.0.0
+  audioplayers: ^6.1.0
+
+  # Local media storage (profile pictures + documents kept on-device)
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.4
 
   # First-run guided tour / coach marks
   tutorial_coach_mark: ^1.3.3
@@ -85,4 +95,5 @@ flutter:
     - assets/images/
     - assets/images/avatars/
     - assets/sounds/
+    - assets/audio/
     - assets/animations/

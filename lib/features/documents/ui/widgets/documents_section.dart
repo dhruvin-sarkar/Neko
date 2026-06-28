@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/logger.dart';
+import '../../../../core/widgets/neko_button.dart';
 import '../../../../shared/services/feedback_service.dart';
 import '../../../../shared/services/file_picker_service.dart';
 import '../../../../shared/widgets/neko_dialog.dart';
@@ -170,10 +172,10 @@ class DocumentsSection extends ConsumerWidget {
                   const SizedBox(height: 12),
                 ],
               const SizedBox(height: 4),
-              OutlinedButton.icon(
-                onPressed: isBusy ? null : () => _add(context, ref),
-                icon: const Icon(Icons.upload_file_outlined),
-                label: const Text('Upload a document'),
+              NekoButton.secondary(
+                label: 'Upload a document',
+                icon: Icons.upload_file_outlined,
+                onTap: isBusy ? null : () => _add(context, ref),
               ),
             ],
           ),
@@ -193,9 +195,28 @@ class _DocumentsLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+    return RepaintBoundary(
+      child: Shimmer.fromColors(
+        baseColor: AppColors.surfaceCard,
+        highlightColor:
+            Color.lerp(AppColors.surfaceCard, Colors.white, 0.6) ??
+            Colors.white,
+        period: const Duration(milliseconds: 1400),
+        child: Column(
+          children: [
+            for (int i = 0; i < 2; i++) ...[
+              if (i > 0) const SizedBox(height: 12),
+              Container(
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

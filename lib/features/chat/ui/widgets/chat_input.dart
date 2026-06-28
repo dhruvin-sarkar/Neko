@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:zo_animated_border/zo_animated_border.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/widgets/neko_loader.dart';
 import '../../models/chat_attachment.dart';
 
 /// The composer at the bottom of the chat: an attachments tray, a growing
@@ -63,14 +65,22 @@ class _ChatInputState extends State<ChatInput> {
     final bool sendDisabled =
         widget.isUploading || widget.isGenerating || !_hasContent;
 
-    return Container(
+    final Widget composer = Container(
       decoration: BoxDecoration(
         color: AppColors.snowWhite,
-        border: Border.all(color: AppColors.border),
+        border: widget.isGenerating
+            ? null
+            : Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 12, offset: Offset(0, 4)),
-        ],
+        boxShadow: widget.isGenerating
+            ? null
+            : const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
       ),
       padding: const EdgeInsets.all(8),
       child: Column(
@@ -130,6 +140,25 @@ class _ChatInputState extends State<ChatInput> {
         ],
       ),
     );
+
+    // While Neko is replying, a gentle coral gradient drifts around the
+    // composer as a calm "thinking" cue. Otherwise it's a plain static surface.
+    if (widget.isGenerating) {
+      return ZoAnimatedGradientBorder(
+        borderRadius: 24,
+        borderThickness: 2,
+        glowOpacity: 0.35,
+        animationCurve: Curves.linear,
+        animationDuration: const Duration(milliseconds: 2600),
+        gradientColor: <Color>[
+          AppColors.primary,
+          AppColors.primaryLight,
+          AppColors.primary,
+        ],
+        child: composer,
+      );
+    }
+    return composer;
   }
 }
 
@@ -169,7 +198,11 @@ class _ActionButton extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: IconButton(
-        icon: const Icon(Icons.arrow_upward_rounded, size: 18, color: Colors.white),
+        icon: const Icon(
+          Icons.arrow_upward_rounded,
+          size: 18,
+          color: Colors.white,
+        ),
         onPressed: disabled ? null : onSend,
         visualDensity: VisualDensity.compact,
         tooltip: 'Send',
@@ -231,17 +264,11 @@ class _PreviewItem extends StatelessWidget {
             ),
             clipBehavior: Clip.antiAlias,
             child: uploading
-                ? Center(
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  )
-                : (a != null && a.isImage && !kIsWeb && File(a.path).existsSync()
+                ? const Center(child: NekoLoader.small())
+                : (a != null &&
+                          a.isImage &&
+                          !kIsWeb &&
+                          File(a.path).existsSync()
                       ? Image.file(File(a.path), fit: BoxFit.cover)
                       : const Center(
                           child: Icon(

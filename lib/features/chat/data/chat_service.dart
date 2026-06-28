@@ -4,8 +4,10 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart' show XFile;
 
 import '../../../core/utils/logger.dart';
+import '../models/chat_attachment.dart';
 import '../models/chat_message.dart';
 
 /// Contract for the AI backend: send the [history] and stream the reply token
@@ -16,7 +18,9 @@ abstract class ChatService {
 
 /// Raised when the AI request fails; shown to the user as a friendly note.
 class ChatException implements Exception {
-  const ChatException([this.message = 'The assistant is unavailable right now.']);
+  const ChatException([
+    this.message = 'The assistant is unavailable right now.',
+  ]);
   final String message;
 }
 
@@ -40,27 +44,43 @@ class HackClubChatService implements ChatService {
 
   final http.Client _client;
 
-  String get _apiKey => dotenv.get('AI_API_KEY', fallback: '');
-  String get _baseUrl => dotenv.get(
-    'AI_BASE_URL',
-    fallback: 'https://ai.hackclub.com/proxy/v1',
-  );
+  /// Placeholder shipped in `.env.example`; treated as "no key set".
+  static const String _placeholderKey = 'replace_with_your_hackclub_api_key';
+
+  String get _apiKey {
+    final String key = dotenv.get('HACKCLUB_API_KEY', fallback: '');
+    if (key.isNotEmpty) return key;
+    return dotenv.get('AI_API_KEY', fallback: '');
+  }
+
+  String get _baseUrl =>
+      dotenv.get('AI_BASE_URL', fallback: 'https://ai.hackclub.com/proxy/v1');
   String get _model =>
       dotenv.get('AI_MODEL', fallback: 'google/gemini-3-flash-preview');
 
   @override
   Stream<String> streamReply(List<ChatMessage> history) async* {
-    final List<Map<String, String>> messages = <Map<String, String>>[
+    final String apiKey = _apiKey;
+    if (apiKey.isEmpty || apiKey == _placeholderKey) {
+      throw const ChatException(
+        'Add your Hack Club AI key to the .env file '
+        '(HACKCLUB_API_KEY) to chat with Neko.',
+      );
+    }
+
+    final List<Map<String, dynamic>> messages = <Map<String, dynamic>>[
       {'role': 'system', 'content': _systemPrompt},
-      for (final ChatMessage m in history)
-        if (!(m.role == ChatRole.assistant && m.content.trim().isEmpty))
-          {'role': m.isUser ? 'user' : 'assistant', 'content': m.content},
     ];
+    for (final ChatMessage m in history) {
+      // Skip the empty assistant placeholder appended while we wait for a reply.
+      if (m.role == ChatRole.assistant && m.content.trim().isEmpty) continue;
+      messages.add(await _encodeMessage(m));
+    }
 
     final http.Request request =
         http.Request('POST', Uri.parse('$_baseUrl/chat/completions'))
           ..headers.addAll(<String, String>{
-            'Authorization': 'Bearer $_apiKey',
+            'Authorization': 'Bearer $apiKey',
             'Content-Type': 'application/json',
             'Accept': 'text/event-stream',
           })
@@ -133,6 +153,62 @@ class HackClubChatService implements ChatService {
       AppLogger.warning('AI response parse failed', e, st);
       throw const ChatException();
     }
+  }
+
+  /// Builds the API message for [m]. A user message carrying image attachments
+  /// becomes a multi-part content array (text + inline images) so vision models
+  /// can actually see them; everything else stays a plain text message.
+  Future<Map<String, dynamic>> _encodeMessage(ChatMessage m) async {
+    final String role = m.isUser ? 'user' : 'assistant';
+    final List<ChatAttachment> images = m.isUser
+        ? m.attachments.where((ChatAttachment a) => a.isImage).toList()
+        : const <ChatAttachment>[];
+
+    if (images.isEmpty) {
+      return <String, dynamic>{'role': role, 'content': m.content};
+    }
+
+    final List<Map<String, dynamic>> parts = <Map<String, dynamic>>[
+      if (m.content.trim().isNotEmpty)
+        <String, dynamic>{'type': 'text', 'text': m.content},
+    ];
+    for (final ChatAttachment a in images) {
+      final String? dataUrl = await _toDataUrl(a.path);
+      if (dataUrl != null) {
+        parts.add(<String, dynamic>{
+          'type': 'image_url',
+          'image_url': <String, String>{'url': dataUrl},
+        });
+      }
+    }
+    // If every image failed to load, fall back to plain text so we still send
+    // something coherent.
+    if (parts.isEmpty) {
+      return <String, dynamic>{'role': role, 'content': m.content};
+    }
+    return <String, dynamic>{'role': role, 'content': parts};
+  }
+
+  /// Reads a local image and encodes it as a base64 data URL the API accepts.
+  /// Returns null if the file can't be read, so a bad attachment never blocks
+  /// the message.
+  Future<String?> _toDataUrl(String path) async {
+    try {
+      final List<int> bytes = await XFile(path).readAsBytes();
+      return 'data:${_mimeFor(path)};base64,${base64Encode(bytes)}';
+    } on Object catch (e, st) {
+      AppLogger.warning('Could not attach image to chat', e, st);
+      return null;
+    }
+  }
+
+  String _mimeFor(String path) {
+    final String p = path.toLowerCase();
+    if (p.endsWith('.png')) return 'image/png';
+    if (p.endsWith('.webp')) return 'image/webp';
+    if (p.endsWith('.gif')) return 'image/gif';
+    if (p.endsWith('.heic')) return 'image/heic';
+    return 'image/jpeg';
   }
 }
 

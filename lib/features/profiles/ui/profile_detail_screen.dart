@@ -8,6 +8,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../features/tour/providers/tour_keys.dart';
 import '../../documents/ui/widgets/documents_section.dart';
+import 'widgets/profile_detail_shimmer.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../providers/profile_provider.dart';
 import 'widgets/cat_avatar.dart';
@@ -51,12 +52,7 @@ class ProfileDetailScreen extends ConsumerWidget {
           switchOutCurve: Curves.easeIn,
           child: cat == null
               ? (isLoading
-                    ? Center(
-                        key: const ValueKey('loading'),
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                        ),
-                      )
+                    ? const ProfileDetailShimmer(key: ValueKey('loading'))
                     : const _NotFound(key: ValueKey('not-found')))
               : _CatProfileBody(
                   key: ValueKey(cat.id),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/settings/providers/theme_controller.dart';
+import '../core/widgets/keyboard_cat.dart';
 import '../shared/widgets/paw_background.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
@@ -25,7 +26,9 @@ class NekoApp extends ConsumerWidget {
       builder: (context, child) => Consumer(
         builder: (context, ref, _) {
           ref.watch(themeControllerProvider);
-          return PawBackground(child: child ?? const SizedBox.shrink());
+          return PawBackground(
+            child: KeyboardCat(child: child ?? const SizedBox.shrink()),
+          );
         },
       ),
     );

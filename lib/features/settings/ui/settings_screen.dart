@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../app/app_info.dart';
 import '../../../app/theme/app_colors.dart';
@@ -114,6 +115,16 @@ class SettingsScreen extends ConsumerWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            Center(
+                              child: RepaintBoundary(
+                                child: Lottie.asset(
+                                  'assets/animations/rainbow_cat.json',
+                                  width: 140,
+                                  repeat: true,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             _AccountCard(
                               displayName: displayName,
                               email: email,
@@ -387,5 +398,3 @@ class _AboutCard extends StatelessWidget {
     );
   }
 }
-
-

@@ -9,6 +9,7 @@ import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/widgets/neko_loader.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_primary_button.dart';
@@ -197,7 +198,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
         appBar: AppBar(leading: const BackButton(color: AppColors.textPrimary)),
         body: Center(
           child: (cat == null && stillLoading)
-              ? CircularProgressIndicator(color: AppColors.primary)
+              ? const NekoLoader()
               : Text(
                   "We can't find that cat to edit.",
                   style: AppTextStyles.headlineLarge,

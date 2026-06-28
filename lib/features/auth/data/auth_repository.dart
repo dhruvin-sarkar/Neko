@@ -233,13 +233,12 @@ class AuthRepository {
   /// (e.g. Firestore rules or a transient network error) is logged but never
   /// thrown, so it can't turn an otherwise-successful sign-in into an error.
   ///
-  /// Onboarding routing keys off `onboardingComplete`: a brand-new account
-  /// (no existing document) starts at `false` so it lands in the add-a-cat
-  /// flow, while a returning user (document already exists) is marked complete
-  /// so they go straight Home instead of being sent through onboarding again.
-  /// `guidedTourComplete` follows the same first-time rule so the Home tour is
-  /// shown once to new users and skipped for returning ones.
-  /// `createdAt` is only stamped on first write (merge never overwrites it).
+  /// The `onboardingComplete` and `guidedTourComplete` flags are owned by the
+  /// onboarding and tour flows. On a brand-new account (no document yet) they
+  /// start `false`. For a returning account we only refresh the contact fields
+  /// and never touch those flags — otherwise a sign-in could overwrite a real
+  /// `true` back to `false` and wrongly send the user through onboarding again.
+  /// `createdAt` is only stamped on first write.
   Future<void> _ensureUserDocument(
     User user, {
     required String displayName,
@@ -249,14 +248,22 @@ class AuthRepository {
           .collection('users')
           .doc(user.uid);
       final DocumentSnapshot<Map<String, dynamic>> existing = await ref.get();
-      final bool isReturning = existing.exists;
-      await ref.set({
-        'displayName': displayName,
-        'email': user.email ?? '',
-        if (!isReturning) 'createdAt': FieldValue.serverTimestamp(),
-        'onboardingComplete': isReturning,
-        'guidedTourComplete': isReturning,
-      }, SetOptions(merge: true));
+      if (existing.exists) {
+        // Returning account — refresh contact details only.
+        await ref.set({
+          'displayName': displayName,
+          'email': user.email ?? '',
+        }, SetOptions(merge: true));
+      } else {
+        // First time we've seen this account — a new user hasn't onboarded yet.
+        await ref.set(<String, dynamic>{
+          'displayName': displayName,
+          'email': user.email ?? '',
+          'createdAt': FieldValue.serverTimestamp(),
+          'onboardingComplete': false,
+          'guidedTourComplete': false,
+        });
+      }
     } on Object catch (e, st) {
       AppLogger.warning('Could not sync user document; continuing', e, st);
     }
@@ -294,11 +301,7 @@ class AuthRepository {
   }
 
   AppException _mapUnknown(Object e, StackTrace st) {
-    AppLogger.error(
-      'Unexpected auth failure (${e.runtimeType}): $e',
-      e,
-      st,
-    );
+    AppLogger.error('Unexpected auth failure (${e.runtimeType}): $e', e, st);
     return AppException('Something went wrong. Please try again.', cause: e);
   }
 }
