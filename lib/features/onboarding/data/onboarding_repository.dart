@@ -44,16 +44,13 @@ class OnboardingRepository {
           .collection('cats')
           .doc();
 
-      // Drop nullable keys so we never write explicit nulls; re-add only when
-      // a value is actually present (symmetric, merge-safe).
+      // Drop the client createdAt and every null optional field (birthday,
+      // avatarPreset) so we never persist explicit nulls to Firestore.
       final Map<String, dynamic> data = profile.toJson()
         ..remove('createdAt')
-        ..remove('avatarPreset');
+        ..removeWhere((_, Object? v) => v == null);
       data['id'] = catRef.id;
       data['createdAt'] = FieldValue.serverTimestamp();
-      if (profile.avatarPreset != null) {
-        data['avatarPreset'] = profile.avatarPreset;
-      }
 
       final WriteBatch batch = _firestore.batch()
         ..set(catRef, data)

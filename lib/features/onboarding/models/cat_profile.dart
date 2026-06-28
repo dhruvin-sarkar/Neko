@@ -31,7 +31,19 @@ class CatProfile with _$CatProfile {
   /// Builds a profile from a Firestore document, injecting the document id.
   factory CatProfile.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final Map<String, dynamic> data = doc.data() ?? <String, dynamic>{};
-    return CatProfile.fromJson(<String, dynamic>{...data, 'id': doc.id});
+    // Coerce the required fields defensively: a single document missing or
+    // mistyping one (a partial write, a console edit, a schema change) must not
+    // throw and tear down the whole cats stream.
+    return CatProfile.fromJson(<String, dynamic>{
+      ...data,
+      'id': doc.id,
+      'name': (data['name'] as String?) ?? '',
+      'breed': (data['breed'] as String?) ?? 'Other',
+      'colorType': (data['colorType'] as String?) ?? 'other',
+      'activityLevel': (data['activityLevel'] as String?) ?? 'active',
+      'ageMonths': (data['ageMonths'] as num?)?.toInt() ?? 0,
+      'weightKg': (data['weightKg'] as num?)?.toDouble() ?? 0.0,
+    });
   }
 
   /// Whole years and leftover months, for friendly display.

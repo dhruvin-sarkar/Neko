@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -37,7 +38,13 @@ class OnboardingNotifier extends _$OnboardingNotifier {
     if (uid != null) {
       final saved = ref.read(onboardingPersistenceProvider).loadDraft(uid);
       if (saved != null) {
-        return OnboardingState(step: saved.step, draft: saved.draft);
+        // Drop a restored photo path whose temp file the OS has since cleared,
+        // so the photo step and the final upload don't choke on a dead path.
+        final String? photo = saved.draft.photoPath;
+        final draft = (photo != null && !File(photo).existsSync())
+            ? saved.draft.copyWith(photoPath: null)
+            : saved.draft;
+        return OnboardingState(step: saved.step, draft: draft);
       }
     }
     return const OnboardingState(step: 1);
@@ -55,41 +62,62 @@ class OnboardingNotifier extends _$OnboardingNotifier {
     );
   }
 
-  void setName(String name) =>
-      state = state.copyWith(draft: state.draft.copyWith(name: name));
+  void setName(String name) {
+    state = state.copyWith(draft: state.draft.copyWith(name: name));
+    _persist();
+  }
 
-  void setBreed(String breed) =>
-      state = state.copyWith(draft: state.draft.copyWith(breed: breed));
+  void setBreed(String breed) {
+    state = state.copyWith(draft: state.draft.copyWith(breed: breed));
+    _persist();
+  }
 
-  void setAge({required int years, required int months}) =>
-      state = state.copyWith(
-        draft: state.draft.copyWith(ageYears: years, ageMonths: months),
-      );
+  void setAge({required int years, required int months}) {
+    state = state.copyWith(
+      draft: state.draft.copyWith(ageYears: years, ageMonths: months),
+    );
+    _persist();
+  }
 
-  void setBirthday(DateTime? birthday) =>
-      state = state.copyWith(draft: state.draft.copyWith(birthday: birthday));
+  void setBirthday(DateTime? birthday) {
+    state = state.copyWith(draft: state.draft.copyWith(birthday: birthday));
+    _persist();
+  }
 
-  void setWeight(double? weightKg) =>
-      state = state.copyWith(draft: state.draft.copyWith(weightKg: weightKg));
+  void setWeight(double? weightKg) {
+    state = state.copyWith(draft: state.draft.copyWith(weightKg: weightKg));
+    _persist();
+  }
 
-  void setColorType(String colorType) =>
-      state = state.copyWith(draft: state.draft.copyWith(colorType: colorType));
+  void setColorType(String colorType) {
+    state = state.copyWith(draft: state.draft.copyWith(colorType: colorType));
+    _persist();
+  }
 
-  void setActivityLevel(String activityLevel) => state = state.copyWith(
-    draft: state.draft.copyWith(activityLevel: activityLevel),
-  );
+  void setActivityLevel(String activityLevel) {
+    state = state.copyWith(
+      draft: state.draft.copyWith(activityLevel: activityLevel),
+    );
+    _persist();
+  }
 
   /// Sets (or clears, with `null`) the local path of the chosen cat photo.
   /// Choosing a photo clears any selected preset avatar.
-  void setPhotoPath(String? photoPath) => state = state.copyWith(
-    draft: state.draft.copyWith(photoPath: photoPath, avatarPreset: null),
-  );
+  void setPhotoPath(String? photoPath) {
+    state = state.copyWith(
+      draft: state.draft.copyWith(photoPath: photoPath, avatarPreset: null),
+    );
+    _persist();
+  }
 
   /// Selects (or clears) a bundled preset avatar. Choosing one clears any
   /// picked photo.
-  void setAvatarPreset(String? avatarPreset) => state = state.copyWith(
-    draft: state.draft.copyWith(avatarPreset: avatarPreset, photoPath: null),
-  );
+  void setAvatarPreset(String? avatarPreset) {
+    state = state.copyWith(
+      draft: state.draft.copyWith(avatarPreset: avatarPreset, photoPath: null),
+    );
+    _persist();
+  }
 
   void nextStep() {
     if (state.step < _lastStep) {

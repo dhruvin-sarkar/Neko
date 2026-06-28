@@ -53,7 +53,10 @@ class ProfileRepository {
     try {
       final Map<String, dynamic> data = profile.toJson()
         ..remove('id')
-        ..remove('createdAt');
+        ..remove('createdAt')
+        // Don't null out optional fields (avatarPreset, birthday) on a partial
+        // edit — update() would write explicit nulls and erase them.
+        ..removeWhere((_, Object? v) => v == null);
       await _catsRef.doc(profile.id).update(data);
     } on Object catch (e, st) {
       AppLogger.error('Failed to update cat', e, st);

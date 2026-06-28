@@ -31,13 +31,20 @@ class DocumentActionController extends _$DocumentActionController {
     required String type,
   }) async {
     if (state.isLoading) return;
-    state = const AsyncValue<void>.loading();
-    state = await AsyncValue.guard(
-      () => ref
-          .read(documentRepositoryProvider(catId))
-          .upload(path: path, name: name, type: type),
-    );
-    if (!state.hasError) ref.invalidate(documentsProvider(catId));
+    // Hold the (auto-dispose) notifier alive across the await so navigating
+    // away mid-upload can't dispose it and crash the post-await state write.
+    final KeepAliveLink link = ref.keepAlive();
+    try {
+      state = const AsyncValue<void>.loading();
+      state = await AsyncValue.guard(
+        () => ref
+            .read(documentRepositoryProvider(catId))
+            .upload(path: path, name: name, type: type),
+      );
+      if (!state.hasError) ref.invalidate(documentsProvider(catId));
+    } finally {
+      link.close();
+    }
   }
 
   Future<void> delete({
@@ -45,10 +52,15 @@ class DocumentActionController extends _$DocumentActionController {
     required CatDocument document,
   }) async {
     if (state.isLoading) return;
-    state = const AsyncValue<void>.loading();
-    state = await AsyncValue.guard(
-      () => ref.read(documentRepositoryProvider(catId)).delete(document),
-    );
-    if (!state.hasError) ref.invalidate(documentsProvider(catId));
+    final KeepAliveLink link = ref.keepAlive();
+    try {
+      state = const AsyncValue<void>.loading();
+      state = await AsyncValue.guard(
+        () => ref.read(documentRepositoryProvider(catId)).delete(document),
+      );
+      if (!state.hasError) ref.invalidate(documentsProvider(catId));
+    } finally {
+      link.close();
+    }
   }
 }

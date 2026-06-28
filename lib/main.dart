@@ -16,6 +16,7 @@ import 'core/services/local_storage_service.dart';
 import 'core/utils/logger.dart';
 import 'features/onboarding/data/onboarding_persistence.dart';
 import 'features/settings/providers/sound_settings_controller.dart';
+import 'features/settings/providers/theme_controller.dart';
 import 'firebase_options.dart';
 
 void main() {
@@ -62,17 +63,31 @@ void main() {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
 
       // On-device media store (profile pictures + documents) and the SFX
-      // engine. Both are best-effort and never block startup on failure.
-      await LocalStorageService.init();
-      await AudioService.init();
+      // engine. Both are best-effort and must never block startup on failure.
+      try {
+        await LocalStorageService.init();
+      } on Object catch (e, st) {
+        AppLogger.warning(
+          'LocalStorageService init failed; media disabled',
+          e,
+          st,
+        );
+      }
+      try {
+        await AudioService.init();
+      } on Object catch (e, st) {
+        AppLogger.warning('AudioService init failed; sounds disabled', e, st);
+      }
 
       final ProviderContainer container = ProviderContainer(
         overrides: <Override>[
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
       );
-      // Apply the saved mute/volume preference to the engine before first frame.
+      // Apply saved sound + coat-theme preferences before the first frame, so
+      // the app opens muted/at-volume and in the user's chosen theme.
       container.read(soundSettingsControllerProvider);
+      container.read(themeControllerProvider);
 
       runApp(
         UncontrolledProviderScope(container: container, child: const NekoApp()),

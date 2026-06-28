@@ -159,8 +159,11 @@ class HackClubChatService implements ChatService {
                 as Map<String, dynamic>?;
         final String? content = delta?['content'] as String?;
         if (content != null && content.isNotEmpty) yield content;
-      } on Object {
-        // Ignore malformed chunks.
+      } on Object catch (e) {
+        // Skip a malformed chunk — but log it. If the API envelope ever
+        // changes, every chunk fails here and the reply would otherwise come
+        // back silently empty with no diagnostic trail.
+        AppLogger.warning('SSE chunk parse skipped', e);
       }
     }
   }

@@ -111,6 +111,9 @@ class ChatController extends Notifier<ChatState> {
             _setAssistant(assistantId, message, streaming: false);
             state = state.copyWith(isGenerating: false);
             _sub = null;
+            // Persist the partial turn too, so a mid-stream network error
+            // doesn't silently drop the exchange from history.
+            _saveCurrent();
           },
         );
   }

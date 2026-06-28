@@ -70,9 +70,16 @@ class DocumentRepository {
     }
   }
 
-  /// Removes a document (file + index entry).
+  /// Removes a document (index entry + file).
   Future<void> delete(CatDocument document) async {
-    await LocalStorageService.deleteDocument(_catId, document.path);
+    try {
+      await LocalStorageService.deleteDocument(_catId, document.path);
+    } on Object catch (e, st) {
+      AppLogger.error('Document delete failed', e, st);
+      throw const AppException(
+        "We couldn't remove that document. Please try again.",
+      );
+    }
   }
 
   String _extensionOf(String path) {

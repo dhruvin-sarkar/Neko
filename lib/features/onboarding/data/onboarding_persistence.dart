@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../core/utils/logger.dart';
 import '../models/onboarding_draft.dart';
 
 /// The app-wide [SharedPreferences] instance.
@@ -53,7 +54,12 @@ class OnboardingPersistence {
         draft: OnboardingDraft.fromJson(map['draft'] as Map<String, dynamic>),
         step: (map['step'] as num).toInt(),
       );
-    } on Object {
+    } on Object catch (e, st) {
+      AppLogger.warning(
+        'Failed to parse saved onboarding draft; discarding',
+        e,
+        st,
+      );
       return null;
     }
   }

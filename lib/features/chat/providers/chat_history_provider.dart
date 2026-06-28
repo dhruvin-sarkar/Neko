@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/utils/logger.dart';
 import '../../onboarding/data/onboarding_persistence.dart';
 import '../models/chat_conversation.dart';
 
@@ -28,7 +29,8 @@ class ChatHistoryController extends Notifier<List<ChatConversation>> {
       ];
       parsed.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       return parsed;
-    } on Object {
+    } on Object catch (e, st) {
+      AppLogger.error('Failed to load chat history; starting empty', e, st);
       return const [];
     }
   }

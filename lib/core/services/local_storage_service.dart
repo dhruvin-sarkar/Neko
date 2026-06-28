@@ -127,16 +127,18 @@ class LocalStorageService {
         .toList();
   }
 
-  /// Removes one document (file + index entry).
+  /// Removes one document. Updates the index first (and rethrows if that write
+  /// fails, so the caller can surface it); the on-disk file delete is then
+  /// best-effort — a leftover file is harmless, a stale index entry is not.
   static Future<void> deleteDocument(String catId, String path) async {
+    final List<Map<String, dynamic>> docs = await getDocuments(catId);
+    docs.removeWhere((Map<String, dynamic> d) => d['path'] == path);
+    await _media.put('docs_$catId', docs);
     try {
       final File file = File(path);
       if (await file.exists()) await file.delete();
-      final List<Map<String, dynamic>> docs = await getDocuments(catId);
-      docs.removeWhere((Map<String, dynamic> d) => d['path'] == path);
-      await _media.put('docs_$catId', docs);
     } on Object catch (e, st) {
-      AppLogger.warning('Failed to delete document', e, st);
+      AppLogger.warning('Document de-indexed but file delete failed', e, st);
     }
   }
 
