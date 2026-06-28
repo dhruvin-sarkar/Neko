@@ -128,6 +128,8 @@ class _AvatarTile extends StatelessWidget {
             child: Image.asset(
               AvatarPresets.assetFor(id),
               fit: BoxFit.cover,
+              cacheWidth: 240,
+              cacheHeight: 240,
               errorBuilder: (_, _, _) => Container(
                 color: tint,
                 child: const Icon(

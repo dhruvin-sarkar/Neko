@@ -330,56 +330,60 @@ class _HistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.selectedFill,
-                borderRadius: BorderRadius.circular(12),
+    return Semantics(
+      button: true,
+      label: 'Open conversation: ${conversation.preview}',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.selectedFill,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 20,
+                  color: AppColors.primary,
+                ),
               ),
-              child: Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 20,
-                color: AppColors.primary,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      conversation.preview,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyLarge,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _relativeTime(conversation.updatedAt),
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    conversation.preview,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyLarge,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _relativeTime(conversation.updatedAt),
-                    style: AppTextStyles.caption,
-                  ),
-                ],
+              IconButton(
+                tooltip: 'Delete',
+                icon: Icon(
+                  Icons.delete_outline_rounded,
+                  color: AppColors.textDisabled,
+                  size: 20,
+                ),
+                onPressed: onDelete,
               ),
-            ),
-            IconButton(
-              tooltip: 'Delete',
-              icon: Icon(
-                Icons.delete_outline_rounded,
-                color: AppColors.textDisabled,
-                size: 20,
-              ),
-              onPressed: onDelete,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

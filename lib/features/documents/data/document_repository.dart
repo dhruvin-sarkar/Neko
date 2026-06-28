@@ -30,8 +30,8 @@ class DocumentRepository {
       final DateTime? ad = a.savedAt;
       final DateTime? bd = b.savedAt;
       if (ad == null && bd == null) return 0;
-      if (ad == null) return -1; // just-saved (pending stamp) — show first
-      if (bd == null) return 1;
+      if (ad == null) return 1; // undated/corrupt entries sort last
+      if (bd == null) return -1;
       return bd.compareTo(ad);
     });
     return docs;

@@ -37,7 +37,13 @@ class ChatHistoryController extends Notifier<List<ChatConversation>> {
 
   Future<void> _persist() async {
     final String raw = jsonEncode([for (final c in state) c.toJson()]);
-    await ref.read(sharedPreferencesProvider).setString(_kHistoryKey, raw);
+    try {
+      await ref.read(sharedPreferencesProvider).setString(_kHistoryKey, raw);
+    } on Object catch (e, st) {
+      // State is already updated optimistically; surface the write failure
+      // rather than letting the rejected Future vanish.
+      AppLogger.error('Failed to persist chat history', e, st);
+    }
   }
 
   /// Inserts or updates [conversation] (matched by id), keeping newest first.
