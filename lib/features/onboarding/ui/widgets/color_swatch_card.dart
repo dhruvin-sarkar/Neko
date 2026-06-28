@@ -58,7 +58,10 @@ class ColorSwatchCard extends StatelessWidget {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: option.circleColor,
+                        color: _gradient(option.themeId) == null
+                            ? option.circleColor
+                            : null,
+                        gradient: _gradient(option.themeId),
                         shape: BoxShape.circle,
                         border: option.needsBorder
                             ? Border.all(color: AppColors.border)
@@ -84,6 +87,42 @@ class ColorSwatchCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Multi-tone swatch gradients for the patterned coats; null = solid colour.
+Gradient? _gradient(String? themeId) {
+  switch (themeId) {
+    case 'calico':
+      return const SweepGradient(
+        colors: [
+          Color(0xFFF15A29),
+          Color(0xFF1A1A2E),
+          Color(0xFFFFFFFF),
+          Color(0xFFF15A29),
+        ],
+      );
+    case 'tortoiseshell':
+      return const SweepGradient(
+        colors: [
+          Color(0xFFC0632A),
+          Color(0xFF3E1A00),
+          Color(0xFFD4A017),
+          Color(0xFFC0632A),
+        ],
+      );
+    case 'tuxedo':
+      return const LinearGradient(
+        colors: [
+          Color(0xFF212121),
+          Color(0xFF212121),
+          Color(0xFFFFFFFF),
+          Color(0xFFFFFFFF),
+        ],
+        stops: [0.0, 0.5, 0.5, 1.0],
+      );
+    default:
+      return null;
   }
 }
 

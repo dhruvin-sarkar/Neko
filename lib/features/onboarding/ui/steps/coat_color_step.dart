@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/neko_palette.dart';
 import '../../../../core/services/audio_service.dart';
 import '../../../../features/settings/providers/theme_controller.dart';
@@ -63,6 +66,20 @@ class CoatColorStep extends ConsumerWidget {
                             .select(NekoPalettes.byId(themeId));
                         unawaited(HapticFeedback.mediumImpact());
                         unawaited(AudioService.playClickSoft());
+                        showToast(
+                          '${option.label} theme applied ✓',
+                          context: context,
+                          duration: const Duration(milliseconds: 1200),
+                          position: StyledToastPosition.center,
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.9,
+                          ),
+                          textStyle: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textOnPrimary,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          animation: StyledToastAnimation.slideFromBottomFade,
+                        );
                       } else {
                         unawaited(feedback.onSelect());
                       }
