@@ -85,7 +85,7 @@ class _Attachments extends StatelessWidget {
               width: 120,
               height: 90,
               child: a.isImage && !kIsWeb && File(a.path).existsSync()
-                  ? Image.file(File(a.path), fit: BoxFit.cover)
+                  ? Image.file(File(a.path), fit: BoxFit.cover, cacheWidth: 360)
                   : Container(
                       color: AppColors.surfaceMuted,
                       alignment: Alignment.center,

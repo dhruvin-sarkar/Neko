@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../../core/neko_motion.dart';
+
 /// Wraps [child] so it compresses on press and springs back on release, using
 /// `flutter_animate`'s target-driven scale.
 ///
@@ -13,12 +15,16 @@ class Pressable extends StatefulWidget {
     required this.onTap,
     this.pressedScale = 0.97,
     this.semanticLabel,
+    this.selected,
   });
 
   final Widget child;
   final VoidCallback onTap;
   final double pressedScale;
   final String? semanticLabel;
+
+  /// Optional selected state, surfaced to accessibility (e.g. a chosen card).
+  final bool? selected;
 
   @override
   State<Pressable> createState() => _PressableState();
@@ -37,7 +43,9 @@ class _PressableState extends State<Pressable> {
     return Semantics(
       button: true,
       label: widget.semanticLabel,
+      selected: widget.selected,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTapDown: (_) => _setPressed(true),
         onTapUp: (_) {
           _setPressed(false);
@@ -48,8 +56,8 @@ class _PressableState extends State<Pressable> {
             .animate(target: _pressed ? 1 : 0)
             .scaleXY(
               end: widget.pressedScale,
-              duration: 80.ms,
-              curve: Curves.easeOut,
+              duration: NekoMotion.pressIn,
+              curve: NekoMotion.standardCurve,
             ),
       ),
     );

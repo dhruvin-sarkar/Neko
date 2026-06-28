@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/neko_palette.dart';
+import '../../../../core/neko_motion.dart';
+import '../../../../shared/widgets/pressable.dart';
 import '../../models/coat_option.dart';
 import 'selection_check.dart';
 
@@ -22,68 +24,64 @@ class ColorSwatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
+      onTap: onTap,
+      semanticLabel: option.label,
       selected: isSelected,
-      label: option.label,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryLight : AppColors.snowWhite,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.cloudGray,
-              width: isSelected ? 2.5 : 2,
+      child: AnimatedContainer(
+        duration: NekoMotion.fast,
+        curve: NekoMotion.standardCurve,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryLight : AppColors.snowWhite,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.cloudGray,
+            width: isSelected ? 2.5 : 2,
+          ),
+          boxShadow: isSelected
+              ? null
+              : [
+                  BoxShadow(
+                    color: AppColors.cloudGray.withValues(alpha: 0.8),
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: _gradient(option.themeId) == null
+                          ? option.circleColor
+                          : null,
+                      gradient: _gradient(option.themeId),
+                      shape: BoxShape.circle,
+                      border: option.needsBorder
+                          ? Border.all(color: AppColors.border)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(option.label, style: AppTextStyles.bodyMedium),
+                  if (option.themeId != null) ...[
+                    const SizedBox(height: 8),
+                    _MiniPalette(themeId: option.themeId!),
+                  ],
+                ],
+              ),
             ),
-            boxShadow: isSelected
-                ? null
-                : [
-                    BoxShadow(
-                      color: AppColors.cloudGray.withValues(alpha: 0.8),
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: _gradient(option.themeId) == null
-                            ? option.circleColor
-                            : null,
-                        gradient: _gradient(option.themeId),
-                        shape: BoxShape.circle,
-                        border: option.needsBorder
-                            ? Border.all(color: AppColors.border)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(option.label, style: AppTextStyles.bodyMedium),
-                    if (option.themeId != null) ...[
-                      const SizedBox(height: 8),
-                      _MiniPalette(themeId: option.themeId!),
-                    ],
-                  ],
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: SelectionCheck(visible: isSelected),
-              ),
-            ],
-          ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: SelectionCheck(visible: isSelected),
+            ),
+          ],
         ),
       ),
     );

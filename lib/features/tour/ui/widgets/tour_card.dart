@@ -125,11 +125,11 @@ class TourCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.snowWhite,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black38,
+            color: AppColors.shadowStrong,
             blurRadius: 28,
-            offset: Offset(0, 12),
+            offset: const Offset(0, 12),
           ),
         ],
       ),

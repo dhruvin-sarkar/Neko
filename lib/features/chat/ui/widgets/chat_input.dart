@@ -74,11 +74,11 @@ class _ChatInputState extends State<ChatInput> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: widget.isGenerating
             ? null
-            : const [
+            : [
                 BoxShadow(
-                  color: Colors.black12,
+                  color: AppColors.shadowSoft,
                   blurRadius: 12,
-                  offset: Offset(0, 4),
+                  offset: const Offset(0, 4),
                 ),
               ],
       ),
@@ -269,7 +269,11 @@ class _PreviewItem extends StatelessWidget {
                           a.isImage &&
                           !kIsWeb &&
                           File(a.path).existsSync()
-                      ? Image.file(File(a.path), fit: BoxFit.cover)
+                      ? Image.file(
+                          File(a.path),
+                          fit: BoxFit.cover,
+                          cacheWidth: 360,
+                        )
                       : Center(
                           child: Icon(
                             Icons.insert_drive_file_outlined,

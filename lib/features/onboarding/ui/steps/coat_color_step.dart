@@ -9,6 +9,7 @@ import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/neko_palette.dart';
+import '../../../../core/neko_motion.dart';
 import '../../../../core/services/audio_service.dart';
 import '../../../../features/settings/providers/theme_controller.dart';
 import '../../../../shared/services/feedback_service.dart';
@@ -87,11 +88,11 @@ class CoatColorStep extends ConsumerWidget {
                     },
                   )
                   .animate(delay: (60 * index).ms)
-                  .fadeIn(duration: 250.ms)
+                  .fadeIn(duration: NekoMotion.base)
                   .slideY(
                     begin: 0.3,
                     end: 0,
-                    duration: 280.ms,
+                    duration: NekoMotion.entry,
                     curve: Curves.easeOutCubic,
                   );
             },

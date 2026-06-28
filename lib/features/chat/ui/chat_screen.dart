@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../core/neko_motion.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/services/image_picker_service.dart';
 import '../../../shared/widgets/neko_mascot.dart';
@@ -155,7 +156,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       final ChatMessage m = state.messages[index];
                       return ChatMessageBubble(message: m)
                           .animate()
-                          .fadeIn(duration: 200.ms)
+                          .fadeIn(duration: NekoMotion.quick)
                           .slideY(begin: 0.12, end: 0, curve: Curves.easeOut);
                     },
                   ),
@@ -222,7 +223,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 28),
           SuggestedPrompts(onSelect: onSelect),
         ],
-      ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.1, end: 0),
+      ).animate().fadeIn(duration: NekoMotion.entry).slideY(begin: 0.1, end: 0),
     );
   }
 }
@@ -239,7 +240,7 @@ class _HistorySheet extends ConsumerWidget {
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.6,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.6,
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 12, 16),

@@ -10,11 +10,7 @@ abstract final class NekoSnackBar {
   const NekoSnackBar._();
 
   /// Shows [message]. Set [error] for error styling (a warning icon).
-  static void show(
-    BuildContext context,
-    String message, {
-    bool error = false,
-  }) {
+  static void show(BuildContext context, String message, {bool error = false}) {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     messenger
       ..hideCurrentSnackBar()
@@ -28,9 +24,7 @@ abstract final class NekoSnackBar {
       elevation: 6,
       duration: const Duration(seconds: 3),
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       content: Row(
         children: <Widget>[
           Icon(

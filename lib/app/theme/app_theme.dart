@@ -119,11 +119,11 @@ abstract final class AppTheme {
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: AppColors.primaryDark),
+      borderSide: BorderSide(color: AppColors.danger),
     ),
     focusedErrorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
-      borderSide: BorderSide(color: AppColors.primaryDark, width: 2),
+      borderSide: BorderSide(color: AppColors.danger, width: 2),
     ),
   );
 }

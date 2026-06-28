@@ -31,8 +31,6 @@ class ThemeController extends Notifier<NekoPalette> {
     if (palette.id == state.id) return;
     AppColors.palette = palette;
     state = palette;
-    await ref
-        .read(sharedPreferencesProvider)
-        .setString(_kThemeKey, palette.id);
+    await ref.read(sharedPreferencesProvider).setString(_kThemeKey, palette.id);
   }
 }

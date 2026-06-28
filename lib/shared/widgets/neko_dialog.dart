@@ -16,9 +16,7 @@ Future<T?> showNekoDialog<T>({
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: barrierDismissible,
-    barrierLabel: MaterialLocalizations.of(
-      context,
-    ).modalBarrierDismissLabel,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
     barrierColor: Colors.black.withValues(alpha: 0.42),
     transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (context, animation, secondaryAnimation) =>

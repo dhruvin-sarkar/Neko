@@ -22,7 +22,6 @@ import 'splash_gate_provider.dart';
 
 part 'router.g.dart';
 
-
 @Riverpod(keepAlive: true)
 GoRouter goRouter(Ref ref) {
   final RouterNotifier notifier = RouterNotifier(ref);

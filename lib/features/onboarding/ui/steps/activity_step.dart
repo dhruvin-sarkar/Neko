@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/neko_motion.dart';
 import '../../../../shared/services/feedback_service.dart';
 import '../../data/onboarding_options.dart';
 import '../../providers/onboarding_provider.dart';
@@ -44,11 +45,11 @@ class ActivityStep extends ConsumerWidget {
                 },
               )
               .animate(delay: (60 * i).ms)
-              .fadeIn(duration: 250.ms)
+              .fadeIn(duration: NekoMotion.base)
               .slideY(
                 begin: 0.3,
                 end: 0,
-                duration: 280.ms,
+                duration: NekoMotion.entry,
                 curve: Curves.easeOutCubic,
               ),
         ],

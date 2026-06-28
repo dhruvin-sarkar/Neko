@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/neko_motion.dart';
 
 /// The custom bottom navigation pill: a white rounded pill where the selected
 /// destination sits inside a filled coral circle (Duolingo-style). A little cat
@@ -75,7 +76,7 @@ class _NekoNavPillState extends State<NekoNavPill>
         children: [
           _buildPill(),
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
+            duration: NekoMotion.standard,
             curve: Curves.easeOutBack,
             left: _catLeft,
             bottom: 50,
@@ -107,11 +108,11 @@ class _NekoNavPillState extends State<NekoNavPill>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Colors.black26,
+            color: AppColors.shadowMedium,
             blurRadius: 16,
-            offset: Offset(0, 6),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -174,8 +175,8 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+          duration: NekoMotion.quick,
+          curve: NekoMotion.standardCurve,
           width: 48,
           height: 48,
           decoration: BoxDecoration(

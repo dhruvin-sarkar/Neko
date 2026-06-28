@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../core/neko_motion.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../onboarding/models/cat_profile.dart';
@@ -63,10 +64,11 @@ class HomeScreen extends ConsumerWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             sliver: SliverToBoxAdapter(
-              child: HomeGreeting(
-                key: tourKeys.greeting,
-                displayName: displayName,
-              ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.15, end: 0),
+              child:
+                  HomeGreeting(key: tourKeys.greeting, displayName: displayName)
+                      .animate()
+                      .fadeIn(duration: NekoMotion.entry)
+                      .slideY(begin: 0.15, end: 0),
             ),
           ),
           ...cats.when(
@@ -126,11 +128,11 @@ List<Widget> _catSlivers(
                     ),
                   )
                   .animate(delay: (80 * index).ms)
-                  .fadeIn(duration: 250.ms)
+                  .fadeIn(duration: NekoMotion.base)
                   .slideY(
                     begin: 0.3,
                     end: 0,
-                    duration: 280.ms,
+                    duration: NekoMotion.entry,
                     curve: Curves.easeOutCubic,
                   );
           return Padding(
