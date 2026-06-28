@@ -52,7 +52,7 @@ class CatAvatar extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.catColorFor(colorType),
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white, width: borderWidth),
+        border: Border.all(color: AppColors.snowWhite, width: borderWidth),
       ),
     );
 

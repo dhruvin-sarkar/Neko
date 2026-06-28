@@ -186,7 +186,7 @@ class _ActionButton extends StatelessWidget {
         icon: Icon(
           Icons.arrow_upward_rounded,
           size: 18,
-          color: AppColors.textOnPrimary,
+          color: disabled ? AppColors.graphite : AppColors.textOnPrimary,
         ),
         onPressed: disabled ? null : onSend,
         visualDensity: VisualDensity.compact,

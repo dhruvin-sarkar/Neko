@@ -29,7 +29,7 @@ abstract final class NekoSnackBar {
         children: <Widget>[
           Icon(
             error ? Icons.error_outline_rounded : Icons.check_circle_outline,
-            color: error ? AppColors.primary : Colors.white,
+            color: error ? AppColors.dangerLight : Colors.white,
             size: 20,
           ),
           const SizedBox(width: 12),

@@ -255,7 +255,10 @@ class _NextButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           child: Text(
             label.toUpperCase(),
-            style: AppTextStyles.buttonLabel.copyWith(fontSize: 14),
+            style: AppTextStyles.buttonLabel.copyWith(
+              fontSize: 14,
+              color: AppColors.textOnPrimary,
+            ),
           ),
         ),
       ),
