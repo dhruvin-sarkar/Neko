@@ -21,6 +21,7 @@ class _KeyboardCatState extends State<KeyboardCat>
     with TickerProviderStateMixin {
   late final AnimationController _lottie = AnimationController(vsync: this);
   bool _visible = false;
+  bool _reduceMotion = false;
 
   @override
   void dispose() {
@@ -31,7 +32,7 @@ class _KeyboardCatState extends State<KeyboardCat>
   void _setVisible(bool value) {
     if (value == _visible) return;
     _visible = value;
-    if (value) {
+    if (value && !_reduceMotion) {
       _lottie.repeat();
     } else {
       _lottie.stop();
@@ -42,6 +43,7 @@ class _KeyboardCatState extends State<KeyboardCat>
   Widget build(BuildContext context) {
     final double inset = MediaQuery.of(context).viewInsets.bottom;
     final bool keyboardOpen = inset > 80;
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
     // Schedule the playback toggle outside build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _setVisible(keyboardOpen);
@@ -57,11 +59,15 @@ class _KeyboardCatState extends State<KeyboardCat>
           child: IgnorePointer(
             child: AnimatedSlide(
               offset: keyboardOpen ? Offset.zero : const Offset(0, 0.6),
-              duration: Duration(milliseconds: keyboardOpen ? 200 : 150),
+              duration: _reduceMotion
+                  ? Duration.zero
+                  : Duration(milliseconds: keyboardOpen ? 200 : 150),
               curve: keyboardOpen ? Curves.easeOut : Curves.easeIn,
               child: AnimatedOpacity(
                 opacity: keyboardOpen ? 1 : 0,
-                duration: Duration(milliseconds: keyboardOpen ? 200 : 150),
+                duration: _reduceMotion
+                    ? Duration.zero
+                    : Duration(milliseconds: keyboardOpen ? 200 : 150),
                 // Peeks from the far right, above the keyboard, big enough to
                 // read but kept off the centre so it never covers what you type.
                 child: Align(
@@ -73,7 +79,7 @@ class _KeyboardCatState extends State<KeyboardCat>
                       width: 120,
                       onLoaded: (composition) {
                         _lottie.duration = composition.duration;
-                        if (_visible) _lottie.repeat();
+                        if (_visible && !_reduceMotion) _lottie.repeat();
                       },
                     ),
                   ),
