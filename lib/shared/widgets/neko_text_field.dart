@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:zo_animated_border/zo_animated_border.dart';
 
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_text_styles.dart';
 
-/// A themed text field with a coral focus glow, a check icon when valid, and an
-/// optional password visibility toggle.
+/// A themed text field with a clean coral focus border, a check icon when valid,
+/// and an optional password visibility toggle.
 ///
 /// All view state (focus, validity, obscured) is driven by listenables rather
 /// than `setState`, so rebuilds stay scoped to this field.
@@ -105,15 +104,9 @@ class _NekoTextFieldState extends State<NekoTextField> {
         final String text = widget.controller?.text ?? '';
         final String? error = widget.validator?.call(text);
         final bool isValid = error == null && text.isNotEmpty;
-        final bool focused = _focusNode.hasFocus;
         final bool obscured = _obscured.value;
 
-        // On focus (when the input is valid), a soft coral gradient traces the
-        // border — a single, calm "this field is active" cue. No extra glow or
-        // shadow stacked on top. Errors keep the theme's red border instead.
-        final bool showGradient = focused && error == null;
-
-        final Widget field = TextFormField(
+        return TextFormField(
           controller: widget.controller,
           focusNode: _focusNode,
           autofocus: widget.autofocus,
@@ -135,38 +128,8 @@ class _NekoTextFieldState extends State<NekoTextField> {
             floatingLabelStyle: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.primary,
             ),
-            errorStyle: AppTextStyles.caption.copyWith(
-              color: AppColors.primaryDark,
-            ),
             suffixIcon: _suffix(obscured: obscured, isValid: isValid),
-            // When the gradient trace is showing, hide the field's own focus
-            // line so the two don't double up on the same edge.
-            focusedBorder: showGradient
-                ? OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Colors.transparent,
-                      width: 2,
-                    ),
-                  )
-                : null,
           ),
-        );
-
-        if (!showGradient) return field;
-
-        return ZoAnimatedGradientBorder(
-          borderRadius: 16,
-          borderThickness: 2,
-          glowOpacity: 0.3,
-          animationCurve: Curves.linear,
-          animationDuration: const Duration(milliseconds: 2800),
-          gradientColor: <Color>[
-            AppColors.primary,
-            AppColors.primaryLight,
-            AppColors.primary,
-          ],
-          child: field,
         );
       },
     );
