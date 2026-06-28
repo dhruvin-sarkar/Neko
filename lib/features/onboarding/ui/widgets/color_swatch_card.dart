@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../app/theme/neko_palette.dart';
 import '../../models/coat_option.dart';
 import 'selection_check.dart';
 
@@ -64,8 +65,12 @@ class ColorSwatchCard extends StatelessWidget {
                             : null,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(option.label, style: AppTextStyles.bodyMedium),
+                    if (option.themeId != null) ...[
+                      const SizedBox(height: 8),
+                      _MiniPalette(themeId: option.themeId!),
+                    ],
                   ],
                 ),
               ),
@@ -78,6 +83,42 @@ class ColorSwatchCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A row of five tiny circles previewing a theme's key colours: primary,
+/// secondary, background, surface, and the nav accent.
+class _MiniPalette extends StatelessWidget {
+  const _MiniPalette({required this.themeId});
+
+  final String themeId;
+
+  @override
+  Widget build(BuildContext context) {
+    final NekoPalette p = NekoPalettes.byId(themeId);
+    final List<Color> colors = <Color>[
+      p.primary,
+      p.secondary,
+      p.background,
+      p.surface,
+      p.navActive,
+    ];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final Color c in colors)
+          Container(
+            width: 14,
+            height: 14,
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+              color: c,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.black12, width: 0.5),
+            ),
+          ),
+      ],
     );
   }
 }

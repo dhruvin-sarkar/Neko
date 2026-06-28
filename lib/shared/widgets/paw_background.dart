@@ -60,7 +60,9 @@ class _PawBackgroundState extends State<PawBackground>
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
       color: AppColors.homeBg,
       child: Stack(
         children: [

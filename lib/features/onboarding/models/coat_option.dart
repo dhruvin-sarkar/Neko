@@ -7,6 +7,7 @@ class CoatOption {
     required this.value,
     required this.label,
     required this.circleColor,
+    this.themeId,
     this.needsBorder = false,
   });
 
@@ -18,6 +19,10 @@ class CoatOption {
 
   /// Color of the preview circle.
   final Color circleColor;
+
+  /// The cat-coat theme this coat maps to (one of the 12 [NekoPalettes]).
+  /// Selecting the coat applies this theme to the whole app.
+  final String? themeId;
 
   /// Whether the circle needs an outline to stay visible (e.g. white on white).
   final bool needsBorder;
