@@ -70,9 +70,9 @@ abstract final class AppTheme {
   static FilledButtonThemeData get _filledButtonTheme => FilledButtonThemeData(
     style: FilledButton.styleFrom(
       backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      foregroundColor: AppColors.textOnPrimary,
       disabledBackgroundColor: AppColors.disabledBtn,
-      disabledForegroundColor: Colors.white,
+      disabledForegroundColor: AppColors.textDisabled,
       elevation: 0,
       minimumSize: const Size(double.infinity, 56),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),

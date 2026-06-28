@@ -201,9 +201,12 @@ class _DocumentsLoading extends StatelessWidget {
     return RepaintBoundary(
       child: Shimmer.fromColors(
         baseColor: AppColors.surfaceCard,
-        highlightColor:
-            Color.lerp(AppColors.surfaceCard, Colors.white, 0.6) ??
-            Colors.white,
+        // On dark palettes a white highlight flashes harshly; ease toward the
+        // raised surface instead so the sweep stays subtle on every theme.
+        highlightColor: AppColors.isDark
+            ? AppColors.surfaceElevated
+            : (Color.lerp(AppColors.surfaceCard, Colors.white, 0.6) ??
+                  Colors.white),
         period: const Duration(milliseconds: 1400),
         child: Column(
           children: [
