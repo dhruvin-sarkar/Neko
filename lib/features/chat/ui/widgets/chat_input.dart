@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:zo_animated_border/zo_animated_border.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -68,9 +67,12 @@ class _ChatInputState extends State<ChatInput> {
     final Widget composer = Container(
       decoration: BoxDecoration(
         color: AppColors.snowWhite,
-        border: widget.isGenerating
-            ? null
-            : Border.all(color: AppColors.border),
+        // A calm coral border while Neko is replying (the reply streams above
+        // with typing dots); a quiet neutral border otherwise.
+        border: Border.all(
+          color: widget.isGenerating ? AppColors.primary : AppColors.border,
+          width: widget.isGenerating ? 2 : 1,
+        ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: widget.isGenerating
             ? null
@@ -141,23 +143,6 @@ class _ChatInputState extends State<ChatInput> {
       ),
     );
 
-    // While Neko is replying, a gentle coral gradient drifts around the
-    // composer as a calm "thinking" cue. Otherwise it's a plain static surface.
-    if (widget.isGenerating) {
-      return ZoAnimatedGradientBorder(
-        borderRadius: 24,
-        borderThickness: 2,
-        glowOpacity: 0.35,
-        animationCurve: Curves.linear,
-        animationDuration: const Duration(milliseconds: 2600),
-        gradientColor: <Color>[
-          AppColors.primary,
-          AppColors.primaryLight,
-          AppColors.primary,
-        ],
-        child: composer,
-      );
-    }
     return composer;
   }
 }
