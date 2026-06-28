@@ -17,6 +17,6 @@ class OnboardingScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(themeControllerProvider);
-    return PawBackground(child: const OnboardingFlowView());
+    return const PawBackground(child: OnboardingFlowView());
   }
 }

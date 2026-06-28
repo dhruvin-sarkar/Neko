@@ -147,7 +147,7 @@ class SettingsScreen extends ConsumerWidget {
                             const SizedBox(height: 16),
                             const _SoundCard(),
                             const SizedBox(height: 16),
-                            _AboutCard(),
+                            const _AboutCard(),
                           ],
                         ),
                       ),

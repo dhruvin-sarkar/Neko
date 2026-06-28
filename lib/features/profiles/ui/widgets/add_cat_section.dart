@@ -26,12 +26,14 @@ class AddCatSection extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Lottie.asset(
-                'assets/animations/Sleeping Cat Breathing Loop.json',
-                fit: BoxFit.contain,
-                repeat: !MediaQuery.disableAnimationsOf(context),
-                frameRate: FrameRate.max,
-                errorBuilder: (_, _, _) => const _MatPlaceholder(),
+              RepaintBoundary(
+                child: Lottie.asset(
+                  'assets/animations/Sleeping Cat Breathing Loop.json',
+                  fit: BoxFit.contain,
+                  repeat: !MediaQuery.disableAnimationsOf(context),
+                  frameRate: FrameRate.max,
+                  errorBuilder: (_, _, _) => const _MatPlaceholder(),
+                ),
               ),
               Align(
                 alignment: const Alignment(-0.55, 0.55),
