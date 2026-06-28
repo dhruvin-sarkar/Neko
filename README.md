@@ -1,5 +1,6 @@
 # Neko
 
+<<<<<<< HEAD
 A cat companion app built for #hackthekitty 2026.
 
 ## What it does
@@ -63,3 +64,23 @@ Settings.
 
 - Dhruvin — home screen, cat profiles, onboarding, animations, design system, assistant tab
 - Akshat — auth, Firebase setup, settings, guided tutorial
+=======
+Ok right now akshat is working on a guided tutorial for the app and a few things in settings the next big thing we have to do is the whole notch system i had a slight thing where the firestore works and stuff but the storage doesnt cuz its a seperate thing that requires a paid plan and thus my next plan is to have the profile picture if taken and the documents cached locally aside from that next is to make another tab seperate from settings and home an ai tab connected with the HC api model it would have a chatgpt like interface and all the text to speech and speech to text and ocr and what not image analysing etc etc it would have a custom Cat focused system prompt and stuff Also all the data from the onboarding and the documents shld be extracted into a file or something that the ai knows and can tailor its replies and then a cat profile colour switching thing that ties in with making the onboarding question of colur and breed better somehow after all that we can work on the notch that basicly copies ALL the functionality of the dynamic island in a cat theme d way somehow we ll figure that out
+
+
+Akshat here!
+Here's what i have implemented so far:
+
+- [x] Guided Tour
+- [x] New Transitions/ Animations
+- [x] AI page (I havve included attachments haven't tested yet cause i lowk forgot to)
+- [x] PFP has been added
+- [x] Themes
+- [x] Persistence b/w onboarding and guide
+
+what can be improved:
+- [ ] Transitions might be buggy so if you find bugs go ahead fix it
+- [ ] Feel free to change the colors of the themes, i chose generic ones
+- [ ] that cat pfp animation/transition is still disconnecty
+- [ ] tried to find out why it onboards you everytime you sign-in, didn't get it (i added a check for each user on firebase and if they pass it once the check changes to True, and shouldn't show the onboarding page but it still does sooooo....
+>>>>>>> 58179257b73be139f53494288b5bdf97c72eeaf0
