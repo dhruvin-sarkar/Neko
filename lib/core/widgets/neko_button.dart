@@ -1,270 +1,177 @@
+import 'package:chiclet/chiclet.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/physics.dart';
-import 'package:flutter/services.dart';
 
 import '../../app/theme/app_colors.dart';
+import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_text_styles.dart';
-import '../services/audio_service.dart';
 
-/// The kinds of [NekoButton]. Each shares the same press physics.
-enum _NekoButtonKind { primary, secondary, ghost, icon }
-
-/// The app's tactile button: a raised surface sitting on a darker platform that
-/// presses down when tapped, then springs back with a slight overshoot — the
-/// Duolingo "chiclet" feel, hand-built so it works for labels and icons alike.
+/// The app's single call-to-action button — a 3D "chiclet" that presses down
+/// onto a darker platform (the Duolingo feel), built on the `chiclet` package.
 ///
-/// Press drops the surface onto the platform (120ms) and shrinks it slightly;
-/// release runs a spring back to rest. Haptics and a click sound fire on every
-/// interaction. The touch target is always at least 48dp tall (WCAG).
-class NekoButton extends StatefulWidget {
+/// Variants:
+/// - [NekoButton.primary]   — the coral CTA.
+/// - [NekoButton.secondary] — a lighter surface chiclet with coral label.
+/// - [NekoButton.ghost]     — a low-emphasis text action (no platform).
+///
+/// Presentation only: callers fire feedback in their `onPressed`, so the
+/// feedback map stays in one place. Labels render uppercase (except ghost).
+class NekoButton extends StatelessWidget {
   const NekoButton._({
-    required _NekoButtonKind kind,
-    required this.onTap,
-    this.label,
+    super.key,
+    required _NekoVariant variant,
+    required this.label,
+    required this.onPressed,
+    this.enabled = true,
+    this.isLoading = false,
     this.icon,
-    this.leadingIcon,
     this.color,
     this.expand = true,
-  }) : _kind = kind;
+  }) : _variant = variant;
 
-  /// Filled coral call-to-action.
+  /// The coral primary call-to-action.
   factory NekoButton.primary({
+    Key? key,
     required String label,
-    required VoidCallback? onTap,
-    bool expand = true,
-    Color? color,
+    required VoidCallback? onPressed,
+    bool enabled = true,
+    bool isLoading = false,
     IconData? icon,
-  }) => NekoButton._(
-    kind: _NekoButtonKind.primary,
-    label: label,
-    onTap: onTap,
-    expand: expand,
-    color: color,
-    leadingIcon: icon,
-  );
-
-  /// Light surface with coral text — secondary actions.
-  factory NekoButton.secondary({
-    required String label,
-    required VoidCallback? onTap,
-    bool expand = true,
-    IconData? icon,
-  }) => NekoButton._(
-    kind: _NekoButtonKind.secondary,
-    label: label,
-    onTap: onTap,
-    expand: expand,
-    leadingIcon: icon,
-  );
-
-  /// Text-only action with just the spring scale (no platform).
-  factory NekoButton.ghost({
-    required String label,
-    required VoidCallback? onTap,
-  }) => NekoButton._(
-    kind: _NekoButtonKind.ghost,
-    label: label,
-    onTap: onTap,
-    expand: false,
-  );
-
-  /// Circular icon button that keeps the platform press.
-  factory NekoButton.icon({
-    required Widget icon,
-    required VoidCallback? onTap,
     Color? color,
+    bool expand = true,
   }) => NekoButton._(
-    kind: _NekoButtonKind.icon,
+    key: key,
+    variant: _NekoVariant.primary,
+    label: label,
+    onPressed: onPressed,
+    enabled: enabled,
+    isLoading: isLoading,
     icon: icon,
-    onTap: onTap,
-    expand: false,
     color: color,
+    expand: expand,
   );
 
-  final _NekoButtonKind _kind;
-  final String? label;
-  final Widget? icon;
-  final IconData? leadingIcon;
-  final VoidCallback? onTap;
+  /// A lighter surface chiclet (white face, coral label) for secondary actions.
+  factory NekoButton.secondary({
+    Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+    bool enabled = true,
+    bool isLoading = false,
+    IconData? icon,
+    bool expand = true,
+  }) => NekoButton._(
+    key: key,
+    variant: _NekoVariant.secondary,
+    label: label,
+    onPressed: onPressed,
+    enabled: enabled,
+    isLoading: isLoading,
+    icon: icon,
+    expand: expand,
+  );
+
+  /// A low-emphasis text action with a ripple — no platform.
+  factory NekoButton.ghost({
+    Key? key,
+    required String label,
+    required VoidCallback? onPressed,
+    bool enabled = true,
+  }) => NekoButton._(
+    key: key,
+    variant: _NekoVariant.ghost,
+    label: label,
+    onPressed: onPressed,
+    enabled: enabled,
+  );
+
+  final _NekoVariant _variant;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool enabled;
+  final bool isLoading;
+  final IconData? icon;
   final Color? color;
   final bool expand;
 
-  @override
-  State<NekoButton> createState() => _NekoButtonState();
-}
-
-class _NekoButtonState extends State<NekoButton>
-    with SingleTickerProviderStateMixin {
-  // 1.0 = fully raised (rest), 0.0 = pressed down onto the platform. The spring
-  // can briefly overshoot past 1.0, which is what gives the satisfying pop.
-  late final AnimationController _c = AnimationController.unbounded(
-    vsync: this,
-    value: 1,
-  );
-
-  static const double _depth = 4;
-  static const double _radius = 16;
-  static const double _minHeight = 52; // ≥ 48dp target including the platform
-
-  static final SpringDescription _spring = SpringDescription(
-    mass: 1,
-    stiffness: 500,
-    damping: 28,
-  );
-
-  bool get _enabled => widget.onTap != null;
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  void _onTapDown(_) {
-    if (!_enabled) return;
-    HapticFeedback.heavyImpact();
-    AudioService.playClick();
-    _c.animateTo(
-      0,
-      duration: const Duration(milliseconds: 120),
-      curve: Curves.easeIn,
-    );
-  }
-
-  void _release() {
-    if (!_enabled) return;
-    HapticFeedback.lightImpact();
-    _c.animateWith(SpringSimulation(_spring, _c.value, 1, 0));
-  }
-
-  void _onTapUp(_) {
-    _release();
-    widget.onTap?.call();
-  }
+  bool get _interactive => enabled && !isLoading && onPressed != null;
 
   @override
   Widget build(BuildContext context) {
-    if (widget._kind == _NekoButtonKind.ghost) return _buildGhost();
+    if (_variant == _NekoVariant.ghost) return _buildGhost();
 
-    final bool isIcon = widget._kind == _NekoButtonKind.icon;
-    final Color surface = _surfaceColor();
-    final Color platform = _platformColor(surface);
+    final bool primary = _variant == _NekoVariant.primary;
+    final Color face = primary
+        ? (color ?? AppColors.primary)
+        : AppColors.snowWhite;
+    final Color platform = primary
+        ? (color != null ? _darken(color!) : AppColors.primaryDark)
+        : AppColors.cloudGray;
+    final Color fg = primary ? Colors.white : AppColors.primary;
 
-    final Widget content = AnimatedBuilder(
-      animation: _c,
-      builder: (context, _) {
-        final double t = _c.value;
-        final double offsetY = (1 - t) * _depth;
-        final double scale = 0.97 + (t.clamp(0.0, 1.2)) * 0.03;
-        final BorderRadius radius = BorderRadius.circular(
-          isIcon ? 100 : _radius,
-        );
-
-        return SizedBox(
-          height: _minHeight,
-          width: isIcon ? _minHeight : null,
-          child: Stack(
-            children: [
-              // Darker platform sits one step below the surface.
-              Positioned(
-                left: 0,
-                right: 0,
-                top: _depth,
-                height: _minHeight - _depth,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: platform,
-                    borderRadius: radius,
+    return ChicletAnimatedButton(
+      onPressed: _interactive ? onPressed : null,
+      width: expand ? double.infinity : null,
+      height: 56,
+      buttonHeight: 5,
+      borderRadius: AppRadius.lg,
+      backgroundColor: _interactive ? face : AppColors.cloudGray,
+      buttonColor: _interactive ? platform : AppColors.silver,
+      foregroundColor: fg,
+      disabledBackgroundColor: AppColors.cloudGray,
+      disabledForegroundColor: AppColors.graphite,
+      child: isLoading
+          ? SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.5, color: fg),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    color: _interactive ? fg : AppColors.graphite,
+                    size: 20,
                   ),
-                ),
-              ),
-              // Raised surface, translated down + scaled as it's pressed.
-              Positioned(
-                left: 0,
-                right: 0,
-                top: offsetY,
-                height: _minHeight - _depth,
-                child: Transform.scale(
-                  scale: scale,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: surface,
-                      borderRadius: radius,
+                  const SizedBox(width: AppSpacing.x8),
+                ],
+                Flexible(
+                  child: Text(
+                    label.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.buttonLabel.copyWith(
+                      color: _interactive ? fg : AppColors.graphite,
                     ),
-                    child: Center(child: _innerContent()),
                   ),
                 ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    final Widget sized = widget.expand
-        ? SizedBox(width: double.infinity, child: content)
-        : content;
-
-    return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _release,
-      behavior: HitTestBehavior.opaque,
-      child: sized,
-    );
-  }
-
-  Widget _innerContent() {
-    if (widget._kind == _NekoButtonKind.icon) {
-      return IconTheme(
-        data: IconThemeData(color: _foregroundColor(), size: 22),
-        child: widget.icon!,
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (widget.leadingIcon != null) ...[
-            Icon(widget.leadingIcon, color: _foregroundColor(), size: 20),
-            const SizedBox(width: 10),
-          ],
-          Flexible(
-            child: Text(
-              widget.label!.toUpperCase(),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.buttonLabel.copyWith(
-                color: _foregroundColor(),
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildGhost() {
-    return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _release,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (context, child) {
-          final double scale = 0.97 + (_c.value.clamp(0.0, 1.2)) * 0.03;
-          return Transform.scale(scale: scale, child: child);
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Text(
-            widget.label!,
-            style: AppTextStyles.buttonLabel.copyWith(
-              color: _enabled ? AppColors.primary : AppColors.silver,
+    return Semantics(
+      button: true,
+      enabled: _interactive,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _interactive ? onPressed : null,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.x16,
+              vertical: AppSpacing.x12,
+            ),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.buttonLabel.copyWith(
+                color: _interactive ? AppColors.primary : AppColors.silver,
+              ),
             ),
           ),
         ),
@@ -272,36 +179,12 @@ class _NekoButtonState extends State<NekoButton>
     );
   }
 
-  Color _surfaceColor() {
-    if (!_enabled) return AppColors.cloudGray;
-    switch (widget._kind) {
-      case _NekoButtonKind.primary:
-      case _NekoButtonKind.icon:
-        return widget.color ?? AppColors.primary;
-      case _NekoButtonKind.secondary:
-        return AppColors.snowWhite;
-      case _NekoButtonKind.ghost:
-        return Colors.transparent;
-    }
-  }
-
-  /// The platform is the surface darkened in HSL space by 0.22 lightness.
-  Color _platformColor(Color surface) {
-    if (!_enabled) return AppColors.silver;
-    if (widget._kind == _NekoButtonKind.secondary) return AppColors.cloudGray;
-    final HSLColor hsl = HSLColor.fromColor(surface);
+  /// Darkens [c] in HSL space for the pressed-platform colour of a custom-tinted
+  /// primary button.
+  static Color _darken(Color c) {
+    final HSLColor hsl = HSLColor.fromColor(c);
     return hsl.withLightness((hsl.lightness - 0.22).clamp(0.0, 1.0)).toColor();
   }
-
-  Color _foregroundColor() {
-    if (!_enabled) return AppColors.graphite;
-    switch (widget._kind) {
-      case _NekoButtonKind.secondary:
-        return AppColors.primary;
-      case _NekoButtonKind.primary:
-      case _NekoButtonKind.icon:
-      case _NekoButtonKind.ghost:
-        return Colors.white;
-    }
-  }
 }
+
+enum _NekoVariant { primary, secondary, ghost }

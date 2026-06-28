@@ -10,7 +10,7 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_mascot.dart';
-import '../../../shared/widgets/neko_primary_button.dart';
+import '../../../core/widgets/neko_button.dart';
 import '../../../shared/widgets/neko_text_button.dart';
 
 /// The first screen a signed-out person sees: the Neko welcome, with "Get
@@ -30,7 +30,7 @@ class WelcomeScreen extends ConsumerWidget {
           child: Column(
             children: [
               const Expanded(child: Center(child: _WelcomeMark())),
-              NekoPrimaryButton(
+              NekoButton.primary(
                 label: 'Get started',
                 onPressed: () {
                   unawaited(feedback.onTap());

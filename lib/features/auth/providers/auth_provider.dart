@@ -22,7 +22,6 @@ AuthRepository authRepository(Ref ref) => AuthRepository(
   googleSignIn: ref.watch(googleSignInProvider),
 );
 
-
 @Riverpod(keepAlive: true)
 Stream<GoogleSignInAccount?> googleAccountChanges(Ref ref) =>
     ref.watch(authRepositoryProvider).googleAccountChanges;
@@ -85,9 +84,7 @@ class AuthController extends _$AuthController {
     if (state.isLoading) return;
     state = const AsyncValue<void>.loading();
     _safeState(
-      await AsyncValue.guard(
-        () => ref.read(authRepositoryProvider).signOut(),
-      ),
+      await AsyncValue.guard(() => ref.read(authRepositoryProvider).signOut()),
     );
   }
 

@@ -12,7 +12,7 @@ import '../../../core/errors/app_exception.dart';
 import '../../../core/widgets/neko_loader.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_dialog.dart';
-import '../../../shared/widgets/neko_primary_button.dart';
+import '../../../core/widgets/neko_button.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../../shared/widgets/neko_text_field.dart';
 import '../../onboarding/data/calorie_calculator.dart';
@@ -34,6 +34,7 @@ class EditCatScreen extends ConsumerStatefulWidget {
 
 class _EditCatScreenState extends ConsumerState<EditCatScreen> {
   CatProfile? _original;
+  String _originalName = '';
   bool _initialized = false;
   final TextEditingController _name = TextEditingController();
   final TextEditingController _years = TextEditingController();
@@ -53,6 +54,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     if (_initialized) return;
     _initialized = true;
     _original = cat;
+    _originalName = cat.name;
     _name.text = cat.name;
     _years.text = cat.years > 0 ? '${cat.years}' : '';
     _months.text = cat.months > 0 ? '${cat.months}' : '';
@@ -211,10 +213,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         leading: BackButton(color: AppColors.textPrimary),
-        title: Text(
-          'Edit ${_name.text.trim()}',
-          style: AppTextStyles.headlineLarge,
-        ),
+        title: Text('Edit $_originalName', style: AppTextStyles.headlineLarge),
       ),
       body: SafeArea(
         top: false,
@@ -309,7 +308,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
               onChanged: (v) => setState(() => _activity = v),
             ),
             const SizedBox(height: 32),
-            NekoPrimaryButton(
+            NekoButton.primary(
               label: 'Save changes',
               enabled: _isValid,
               isLoading: isSaving,

@@ -67,7 +67,7 @@ class PhotoStep extends ConsumerWidget {
               child: NekoButton.secondary(
                 label: 'Camera',
                 icon: Icons.photo_camera_outlined,
-                onTap: () => _pick(ref, ImageSource.camera),
+                onPressed: () => _pick(ref, ImageSource.camera),
               ),
             ),
             const SizedBox(width: 16),
@@ -75,7 +75,7 @@ class PhotoStep extends ConsumerWidget {
               child: NekoButton.secondary(
                 label: 'Gallery',
                 icon: Icons.photo_library_outlined,
-                onTap: () => _pick(ref, ImageSource.gallery),
+                onPressed: () => _pick(ref, ImageSource.gallery),
               ),
             ),
           ],
@@ -84,7 +84,7 @@ class PhotoStep extends ConsumerWidget {
         Center(
           child: NekoButton.ghost(
             label: hasAvatar ? 'Choose a different avatar' : 'Maybe later',
-            onTap: () {
+            onPressed: () {
               unawaited(ref.read(feedbackServiceProvider).onTap());
               AvatarPickerSheet.show(context);
             },
@@ -94,7 +94,7 @@ class PhotoStep extends ConsumerWidget {
           Center(
             child: NekoButton.ghost(
               label: 'Remove',
-              onTap: () => ref
+              onPressed: () => ref
                   .read(onboardingNotifierProvider.notifier)
                   .setPhotoPath(null),
             ),
@@ -118,12 +118,21 @@ class _PhotoPreview extends StatelessWidget {
     if (path != null) {
       return ClipOval(
         child: kIsWeb
-            ? Image.network(path, width: size, height: size, fit: BoxFit.cover)
+            ? Image.network(
+                path,
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                cacheWidth: 480,
+                cacheHeight: 480,
+              )
             : Image.file(
                 File(path),
                 width: size,
                 height: size,
                 fit: BoxFit.cover,
+                cacheWidth: 480,
+                cacheHeight: 480,
               ),
       );
     }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:neko/app/theme/app_colors.dart';
-import 'package:neko/shared/widgets/neko_pill_button.dart';
+import 'package:neko/core/widgets/neko_button.dart';
 
 void main() {
   setUpAll(() {
@@ -25,7 +25,7 @@ void main() {
     });
   });
 
-  group('NekoPillButton', () {
+  group('NekoButton', () {
     testWidgets('shows its label and fires onPressed when tapped', (
       tester,
     ) async {
@@ -33,7 +33,10 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: NekoPillButton(label: 'Continue', onPressed: () => taps++),
+            body: NekoButton.primary(
+              label: 'Continue',
+              onPressed: () => taps++,
+            ),
           ),
         ),
       );
@@ -51,7 +54,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: NekoPillButton(
+            body: NekoButton.primary(
               label: 'Disabled',
               enabled: false,
               onPressed: () => taps++,
@@ -60,7 +63,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(NekoPillButton));
+      await tester.tap(find.byType(NekoButton));
       await tester.pumpAndSettle();
 
       expect(taps, 0);

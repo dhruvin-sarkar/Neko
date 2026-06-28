@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../../../shared/widgets/neko_pill_button.dart';
+import '../../../../core/widgets/neko_button.dart';
 
 /// Friendly error state for the home cat list, with a retry action.
 class HomeErrorCard extends StatelessWidget {
@@ -35,7 +35,7 @@ class HomeErrorCard extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          NekoPillButton(label: 'Try again', onPressed: onRetry),
+          NekoButton.primary(label: 'Try again', onPressed: onRetry),
         ],
       ),
     );

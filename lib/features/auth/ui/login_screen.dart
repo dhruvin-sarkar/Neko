@@ -9,11 +9,12 @@ import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/neko_motion.dart';
 import '../../../core/utils/validators.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/auth_divider.dart';
 import '../../../shared/widgets/google_sign_in_button.dart';
-import '../../../shared/widgets/neko_primary_button.dart';
+import '../../../core/widgets/neko_button.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../../shared/widgets/neko_text_field.dart';
 import '../providers/auth_provider.dart';
@@ -96,61 +97,69 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Form(
             key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const _LoginHeader(),
-                const SizedBox(height: 32),
-                GoogleSignInButton(
-                  enabled: !isLoading,
-                  onPressed: () {
-                    unawaited(ref.read(feedbackServiceProvider).onTap());
-                    ref
-                        .read(authControllerProvider.notifier)
-                        .signInWithGoogle();
-                  },
-                ),
-                const AuthDivider(),
-                NekoTextField(
-                  label: 'Email',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  validator: Validators.email,
-                ),
-                const SizedBox(height: 16),
-                NekoTextField(
-                  label: 'Password',
-                  controller: _passwordController,
-                  obscureText: true,
-                  textInputAction: TextInputAction.done,
-                  validator: Validators.signInPassword,
-                  onSubmitted: (_) => _submit(),
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: isLoading ? null : _resetPassword,
-                    child: Text(
-                      'Forgot password?',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                NekoPrimaryButton(
-                  label: 'Sign in',
-                  isLoading: isLoading,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: 20),
-                _RegisterPrompt(
-                  onTap: isLoading ? null : () => context.go(Routes.register),
-                ),
-              ],
-            ).animate().fadeIn(duration: 280.ms).slideY(begin: 0.15, end: 0),
+            child:
+                Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _LoginHeader(),
+                        const SizedBox(height: 32),
+                        GoogleSignInButton(
+                          enabled: !isLoading,
+                          onPressed: () {
+                            unawaited(
+                              ref.read(feedbackServiceProvider).onTap(),
+                            );
+                            ref
+                                .read(authControllerProvider.notifier)
+                                .signInWithGoogle();
+                          },
+                        ),
+                        const AuthDivider(),
+                        NekoTextField(
+                          label: 'Email',
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          validator: Validators.email,
+                        ),
+                        const SizedBox(height: 16),
+                        NekoTextField(
+                          label: 'Password',
+                          controller: _passwordController,
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          validator: Validators.signInPassword,
+                          onSubmitted: (_) => _submit(),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: isLoading ? null : _resetPassword,
+                            child: Text(
+                              'Forgot password?',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        NekoButton.primary(
+                          label: 'Sign in',
+                          isLoading: isLoading,
+                          onPressed: _submit,
+                        ),
+                        const SizedBox(height: 20),
+                        _RegisterPrompt(
+                          onTap: isLoading
+                              ? null
+                              : () => context.go(Routes.register),
+                        ),
+                      ],
+                    )
+                    .animate()
+                    .fadeIn(duration: NekoMotion.entry)
+                    .slideY(begin: 0.15, end: 0),
           ),
         ),
       ),

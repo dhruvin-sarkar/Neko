@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
-import '../../../../shared/widgets/neko_primary_button.dart';
+import '../../../../core/widgets/neko_button.dart';
 import '../../models/cat_document.dart';
 
 /// Metadata returned when the user confirms a document upload.
@@ -109,7 +109,7 @@ class _UploadDocumentSheetState extends State<UploadDocumentSheet> {
           ValueListenableBuilder<String?>(
             valueListenable: _type,
             builder: (context, selected, _) {
-              return NekoPrimaryButton(
+              return NekoButton.primary(
                 label: 'Save document',
                 enabled: selected != null,
                 onPressed: selected == null
