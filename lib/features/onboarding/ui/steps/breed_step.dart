@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:zo_animated_border/zo_animated_border.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
@@ -13,9 +12,10 @@ import '../../data/breed_catalog.dart';
 import '../../providers/onboarding_provider.dart';
 import '../widgets/step_headline.dart';
 
-/// Step 3 — breed picker: a searchable, category-filtered grid. Only the
-/// presentation changed; the chosen breed name still writes to
-/// `OnboardingDraft.breed` via [OnboardingNotifier.setBreed].
+/// Step 3 — breed picker: one calm column of a search field, optional category
+/// filters, and a grid of breed cards. Whatever the user types can always be
+/// added as a custom breed (a card pinned to the results), so they're never
+/// stuck. The chosen breed name writes to `OnboardingDraft.breed`.
 class BreedStep extends ConsumerStatefulWidget {
   const BreedStep({super.key});
 
@@ -53,6 +53,7 @@ class _BreedStepState extends ConsumerState<BreedStep> {
 
   void _clearSearch() {
     _searchCtrl.clear();
+    _focus.unfocus();
     setState(() => _query = '');
   }
 
@@ -75,32 +76,47 @@ class _BreedStepState extends ConsumerState<BreedStep> {
     final List<CatBreed> results = searching
         ? BreedCatalog.search(_query)
         : BreedCatalog.forCategory(_category);
+    // Offer the typed text as a custom breed whenever it isn't already an exact
+    // match — so a breed that isn't catalogued is still one tap away.
+    final bool offerCustom =
+        searching &&
+        !results.any((b) => b.name.toLowerCase() == _query.toLowerCase());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         StepHeadline('What breed is $display?'),
+        const SizedBox(height: 6),
+        Text(
+          'Search, pick from the list, or add your own.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
         const SizedBox(height: 16),
         _searchBar(),
         const SizedBox(height: 12),
         if (!searching) _categoryChips(),
         if (!searching) const SizedBox(height: 12),
-        Expanded(
-          child: results.isEmpty ? _emptyState() : _grid(results, selected),
-        ),
+        Expanded(child: _grid(results, selected, offerCustom)),
       ],
     );
   }
 
   Widget _searchBar() {
-    final Widget field = Container(
-      height: 52,
+    final bool focused = _focus.hasFocus;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      height: 54,
       decoration: BoxDecoration(
         color: AppColors.inputFill,
-        borderRadius: BorderRadius.circular(30),
-        border: _focus.hasFocus ? null : Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: focused ? AppColors.primary : AppColors.border,
+          width: focused ? 2 : 1,
+        ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Row(
         children: [
           Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
@@ -110,12 +126,13 @@ class _BreedStepState extends ConsumerState<BreedStep> {
               controller: _searchCtrl,
               focusNode: _focus,
               onChanged: _onSearchChanged,
+              textInputAction: TextInputAction.search,
               style: AppTextStyles.bodyMedium,
               cursorColor: AppColors.primary,
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
-                hintText: 'Search breeds...',
+                hintText: 'Search breeds…',
                 hintStyle: AppTextStyles.bodyMedium.copyWith(
                   color: AppColors.textDisabled,
                 ),
@@ -127,6 +144,7 @@ class _BreedStepState extends ConsumerState<BreedStep> {
             duration: const Duration(milliseconds: 150),
             child: GestureDetector(
               onTap: _clearSearch,
+              behavior: HitTestBehavior.opaque,
               child: Icon(
                 Icons.close_rounded,
                 color: AppColors.textSecondary,
@@ -137,20 +155,6 @@ class _BreedStepState extends ConsumerState<BreedStep> {
         ],
       ),
     );
-
-    if (!_focus.hasFocus) return field;
-    return ZoAnimatedGradientBorder(
-      borderRadius: 30,
-      borderThickness: 2,
-      glowOpacity: 0.3,
-      animationDuration: const Duration(milliseconds: 2800),
-      gradientColor: <Color>[
-        AppColors.primary,
-        AppColors.secondary,
-        AppColors.primary,
-      ],
-      child: field,
-    );
   }
 
   Widget _categoryChips() {
@@ -159,7 +163,7 @@ class _BreedStepState extends ConsumerState<BreedStep> {
       ...BreedCategory.values,
     ];
     return SizedBox(
-      height: 36,
+      height: 38,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: cats.length,
@@ -172,30 +176,25 @@ class _BreedStepState extends ConsumerState<BreedStep> {
               AudioService.playClickSoft();
               setState(() => _category = c);
             },
-            child: AnimatedScale(
-              scale: active ? 1.05 : 1.0,
+            child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: active
-                      ? AppColors.primaryLight
-                      : AppColors.surfaceCard,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: active ? AppColors.primary : AppColors.border,
-                    width: active ? 2 : 1,
-                  ),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: active ? AppColors.primary : AppColors.surfaceCard,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: active ? AppColors.primary : AppColors.border,
+                  width: 1,
                 ),
-                child: Text(
-                  c?.label ?? 'All',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: active ? AppColors.primary : AppColors.textSecondary,
-                    fontWeight: FontWeight.w700,
-                  ),
+              ),
+              child: Text(
+                c?.label ?? 'All',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: active
+                      ? AppColors.textOnPrimary
+                      : AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -205,32 +204,40 @@ class _BreedStepState extends ConsumerState<BreedStep> {
     );
   }
 
-  Widget _grid(List<CatBreed> breeds, String? selected) {
+  Widget _grid(List<CatBreed> breeds, String? selected, bool offerCustom) {
+    final int total = breeds.length + (offerCustom ? 1 : 0);
+    if (total == 0) return _emptyState();
+
     return AnimationLimiter(
-      key: ValueKey<String>('$_category-$_query-${breeds.length}'),
+      key: ValueKey<String>('$_category-$_query-$total'),
       child: GridView.builder(
         padding: const EdgeInsets.only(bottom: 8),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 2.0,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          mainAxisExtent: 104,
         ),
-        itemCount: breeds.length,
+        itemCount: total,
         itemBuilder: (context, index) {
-          final CatBreed breed = breeds[index];
+          final bool isCustom = offerCustom && index == breeds.length;
           return AnimationConfiguration.staggeredGrid(
             position: index,
             columnCount: 2,
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 280),
             child: FadeInAnimation(
               child: SlideAnimation(
-                verticalOffset: 20,
-                child: _BreedCard(
-                  name: breed.name,
-                  selected: selected == breed.name,
-                  onTap: () => _select(breed.name),
-                ),
+                verticalOffset: 18,
+                child: isCustom
+                    ? _CustomBreedCard(
+                        query: _query,
+                        onTap: () => _select(_query),
+                      )
+                    : _BreedCard(
+                        breed: breeds[index],
+                        selected: selected == breeds[index].name,
+                        onTap: () => _select(breeds[index].name),
+                      ),
               ),
             ),
           );
@@ -248,39 +255,9 @@ class _BreedStepState extends ConsumerState<BreedStep> {
             const Text('🔍🐱', style: TextStyle(fontSize: 48)),
             const SizedBox(height: 16),
             Text(
-              "No breeds found for '$_query'",
+              'No breeds in this filter',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyLarge,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "Try 'British' or 'short hair'",
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textDisabled,
-              ),
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: () => _select(_query),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: AppColors.primary, width: 1.5),
-                ),
-                child: Text(
-                  'Add "$_query" as custom breed',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
             ),
           ],
         ),
@@ -289,25 +266,41 @@ class _BreedStepState extends ConsumerState<BreedStep> {
   }
 }
 
-/// A single breed card: name on the left, a faint decorative paw glyph on the
-/// right. Springs slightly when selected.
+/// A single breed card: name and coat-type tag at the bottom, a faint paw mark
+/// behind, a coral tick when chosen. Springs slightly on selection.
 class _BreedCard extends StatelessWidget {
   const _BreedCard({
-    required this.name,
+    required this.breed,
     required this.selected,
     required this.onTap,
   });
 
-  final String name;
+  final CatBreed breed;
   final bool selected;
   final VoidCallback onTap;
+
+  /// A descriptive coat-type tag, preferred over the generic "Popular".
+  String get _tag {
+    const List<BreedCategory> order = <BreedCategory>[
+      BreedCategory.shortHair,
+      BreedCategory.longHair,
+      BreedCategory.hairless,
+      BreedCategory.wild,
+      BreedCategory.unknown,
+      BreedCategory.popular,
+    ];
+    for (final BreedCategory c in order) {
+      if (breed.categories.contains(c)) return c.label;
+    }
+    return '';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
       selected: selected,
-      label: name,
+      label: breed.name,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -317,7 +310,7 @@ class _BreedCard extends StatelessWidget {
           curve: Curves.easeOutBack,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: selected ? AppColors.primaryLight : AppColors.surfaceCard,
               borderRadius: BorderRadius.circular(20),
@@ -327,25 +320,47 @@ class _BreedCard extends StatelessWidget {
               ),
             ),
             child: Stack(
+              fit: StackFit.expand,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        name,
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Icon(
+                    Icons.pets_rounded,
+                    size: 26,
+                    color: AppColors.primary.withValues(
+                      alpha: selected ? 0.0 : 0.20,
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        breed.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyMedium,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: selected
+                              ? AppColors.primaryDark
+                              : AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                    // UI DECISION: no silhouette PNG is bundled, so a tinted paw
-                    // glyph stands in as the decorative mark.
-                    Icon(
-                      Icons.pets_rounded,
-                      size: 28,
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                    ),
-                  ],
+                      if (_tag.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          _tag,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textDisabled,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
                 if (selected)
                   Positioned(
@@ -358,15 +373,83 @@ class _BreedCard extends StatelessWidget {
                         color: AppColors.primary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.check_rounded,
                         size: 14,
-                        color: Colors.white,
+                        color: AppColors.textOnPrimary,
                       ),
                     ),
                   ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The "add what I typed" card, pinned to the results when the query isn't a
+/// catalogued breed — so an unlisted breed is never a dead end.
+class _CustomBreedCard extends StatelessWidget {
+  const _CustomBreedCard({required this.query, required this.onTap});
+
+  final String query;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Add $query as a custom breed',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.primary, width: 1.5),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Icon(
+                  Icons.add_circle_rounded,
+                  size: 24,
+                  color: AppColors.primary,
+                ),
+              ),
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add “$query”',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Custom breed',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textDisabled,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
