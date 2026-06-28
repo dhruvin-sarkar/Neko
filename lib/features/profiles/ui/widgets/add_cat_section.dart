@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../shared/widgets/pressable.dart';
@@ -25,9 +26,11 @@ class AddCatSection extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              Image.asset(
-                'assets/images/sleeping_cat.png',
+              Lottie.asset(
+                'assets/animations/Sleeping Cat Breathing Loop.json',
                 fit: BoxFit.contain,
+                repeat: true,
+                frameRate: FrameRate.max,
                 errorBuilder: (_, _, _) => const _MatPlaceholder(),
               ),
               Align(

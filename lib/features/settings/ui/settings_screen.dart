@@ -112,23 +112,32 @@ class SettingsScreen extends ConsumerWidget {
             Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Settings', style: AppTextStyles.displayLarge),
-                    const SizedBox(height: 24),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Settings',
+                            style: AppTextStyles.displayLarge,
+                          ),
+                        ),
+                        RepaintBoundary(
+                          child: Lottie.asset(
+                            'assets/animations/rainbow_cat.json',
+                            width: 104,
+                            height: 64,
+                            fit: BoxFit.contain,
+                            repeat: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Center(
-                              child: RepaintBoundary(
-                                child: Lottie.asset(
-                                  'assets/animations/rainbow_cat.json',
-                                  width: 140,
-                                  repeat: true,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
                             _AccountCard(
                               displayName: displayName,
                               email: email,
@@ -489,7 +498,7 @@ class _SoundCard extends ConsumerWidget {
             label: 'Purring volume',
             icon: Icons.pets_rounded,
             value: settings.ambientVolume,
-            max: 0.3,
+            max: 0.5,
             enabled: soundOn,
             onChanged: controller.setAmbientVolume,
           ),
