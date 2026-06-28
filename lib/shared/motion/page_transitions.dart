@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_colors.dart';
@@ -107,6 +108,7 @@ abstract final class PageTransitions {
     double coverOut = 0.5,
   }) {
     final Duration d = duration ?? _curtainDuration;
+    unawaited(_ensurePawCurtainImage());
     return CustomTransitionPage<void>(
       key: key,
       transitionDuration: d,
@@ -187,7 +189,7 @@ abstract final class PageTransitions {
             final Widget faded = Opacity(opacity: v, child: child);
             if (sigma < 0.05) return faded;
             return ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
               child: faded,
             );
           },
@@ -320,7 +322,7 @@ class RecedeOnCover extends StatelessWidget {
         );
         if (sigma < 0.05) return faded;
         return ImageFiltered(
-          imageFilter: ImageFilter.blur(
+          imageFilter: ui.ImageFilter.blur(
             sigmaX: sigma,
             sigmaY: sigma,
             tileMode: TileMode.decal,
@@ -546,6 +548,27 @@ Path _pawPath(Offset center, double scale) {
   return path;
 }
 
+/// The paw artwork, decoded once for the curtain trail so it matches the
+/// background paw. Null until loaded; the trail falls back to a vector paw.
+ui.Image? _pawCurtainImage;
+Future<void>? _pawCurtainImageLoad;
+
+Future<void> _ensurePawCurtainImage() {
+  if (_pawCurtainImage != null) return Future<void>.value();
+  return _pawCurtainImageLoad ??= () async {
+    try {
+      final data = await rootBundle.load('assets/images/paw.png');
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+      );
+      final ui.FrameInfo frame = await codec.getNextFrame();
+      _pawCurtainImage = frame.image;
+    } on Object {
+      // Keep the vector fallback if the asset can't be decoded.
+    }
+  }();
+}
+
 /// Paints the diagonal colored panel and the walking paw-print trail, driven
 /// by the route [progress] animation.
 class _PawCurtainPainter extends CustomPainter {
@@ -601,13 +624,33 @@ class _PawCurtainPainter extends CustomPainter {
       final double side = i.isEven ? 1.0 : -1.0;
       final Offset center = base + normal * (sideStep * side);
 
-      final Paint paint = Paint()
-        ..color = pawColor.withValues(alpha: a * trailFade);
+      final double alpha = a * trailFade;
       canvas.save();
       canvas.translate(center.dx, center.dy);
       canvas.rotate(angle + math.pi / 2 + side * 0.12);
-      canvas.translate(-center.dx, -center.dy);
-      canvas.drawPath(_pawPath(center, pawScale), paint);
+      final ui.Image? img = _pawCurtainImage;
+      if (img != null) {
+        // The same paw artwork as the background, tinted to the brand paw
+        // colour — so one paw is used throughout the app.
+        final double s = pawScale * 2.4;
+        final Paint paint = Paint()
+          ..filterQuality = FilterQuality.medium
+          ..colorFilter = ColorFilter.mode(
+            pawColor.withValues(alpha: alpha),
+            BlendMode.srcIn,
+          );
+        canvas.drawImageRect(
+          img,
+          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+          Rect.fromCenter(center: Offset.zero, width: s, height: s),
+          paint,
+        );
+      } else {
+        canvas.drawPath(
+          _pawPath(Offset.zero, pawScale),
+          Paint()..color = pawColor.withValues(alpha: alpha),
+        );
+      }
       canvas.restore();
     }
   }
@@ -659,6 +702,7 @@ Future<void> playPawCurtain(
     await onCovered();
     return;
   }
+  unawaited(_ensurePawCurtainImage());
 
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   final Completer<void> done = Completer<void>();
