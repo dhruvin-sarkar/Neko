@@ -45,6 +45,9 @@ class _BreedStepState extends ConsumerState<BreedStep> {
   }
 
   void _onSearchChanged(String value) {
+    // Reflect the clear (×) button immediately; only the heavier query that
+    // drives the search results is debounced.
+    setState(() {});
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 180), () {
       if (mounted) setState(() => _query = value.trim());
@@ -209,7 +212,9 @@ class _BreedStepState extends ConsumerState<BreedStep> {
     if (total == 0) return _emptyState();
 
     return AnimationLimiter(
-      key: ValueKey<String>('$_category-$_query-$total'),
+      // Re-stagger when the category or search-mode changes, but not on every
+      // keystroke (which would replay the whole grid animation as you type).
+      key: ValueKey<String>('$_category-${_query.isEmpty ? 'all' : 'search'}'),
       child: GridView.builder(
         padding: const EdgeInsets.only(bottom: 8),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

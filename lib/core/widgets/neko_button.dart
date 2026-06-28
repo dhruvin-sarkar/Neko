@@ -97,7 +97,13 @@ class NekoButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (_variant == _NekoVariant.ghost) return _buildGhost();
+    if (_variant == _NekoVariant.ghost) {
+      return _GhostButton(
+        label: label,
+        onPressed: onPressed,
+        interactive: _interactive,
+      );
+    }
 
     final bool primary = _variant == _NekoVariant.primary;
     final Color face = primary
@@ -151,15 +157,39 @@ class NekoButton extends StatelessWidget {
     );
   }
 
-  Widget _buildGhost() {
+  /// Darkens [c] in HSL space for the pressed-platform colour of a custom-tinted
+  /// primary button.
+  static Color _darken(Color c) {
+    final HSLColor hsl = HSLColor.fromColor(c);
+    return hsl.withLightness((hsl.lightness - 0.22).clamp(0.0, 1.0)).toColor();
+  }
+}
+
+enum _NekoVariant { primary, secondary, ghost }
+
+/// A low-emphasis text action with a ripple — no platform. Extracted to its own
+/// widget so it composes cleanly (no Widget-returning helper method).
+class _GhostButton extends StatelessWidget {
+  const _GhostButton({
+    required this.label,
+    required this.onPressed,
+    required this.interactive,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final bool interactive;
+
+  @override
+  Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      enabled: _interactive,
+      enabled: interactive,
       label: label,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _interactive ? onPressed : null,
+          onTap: interactive ? onPressed : null,
           borderRadius: BorderRadius.circular(AppRadius.lg),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -170,7 +200,7 @@ class NekoButton extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: AppTextStyles.buttonLabel.copyWith(
-                color: _interactive ? AppColors.primary : AppColors.silver,
+                color: interactive ? AppColors.primary : AppColors.silver,
               ),
             ),
           ),
@@ -178,13 +208,4 @@ class NekoButton extends StatelessWidget {
       ),
     );
   }
-
-  /// Darkens [c] in HSL space for the pressed-platform colour of a custom-tinted
-  /// primary button.
-  static Color _darken(Color c) {
-    final HSLColor hsl = HSLColor.fromColor(c);
-    return hsl.withLightness((hsl.lightness - 0.22).clamp(0.0, 1.0)).toColor();
-  }
 }
-
-enum _NekoVariant { primary, secondary, ghost }
