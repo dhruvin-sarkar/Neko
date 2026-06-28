@@ -10,13 +10,17 @@ import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/neko_palette.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/neko_motion.dart';
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/services/audio_service.dart';
+import '../../../core/services/haptic_service.dart';
 import '../../../shared/motion/page_transitions.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_dialog.dart';
-import '../../../shared/widgets/neko_pill_button.dart';
+import '../../../core/widgets/neko_button.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../providers/sound_settings_controller.dart';
 import '../providers/theme_controller.dart';
 
 /// The Settings tab. Background and bottom nav pill are provided by [MainShell].
@@ -132,13 +136,15 @@ class SettingsScreen extends ConsumerWidget {
                             const SizedBox(height: 16),
                             const _ThemeCard(),
                             const SizedBox(height: 16),
+                            const _SoundCard(),
+                            const SizedBox(height: 16),
                             _AboutCard(),
                           ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    NekoPillButton(
+                    NekoButton.primary(
                       label: 'Sign out',
                       isLoading: isLoading,
                       onPressed: () => _confirmSignOut(context, ref),
@@ -146,7 +152,7 @@ class SettingsScreen extends ConsumerWidget {
                   ],
                 )
                 .animate()
-                .fadeIn(duration: 280.ms)
+                .fadeIn(duration: NekoMotion.entry)
                 .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic),
       ),
     );
@@ -250,12 +256,12 @@ class _ThemeSwatch extends StatelessWidget {
             color: palette.background,
             shape: BoxShape.circle,
             border: Border.all(
-              color: selected ? AppColors.almostBlack : Colors.black12,
+              color: selected ? AppColors.almostBlack : AppColors.border,
               width: selected ? 3 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
+                color: AppColors.shadowSoft,
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -391,6 +397,144 @@ class _AboutCard extends StatelessWidget {
             'v${AppInfo.version}',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.textDisabled,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sound preferences: a master mute toggle plus effects and purring volume.
+class _SoundCard extends ConsumerWidget {
+  const _SoundCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final SoundSettings settings = ref.watch(soundSettingsControllerProvider);
+    final SoundSettingsController controller = ref.read(
+      soundSettingsControllerProvider.notifier,
+    );
+    final bool soundOn = !settings.muted;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.selectedFill,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  soundOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Sound', style: AppTextStyles.bodyLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      soundOn ? 'Effects & purring on' : 'Muted',
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: soundOn,
+                activeThumbColor: AppColors.primary,
+                onChanged: (bool enabled) {
+                  if (enabled) {
+                    controller.setMuted(false);
+                    HapticService.selection();
+                    unawaited(AudioService.playSound(SoundId.toggle));
+                  } else {
+                    // Play the toggle before muting, or it would be silenced.
+                    unawaited(AudioService.playSound(SoundId.toggle));
+                    HapticService.selection();
+                    controller.setMuted(true);
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _VolumeRow(
+            label: 'Effects volume',
+            icon: Icons.graphic_eq_rounded,
+            value: settings.sfxVolume,
+            max: 1,
+            enabled: soundOn,
+            onChanged: controller.setSfxVolume,
+            onChangeEnd: (_) =>
+                unawaited(AudioService.playSound(SoundId.btnTapPrimary)),
+          ),
+          _VolumeRow(
+            label: 'Purring volume',
+            icon: Icons.pets_rounded,
+            value: settings.ambientVolume,
+            max: 0.3,
+            enabled: soundOn,
+            onChanged: controller.setAmbientVolume,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A labelled slider row used inside [_SoundCard]; dims when sound is muted.
+class _VolumeRow extends StatelessWidget {
+  const _VolumeRow({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.max,
+    required this.enabled,
+    required this.onChanged,
+    this.onChangeEnd,
+  });
+
+  final String label;
+  final IconData icon;
+  final double value;
+  final double max;
+  final bool enabled;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: enabled ? 1 : 0.4,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.textSecondary),
+          const SizedBox(width: 8),
+          SizedBox(width: 96, child: Text(label, style: AppTextStyles.caption)),
+          Expanded(
+            child: Slider(
+              value: value.clamp(0.0, max),
+              max: max,
+              activeColor: AppColors.primary,
+              onChanged: enabled ? onChanged : null,
+              onChangeEnd: enabled ? onChangeEnd : null,
             ),
           ),
         ],

@@ -10,12 +10,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/neko_app.dart';
+import 'core/neko_motion.dart';
 import 'core/services/audio_service.dart';
 import 'core/services/local_storage_service.dart';
 import 'core/utils/logger.dart';
 import 'features/onboarding/data/onboarding_persistence.dart';
+import 'features/settings/providers/sound_settings_controller.dart';
 import 'firebase_options.dart';
-import 'shared/services/sound_service.dart';
 
 void main() {
   runZonedGuarded(
@@ -23,8 +24,8 @@ void main() {
       WidgetsFlutterBinding.ensureInitialized();
 
       // Global motion defaults — the baseline feel for every animation.
-      Animate.defaultDuration = const Duration(milliseconds: 250);
-      Animate.defaultCurve = Curves.easeOutCubic;
+      Animate.defaultDuration = NekoMotion.base;
+      Animate.defaultCurve = NekoMotion.enter;
 
       FlutterError.onError = (FlutterErrorDetails details) {
         FlutterError.presentError(details);
@@ -58,12 +59,10 @@ void main() {
         ),
       );
 
-      // Pre-load UI sounds so the first tap is low-latency. The same container
-      // backs the app, so the initialized service is the one widgets use.
       final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-      // On-device media store (profile pictures + documents) and the new SFX
-      // layer. Both are best-effort and never block startup on failure.
+      // On-device media store (profile pictures + documents) and the SFX
+      // engine. Both are best-effort and never block startup on failure.
       await LocalStorageService.init();
       await AudioService.init();
 
@@ -72,7 +71,8 @@ void main() {
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
       );
-      await container.read(soundServiceProvider).init();
+      // Apply the saved mute/volume preference to the engine before first frame.
+      container.read(soundSettingsControllerProvider);
 
       runApp(
         UncontrolledProviderScope(container: container, child: const NekoApp()),
