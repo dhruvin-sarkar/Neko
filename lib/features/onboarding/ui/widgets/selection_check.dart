@@ -24,7 +24,7 @@ class SelectionCheck extends StatelessWidget {
           child: Icon(
             Icons.check_rounded,
             size: size * 0.72,
-            color: Colors.white,
+            color: AppColors.textOnPrimary,
           ),
         )
         .animate(target: visible ? 1 : 0)

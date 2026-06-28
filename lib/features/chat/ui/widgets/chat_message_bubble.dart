@@ -19,7 +19,9 @@ class ChatMessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isUser = message.isUser;
     final Color bubbleColor = isUser ? AppColors.primary : AppColors.snowWhite;
-    final Color textColor = isUser ? Colors.white : AppColors.textPrimary;
+    final Color textColor = isUser
+        ? AppColors.textOnPrimary
+        : AppColors.textPrimary;
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -83,24 +85,46 @@ class _Attachments extends StatelessWidget {
       runSpacing: 8,
       children: [
         for (final ChatAttachment a in attachments)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 120,
-              height: 90,
-              child: a.isImage && !kIsWeb && File(a.path).existsSync()
-                  ? Image.file(File(a.path), fit: BoxFit.cover, cacheWidth: 360)
-                  : Container(
-                      color: AppColors.surfaceMuted,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.insert_drive_file_outlined,
-                        color: AppColors.graphite,
-                      ),
-                    ),
-            ),
-          ),
+          _AttachmentThumb(attachment: a),
       ],
+    );
+  }
+}
+
+/// A single attachment thumbnail. Missing/unreadable files fall back to a file
+/// icon via Image.file's errorBuilder (no synchronous existsSync in build), and
+/// the tile carries a screen-reader label.
+class _AttachmentThumb extends StatelessWidget {
+  const _AttachmentThumb({required this.attachment});
+
+  final ChatAttachment attachment;
+
+  @override
+  Widget build(BuildContext context) {
+    final ChatAttachment a = attachment;
+    final Widget fallback = Container(
+      color: AppColors.surfaceMuted,
+      alignment: Alignment.center,
+      child: Icon(Icons.insert_drive_file_outlined, color: AppColors.graphite),
+    );
+    return Semantics(
+      image: a.isImage,
+      label: a.isImage ? 'Image attachment' : 'File attachment',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 120,
+          height: 90,
+          child: a.isImage && !kIsWeb
+              ? Image.file(
+                  File(a.path),
+                  fit: BoxFit.cover,
+                  cacheWidth: 360,
+                  errorBuilder: (_, _, _) => fallback,
+                )
+              : fallback,
+        ),
+      ),
     );
   }
 }

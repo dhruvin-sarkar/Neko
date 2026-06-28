@@ -29,7 +29,7 @@ class AddCatSection extends StatelessWidget {
               Lottie.asset(
                 'assets/animations/Sleeping Cat Breathing Loop.json',
                 fit: BoxFit.contain,
-                repeat: true,
+                repeat: !MediaQuery.disableAnimationsOf(context),
                 frameRate: FrameRate.max,
                 errorBuilder: (_, _, _) => const _MatPlaceholder(),
               ),
@@ -50,9 +50,9 @@ class AddCatSection extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.add_rounded,
-                    color: Colors.white,
+                    color: AppColors.textOnPrimary,
                     size: 28,
                   ),
                 ),

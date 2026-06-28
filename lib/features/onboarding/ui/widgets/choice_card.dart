@@ -96,9 +96,9 @@ class ChoiceCard extends StatelessWidget {
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check_rounded,
-                  color: Colors.white,
+                  color: AppColors.textOnPrimary,
                   size: 16,
                 ),
               ),

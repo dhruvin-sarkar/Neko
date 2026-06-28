@@ -39,6 +39,10 @@ class _NekoNavPillState extends State<NekoNavPill>
 
   late final AnimationController _cat = AnimationController(vsync: this);
 
+  // Mirrors MediaQuery.disableAnimations so the lifecycle callback can respect
+  // the OS reduce-motion setting too.
+  bool _reduceMotion = false;
+
   @override
   void initState() {
     super.initState();
@@ -56,7 +60,9 @@ class _NekoNavPillState extends State<NekoNavPill>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Pause the cat while the app isn't in the foreground to save battery.
     if (state == AppLifecycleState.resumed) {
-      if (_cat.duration != null && !_cat.isAnimating) _cat.repeat();
+      if (!_reduceMotion && _cat.duration != null && !_cat.isAnimating) {
+        _cat.repeat();
+      }
     } else {
       _cat.stop();
     }
@@ -66,6 +72,16 @@ class _NekoNavPillState extends State<NekoNavPill>
 
   @override
   Widget build(BuildContext context) {
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // Honor the OS reduce-motion setting: keep the perched cat still.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_reduceMotion) {
+        _cat.stop();
+      } else if (_cat.duration != null && !_cat.isAnimating) {
+        _cat.repeat();
+      }
+    });
     return SizedBox(
       width: _pillWidth,
       // Room above the pill for the perched cat (now larger and more visible).
@@ -89,7 +105,7 @@ class _NekoNavPillState extends State<NekoNavPill>
                   height: _catSize,
                   onLoaded: (composition) {
                     _cat.duration = composition.duration;
-                    _cat.repeat();
+                    if (!_reduceMotion) _cat.repeat();
                   },
                 ),
               ),
@@ -106,7 +122,7 @@ class _NekoNavPillState extends State<NekoNavPill>
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.snowWhite,
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(

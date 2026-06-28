@@ -127,7 +127,7 @@ class SettingsScreen extends ConsumerWidget {
                             width: 104,
                             height: 64,
                             fit: BoxFit.contain,
-                            repeat: true,
+                            repeat: !MediaQuery.disableAnimationsOf(context),
                           ),
                         ),
                       ],
