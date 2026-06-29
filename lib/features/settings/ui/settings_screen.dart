@@ -115,17 +115,19 @@ class SettingsScreen extends ConsumerWidget {
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Text(
                             'Settings',
                             style: AppTextStyles.displayLarge,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 6),
                         RepaintBoundary(
                           child: Lottie.asset(
                             'assets/animations/rainbow_cat.json',
-                            width: 104,
-                            height: 64,
+                            width: 124,
+                            height: 74,
                             fit: BoxFit.contain,
                             repeat: !MediaQuery.disableAnimationsOf(context),
                           ),
@@ -367,11 +369,13 @@ class _AccountCard extends StatelessWidget {
 }
 
 /// A small "About" card with the app name, tagline, and version.
-class _AboutCard extends StatelessWidget {
+class _AboutCard extends ConsumerWidget {
   const _AboutCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Rebuild on theme change (const + reads AppColors directly).
+    ref.watch(themeControllerProvider);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -420,6 +424,9 @@ class _SoundCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Rebuild on theme change too — this card reads AppColors directly and is
+    // const, so it wouldn't otherwise repaint when the palette switches.
+    ref.watch(themeControllerProvider);
     final SoundSettings settings = ref.watch(soundSettingsControllerProvider);
     final SoundSettingsController controller = ref.read(
       soundSettingsControllerProvider.notifier,
