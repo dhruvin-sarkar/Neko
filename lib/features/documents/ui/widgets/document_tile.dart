@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
@@ -50,15 +53,7 @@ class DocumentTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.selectedFill,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(_icon, color: AppColors.primary, size: 22),
-            ),
+            _DocThumb(document: document, icon: _icon),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -106,5 +101,51 @@ class DocumentTile extends StatelessWidget {
     ];
     final String month = months[(date.month - 1).clamp(0, 11)];
     return '${date.day} $month ${date.year}';
+  }
+}
+
+/// The leading thumbnail: a real image preview for image documents, otherwise
+/// the document's semantic type icon (more informative than a generic file/PDF
+/// glyph). Missing/unreadable files fall back to the icon via Image.file's
+/// errorBuilder (no synchronous existsSync in build).
+class _DocThumb extends StatelessWidget {
+  const _DocThumb({required this.document, required this.icon});
+
+  final CatDocument document;
+  final IconData icon;
+
+  bool get _isImage {
+    final String p = document.path.toLowerCase();
+    return p.endsWith('.jpg') ||
+        p.endsWith('.jpeg') ||
+        p.endsWith('.png') ||
+        p.endsWith('.webp');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget fallback = Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.selectedFill,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: AppColors.primary, size: 22),
+    );
+    if (_isImage && !kIsWeb) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(
+          File(document.path),
+          width: 44,
+          height: 44,
+          fit: BoxFit.cover,
+          cacheWidth: 132,
+          errorBuilder: (_, _, _) => fallback,
+        ),
+      );
+    }
+    return fallback;
   }
 }
