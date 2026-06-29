@@ -125,23 +125,23 @@ class _DocThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget fallback = Container(
-      width: 44,
-      height: 44,
+      width: 64,
+      height: 64,
       decoration: BoxDecoration(
         color: AppColors.selectedFill,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(icon, color: AppColors.primary, size: 22),
+      child: Icon(icon, color: AppColors.primary, size: 30),
     );
     if (_isImage && !kIsWeb) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Image.file(
           File(document.path),
-          width: 44,
-          height: 44,
+          width: 64,
+          height: 64,
           fit: BoxFit.cover,
-          cacheWidth: 132,
+          cacheWidth: 192,
           errorBuilder: (_, _, _) => fallback,
         ),
       );
