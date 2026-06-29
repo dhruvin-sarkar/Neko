@@ -115,31 +115,54 @@ class _AvatarTile extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: selected ? AppColors.primary : Colors.transparent,
-              width: 3,
-            ),
-          ),
-          padding: const EdgeInsets.all(3),
-          child: ClipOval(
-            child: Image.asset(
-              AvatarPresets.assetFor(id),
-              fit: BoxFit.cover,
-              cacheWidth: 240,
-              cacheHeight: 240,
-              errorBuilder: (_, _, _) => Container(
-                color: tint,
-                child: const Icon(
-                  Icons.pets_rounded,
-                  color: Colors.white,
-                  size: 32,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? AppColors.primary : AppColors.border,
+                  width: selected ? 3 : 1.5,
+                ),
+              ),
+              padding: const EdgeInsets.all(3),
+              child: ClipOval(
+                child: Image.asset(
+                  AvatarPresets.assetFor(id),
+                  fit: BoxFit.cover,
+                  cacheWidth: 240,
+                  cacheHeight: 240,
+                  errorBuilder: (_, _, _) => Container(
+                    color: tint,
+                    child: const Icon(
+                      Icons.pets_rounded,
+                      color: Colors.white,
+                      size: 32,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            if (selected)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.surfaceCard, width: 2),
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    size: 14,
+                    color: AppColors.textOnPrimary,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

@@ -12,10 +12,13 @@ abstract final class AvatarPresets {
     'avatar_4',
     'avatar_5',
     'avatar_6',
+    'avatar_7',
+    'avatar_8',
+    'avatar_9',
   ];
 
   /// Resolves a preset id to its bundled asset path.
-  static String assetFor(String id) => 'assets/images/avatars/$id.png';
+  static String assetFor(String id) => 'assets/images/avatars/$id.jpg';
 
   /// Whether [id] is a known preset.
   static bool isPreset(String? id) => id != null && ids.contains(id);
