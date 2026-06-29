@@ -11,6 +11,7 @@ import '../../../core/neko_motion.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/services/image_picker_service.dart';
 import '../../../shared/widgets/neko_mascot.dart';
+import '../../settings/providers/theme_controller.dart';
 import '../models/chat_attachment.dart';
 import '../models/chat_conversation.dart';
 import '../models/chat_message.dart';
@@ -108,6 +109,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild on theme change so this kept-alive tab re-skins when the palette
+    // is switched from another tab.
+    ref.watch(themeControllerProvider);
     // Auto-scroll as the transcript grows or the reply streams in.
     ref.listen(chatControllerProvider, (_, _) => _scrollToBottom());
     final ChatState state = ref.watch(chatControllerProvider);

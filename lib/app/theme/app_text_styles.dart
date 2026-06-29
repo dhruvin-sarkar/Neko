@@ -9,53 +9,59 @@ import 'app_colors.dart';
 /// the headline or the question — and Nunito for everything interactive:
 /// buttons, labels, inputs, body copy. The wide letter-spacing on button
 /// labels is what gives them that game-UI feel.
+///
+/// These are **getters**, not `static final` fields, on purpose: the colour is
+/// read from the active [AppColors] palette on every access. A `static final`
+/// would bake the colour once (at first access, under whatever theme was
+/// active then) and never update — so text would keep the first theme's colour
+/// forever and vanish on dark themes.
 abstract final class AppTextStyles {
   const AppTextStyles._();
 
   // Headlines — Fredoka, large and rounded.
-  static final TextStyle displayLarge = GoogleFonts.fredoka(
+  static TextStyle get displayLarge => GoogleFonts.fredoka(
     fontSize: 32,
     fontWeight: FontWeight.w600,
     color: AppColors.almostBlack,
     letterSpacing: -0.5,
   );
 
-  static final TextStyle displayMedium = GoogleFonts.fredoka(
+  static TextStyle get displayMedium => GoogleFonts.fredoka(
     fontSize: 26,
     fontWeight: FontWeight.w600,
     color: AppColors.almostBlack,
     letterSpacing: -0.3,
   );
 
-  static final TextStyle headlineLarge = GoogleFonts.fredoka(
+  static TextStyle get headlineLarge => GoogleFonts.fredoka(
     fontSize: 22,
     fontWeight: FontWeight.w600,
     color: AppColors.almostBlack,
   );
 
   // UI text — Nunito with the wide tracking Duolingo is known for.
-  static final TextStyle titleMedium = GoogleFonts.nunito(
+  static TextStyle get titleMedium => GoogleFonts.nunito(
     fontSize: 19,
     fontWeight: FontWeight.w700,
     color: AppColors.almostBlack,
     letterSpacing: 0.3,
   );
 
-  static final TextStyle bodyLarge = GoogleFonts.nunito(
+  static TextStyle get bodyLarge => GoogleFonts.nunito(
     fontSize: 17,
     fontWeight: FontWeight.w600,
     color: AppColors.almostBlack,
     letterSpacing: 0.3,
   );
 
-  static final TextStyle bodyMedium = GoogleFonts.nunito(
+  static TextStyle get bodyMedium => GoogleFonts.nunito(
     fontSize: 15,
     fontWeight: FontWeight.w500,
     color: AppColors.graphite,
     letterSpacing: 0.3,
   );
 
-  static final TextStyle caption = GoogleFonts.nunito(
+  static TextStyle get caption => GoogleFonts.nunito(
     fontSize: 13,
     fontWeight: FontWeight.w500,
     color: AppColors.silver,
@@ -63,14 +69,14 @@ abstract final class AppTextStyles {
   );
 
   // Buttons — Nunito, heavy, wide tracking. Labels render in uppercase.
-  static final TextStyle buttonLabel = GoogleFonts.nunito(
+  static TextStyle get buttonLabel => GoogleFonts.nunito(
     fontSize: 17,
     fontWeight: FontWeight.w800,
     color: AppColors.snowWhite,
     letterSpacing: 1.2,
   );
 
-  static final TextStyle buttonLabelDark = GoogleFonts.nunito(
+  static TextStyle get buttonLabelDark => GoogleFonts.nunito(
     fontSize: 17,
     fontWeight: FontWeight.w800,
     color: AppColors.almostBlack,
