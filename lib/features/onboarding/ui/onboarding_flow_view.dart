@@ -37,6 +37,7 @@ class OnboardingFlowView extends ConsumerStatefulWidget {
 
 class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
   int _lastStep = 1;
+  bool _completing = false;
   final ConfettiController _confetti = ConfettiController(
     duration: const Duration(milliseconds: 1200),
   );
@@ -55,9 +56,17 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
       notifier.nextStep();
       return;
     }
-    // Final step: save first, then celebrate before the curtain sweeps us home.
+    // Final step: guard against a second tap during the save + 1.5s celebration
+    // + curtain window (the button briefly re-enables once the save resolves),
+    // which would otherwise create a duplicate cat.
+    if (_completing) return;
+    setState(() => _completing = true);
     final bool saved = await notifier.save();
-    if (!mounted || !saved) return;
+    if (!saved) {
+      if (mounted) setState(() => _completing = false);
+      return;
+    }
+    if (!mounted) return;
     unawaited(feedback.onSuccess());
     _confetti.play();
     await Future<void>.delayed(const Duration(milliseconds: 1500));
@@ -193,7 +202,7 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                     AnimatedContinueButton(
                       label: config.continueLabel,
                       enabled: config.canContinue,
-                      isLoading: state.isSaving,
+                      isLoading: state.isSaving || _completing,
                       onPressed: () => _onContinue(config),
                     ),
                     const SizedBox(height: 8),
