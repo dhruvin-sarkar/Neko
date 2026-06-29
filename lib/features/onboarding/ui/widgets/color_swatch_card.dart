@@ -53,18 +53,41 @@ class ColorSwatchCard extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: _gradient(option.themeId) == null
-                          ? option.circleColor
-                          : null,
-                      gradient: _gradient(option.themeId),
-                      shape: BoxShape.circle,
-                      border: option.needsBorder
-                          ? Border.all(color: AppColors.border)
-                          : null,
+                  SizedBox(
+                    width: 64,
+                    height: 64,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // A clear selection ring around (not on) the coat, so it
+                        // stays visible against any coat colour or gradient.
+                        if (isSelected)
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary,
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: _gradient(option.themeId) == null
+                                ? option.circleColor
+                                : null,
+                            gradient: _gradient(option.themeId),
+                            shape: BoxShape.circle,
+                            border: option.needsBorder
+                                ? Border.all(color: AppColors.border)
+                                : null,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 10),
