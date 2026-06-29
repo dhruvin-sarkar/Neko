@@ -498,7 +498,7 @@ class _SoundCard extends ConsumerWidget {
             label: 'Purring volume',
             icon: Icons.pets_rounded,
             value: settings.ambientVolume,
-            max: 0.5,
+            max: 0.7,
             enabled: soundOn,
             onChanged: controller.setAmbientVolume,
           ),

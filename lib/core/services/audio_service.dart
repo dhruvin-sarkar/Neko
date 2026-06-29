@@ -56,10 +56,10 @@ class AudioService {
   AudioService._();
 
   /// Loudest the ambient purr may ever get.
-  static const double _maxAmbient = 0.5;
+  static const double _maxAmbient = 0.7;
 
-  static double _sfxVolume = 0.35;
-  static double _ambientVolume = 0.22;
+  static double _sfxVolume = 0.7;
+  static double _ambientVolume = 0.4;
   static bool _muted = false;
 
   static final Map<SoundId, AudioPlayer> _players = <SoundId, AudioPlayer>{};

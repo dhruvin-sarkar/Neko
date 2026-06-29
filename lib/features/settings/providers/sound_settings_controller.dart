@@ -53,8 +53,8 @@ class SoundSettingsController extends Notifier<SoundSettings> {
     final prefs = ref.watch(sharedPreferencesProvider);
     final SoundSettings settings = SoundSettings(
       muted: prefs.getBool(_kMutedKey) ?? false,
-      sfxVolume: prefs.getDouble(_kSfxVolumeKey) ?? 0.35,
-      ambientVolume: prefs.getDouble(_kAmbientVolumeKey) ?? 0.22,
+      sfxVolume: prefs.getDouble(_kSfxVolumeKey) ?? 0.7,
+      ambientVolume: prefs.getDouble(_kAmbientVolumeKey) ?? 0.4,
     );
     // Push the saved preference into the engine straight away.
     AudioService.setMuted(settings.muted);
@@ -79,9 +79,9 @@ class SoundSettingsController extends Notifier<SoundSettings> {
     await ref.read(sharedPreferencesProvider).setDouble(_kSfxVolumeKey, v);
   }
 
-  /// Sets the ambient purr volume (0.0–0.5).
+  /// Sets the ambient purr volume (0.0–0.7).
   Future<void> setAmbientVolume(double value) async {
-    final double v = value.clamp(0.0, 0.5);
+    final double v = value.clamp(0.0, 0.7);
     state = state.copyWith(ambientVolume: v);
     AudioService.setAmbientVolume(v);
     await ref.read(sharedPreferencesProvider).setDouble(_kAmbientVolumeKey, v);
