@@ -41,6 +41,7 @@ class MainShell extends ConsumerWidget {
                     heightFactor: 1,
                     child: NekoNavPill(
                       homeKey: tourKeys.navHome,
+                      chatKey: tourKeys.navChat,
                       settingsKey: tourKeys.navSettings,
                       selectedIndex: navigationShell.currentIndex,
                       onSelect: (index) {

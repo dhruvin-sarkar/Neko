@@ -14,6 +14,9 @@ class TourKeys {
   /// The Home destination in the bottom nav pill.
   final GlobalKey navHome = GlobalKey(debugLabel: 'tour_nav_home');
 
+  /// The Neko Assistant (AI chat) destination in the bottom nav pill.
+  final GlobalKey navChat = GlobalKey(debugLabel: 'tour_nav_chat');
+
   /// The Settings destination in the bottom nav pill.
   final GlobalKey navSettings = GlobalKey(debugLabel: 'tour_nav_settings');
 

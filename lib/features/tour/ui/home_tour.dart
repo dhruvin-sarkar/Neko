@@ -118,7 +118,7 @@ class _TourRunner {
     final List<_Step> profile = hasCats
         ? <_Step>[_profileStats, _profileEdit, _profileDocuments]
         : <_Step>[];
-    final List<_Step> homeOutro = <_Step>[_addCat, _settings];
+    final List<_Step> homeOutro = <_Step>[_addCat, _aiAssistant, _settings];
     final int total = homeIntro.length + profile.length + homeOutro.length;
     int offset = 0;
 
@@ -440,6 +440,18 @@ class _TourRunner {
     title: 'Add a cat',
     body:
         'Back home — tap the plus to add another member of the family anytime.',
+    align: ContentAlign.top,
+    shape: ShapeLightFocus.Circle,
+  );
+
+  _Step get _aiAssistant => _Step(
+    key: _keys.navChat,
+    identify: 'ai_assistant',
+    icon: Icons.auto_awesome_rounded,
+    title: 'Meet Neko AI',
+    body:
+        'Your cat-obsessed assistant lives here. Ask about feeding, health, or '
+        'behaviour — Neko knows your cats by name.',
     align: ContentAlign.top,
     shape: ShapeLightFocus.Circle,
   );
