@@ -165,6 +165,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
             child: ChatInput(
               controller: _controller,
+              focusNode: _focus,
               attachments: _pending,
               isGenerating: state.isGenerating,
               isUploading: _uploading,

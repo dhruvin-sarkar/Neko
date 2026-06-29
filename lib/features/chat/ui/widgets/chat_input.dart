@@ -18,6 +18,7 @@ class ChatInput extends StatefulWidget {
   const ChatInput({
     super.key,
     required this.controller,
+    this.focusNode,
     required this.attachments,
     required this.isGenerating,
     required this.isUploading,
@@ -28,6 +29,7 @@ class ChatInput extends StatefulWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final List<ChatAttachment> attachments;
   final bool isGenerating;
   final bool isUploading;
@@ -109,6 +111,7 @@ class _ChatInputState extends State<ChatInput> {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: TextField(
                     controller: widget.controller,
+                    focusNode: widget.focusNode,
                     minLines: 1,
                     maxLines: 5,
                     textCapitalization: TextCapitalization.sentences,
