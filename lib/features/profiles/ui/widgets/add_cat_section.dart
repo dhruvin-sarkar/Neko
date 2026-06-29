@@ -36,7 +36,7 @@ class AddCatSection extends StatelessWidget {
                 ),
               ),
               Align(
-                alignment: const Alignment(-0.55, 0.55),
+                alignment: const Alignment(0, 0.42),
                 child: Container(
                   key: plusKey,
                   width: 52,
