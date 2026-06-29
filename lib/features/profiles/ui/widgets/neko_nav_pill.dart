@@ -36,7 +36,7 @@ class NekoNavPill extends StatefulWidget {
 
 class _NekoNavPillState extends State<NekoNavPill>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  static const double _catSize = 74;
+  static const double _catSize = 84;
   // Centres of the three tabs within the pill (8px padding + spaceEvenly).
   static const List<double> _tabCenters = <double>[50, 116, 182];
 
@@ -88,7 +88,7 @@ class _NekoNavPillState extends State<NekoNavPill>
     return SizedBox(
       width: _kPillWidth,
       // Room above the pill for the perched cat (now larger and more visible).
-      height: 64 + 56,
+      height: 64 + 64,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
@@ -104,7 +104,7 @@ class _NekoNavPillState extends State<NekoNavPill>
             duration: NekoMotion.standard,
             curve: Curves.easeOutBack,
             left: _catLeft,
-            bottom: 46,
+            bottom: 44,
             child: IgnorePointer(
               child: RepaintBoundary(
                 child: Lottie.asset(
