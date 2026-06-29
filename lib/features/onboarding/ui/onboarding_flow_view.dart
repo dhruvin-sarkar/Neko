@@ -13,6 +13,7 @@ import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../settings/providers/theme_controller.dart';
 import '../models/step_config.dart';
 import '../providers/onboarding_provider.dart';
 import 'steps/activity_step.dart';
@@ -135,6 +136,8 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
       },
     );
 
+    // Re-skin the onboarding chrome live as coat selection changes the theme.
+    ref.watch(themeControllerProvider);
     final state = ref.watch(onboardingNotifierProvider);
     final StepConfig config = stepConfigOf(state);
     final bool forward = state.step >= _lastStep;
