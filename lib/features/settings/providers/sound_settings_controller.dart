@@ -53,7 +53,7 @@ class SoundSettingsController extends Notifier<SoundSettings> {
     final prefs = ref.watch(sharedPreferencesProvider);
     final SoundSettings settings = SoundSettings(
       muted: prefs.getBool(_kMutedKey) ?? false,
-      sfxVolume: prefs.getDouble(_kSfxVolumeKey) ?? 0.7,
+      sfxVolume: prefs.getDouble(_kSfxVolumeKey) ?? 1.0,
       ambientVolume: prefs.getDouble(_kAmbientVolumeKey) ?? 0.4,
     );
     // Push the saved preference into the engine straight away.

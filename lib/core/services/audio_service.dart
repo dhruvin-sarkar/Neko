@@ -58,7 +58,7 @@ class AudioService {
   /// Loudest the ambient purr may ever get.
   static const double _maxAmbient = 0.7;
 
-  static double _sfxVolume = 0.7;
+  static double _sfxVolume = 1.0;
   static double _ambientVolume = 0.4;
   static bool _muted = false;
 
@@ -90,17 +90,17 @@ class AudioService {
     SoundId.catMeowNotif: 'sounds/sfx_cat_meow_notif.mp3',
     SoundId.notchPing: 'sounds/sfx_cat_meow_notif.mp3',
     // Taps, navigation and sheet/notch UI — reuse the primary tap clip.
-    SoundId.btnTapPrimary: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.btnTapSoft: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.selectOption: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.progressTick: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.cameraShutter: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.swipeForward: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.swipeBack: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.sheetOpen: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.sheetClose: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.notchExpand: 'sounds/sfx_btn_tap_primary.mp3',
-    SoundId.notchCollapse: 'sounds/sfx_btn_tap_primary.mp3',
+    SoundId.btnTapPrimary: 'sounds/sfx_toggle.mp3',
+    SoundId.btnTapSoft: 'sounds/sfx_toggle.mp3',
+    SoundId.selectOption: 'sounds/sfx_toggle.mp3',
+    SoundId.progressTick: 'sounds/sfx_toggle.mp3',
+    SoundId.cameraShutter: 'sounds/sfx_toggle.mp3',
+    SoundId.swipeForward: 'sounds/sfx_toggle.mp3',
+    SoundId.swipeBack: 'sounds/sfx_toggle.mp3',
+    SoundId.sheetOpen: 'sounds/sfx_toggle.mp3',
+    SoundId.sheetClose: 'sounds/sfx_toggle.mp3',
+    SoundId.notchExpand: 'sounds/sfx_toggle.mp3',
+    SoundId.notchCollapse: 'sounds/sfx_toggle.mp3',
     SoundId.navTap: 'sounds/sfx_nav_tap.wav',
     SoundId.toggle: 'sounds/sfx_toggle.mp3',
     SoundId.wrong: 'sounds/sfx_toggle.mp3',
@@ -115,7 +115,7 @@ class AudioService {
   /// Safety net for the two `.wav` clips: if a device can't decode the wav, fall
   /// back to an mp3 so the sound still plays.
   static const Map<SoundId, String> _fallbackAssets = <SoundId, String>{
-    SoundId.navTap: 'sounds/sfx_btn_tap_primary.mp3',
+    SoundId.navTap: 'sounds/sfx_toggle.mp3',
     SoundId.catMeowGreet: 'sounds/sfx_cat_meow_success.mp3',
   };
 
