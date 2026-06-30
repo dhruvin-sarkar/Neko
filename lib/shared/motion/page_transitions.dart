@@ -63,7 +63,7 @@ abstract final class PageTransitions {
                   ),
                 ),
               ),
-              child: child,
+              child: RepaintBoundary(child: child),
             ),
           ),
         );
@@ -140,13 +140,15 @@ abstract final class PageTransitions {
             // Full-screen curtain panel + paw trail, above both pages.
             Positioned.fill(
               child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _PawCurtainPainter(
-                    progress: animation,
-                    panelColor: _kCurtainColor,
-                    pawColor: _kPawBrandColor,
-                    coverIn: coverIn,
-                    coverOut: coverOut,
+                child: RepaintBoundary(
+                  child: CustomPaint(
+                    painter: _PawCurtainPainter(
+                      progress: animation,
+                      panelColor: _kCurtainColor,
+                      pawColor: _kPawBrandColor,
+                      coverIn: coverIn,
+                      coverOut: coverOut,
+                    ),
                   ),
                 ),
               ),
@@ -183,7 +185,9 @@ abstract final class PageTransitions {
         );
         final Widget content = AnimatedBuilder(
           animation: eased,
-          child: child,
+          // Cache the page raster once so the per-frame blur composites a
+          // retained layer instead of repainting the whole page tree.
+          child: RepaintBoundary(child: child),
           builder: (context, child) {
             final double v = eased.value.clamp(0.0, 1.0);
             final double sigma = (1.0 - v) * _blurMaxSigma;
@@ -313,7 +317,9 @@ class RecedeOnCover extends StatelessWidget {
         ModalRoute.of(context)?.secondaryAnimation ?? kAlwaysDismissedAnimation;
     return AnimatedBuilder(
       animation: anim,
-      child: child,
+      // Cache the shell raster once so the per-frame blur/scale/opacity
+      // composite a retained layer instead of repainting the whole shell tree.
+      child: RepaintBoundary(child: child),
       builder: (context, child) {
         final double s = anim.value.clamp(0.0, 1.0);
         if (s <= 0.001) return child!;
