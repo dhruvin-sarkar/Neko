@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/neko_motion.dart';
 import '../../../../core/widgets/neko_loader.dart';
 import '../../models/chat_attachment.dart';
 
@@ -166,35 +167,54 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isGenerating) {
-      return Container(
-        decoration: BoxDecoration(
-          color: AppColors.darkBanner,
-          shape: BoxShape.circle,
-        ),
-        child: IconButton(
-          icon: const Icon(Icons.stop_rounded, size: 18, color: Colors.white),
-          onPressed: onStop,
-          visualDensity: VisualDensity.compact,
-          tooltip: 'Stop',
-        ),
-      );
-    }
-    return Container(
-      decoration: BoxDecoration(
-        color: disabled ? AppColors.cloudGray : AppColors.primary,
-        shape: BoxShape.circle,
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final Widget button = isGenerating
+        ? Container(
+            key: const ValueKey<String>('stop'),
+            decoration: BoxDecoration(
+              color: AppColors.darkBanner,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.stop_rounded,
+                size: 18,
+                color: Colors.white,
+              ),
+              onPressed: onStop,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Stop',
+            ),
+          )
+        : AnimatedContainer(
+            key: const ValueKey<String>('send'),
+            duration: reduceMotion ? Duration.zero : NekoMotion.quick,
+            curve: NekoMotion.standardCurve,
+            decoration: BoxDecoration(
+              color: disabled ? AppColors.cloudGray : AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: Icon(
+                Icons.arrow_upward_rounded,
+                size: 18,
+                color: disabled ? AppColors.graphite : AppColors.textOnPrimary,
+              ),
+              onPressed: disabled ? null : onSend,
+              visualDensity: VisualDensity.compact,
+              tooltip: 'Send',
+            ),
+          );
+    // Swap Send <-> Stop with a quick scale + fade instead of a hard cut.
+    return AnimatedSwitcher(
+      duration: reduceMotion ? Duration.zero : NekoMotion.quick,
+      switchInCurve: NekoMotion.standardCurve,
+      switchOutCurve: NekoMotion.standardCurve,
+      transitionBuilder: (child, animation) => ScaleTransition(
+        scale: animation,
+        child: FadeTransition(opacity: animation, child: child),
       ),
-      child: IconButton(
-        icon: Icon(
-          Icons.arrow_upward_rounded,
-          size: 18,
-          color: disabled ? AppColors.graphite : AppColors.textOnPrimary,
-        ),
-        onPressed: disabled ? null : onSend,
-        visualDensity: VisualDensity.compact,
-        tooltip: 'Send',
-      ),
+      child: button,
     );
   }
 }

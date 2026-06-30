@@ -21,6 +21,8 @@ class CatBannerShimmer extends StatelessWidget {
             Shimmer.fromColors(
               baseColor: AppColors.surfaceMuted,
               highlightColor: AppColors.surfaceElevated,
+              // Match the cadence of the other skeletons (documents, profile).
+              period: const Duration(milliseconds: 1400),
               child: Container(
                 height: 72,
                 decoration: BoxDecoration(

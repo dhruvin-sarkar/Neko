@@ -44,6 +44,14 @@ class _NekoNavPillState extends State<NekoNavPill>
   late final AnimationController _cat = AnimationController(vsync: this);
 
   @override
+  void initState() {
+    super.initState();
+    // Render the settled mid-frame from the first paint so the cat never
+    // flashes frame 0 before the Lottie composition finishes loading.
+    _cat.value = 0.5;
+  }
+
+  @override
   void dispose() {
     _cat.dispose();
     super.dispose();
@@ -53,6 +61,7 @@ class _NekoNavPillState extends State<NekoNavPill>
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     return SizedBox(
       width: _kPillWidth,
       // Room above the pill for the large, stationary perched cat.
@@ -69,8 +78,10 @@ class _NekoNavPillState extends State<NekoNavPill>
             settingsKey: widget.settingsKey,
           ),
           AnimatedPositioned(
-            duration: NekoMotion.standard,
-            curve: Curves.easeOutBack,
+            // Arrive with the tab's selection circle (200ms); a gentle overshoot
+            // unless the OS asks for reduced motion.
+            duration: reduceMotion ? Duration.zero : NekoMotion.quick,
+            curve: reduceMotion ? Curves.linear : Curves.easeOutBack,
             left: _catLeft,
             bottom: 44,
             child: IgnorePointer(

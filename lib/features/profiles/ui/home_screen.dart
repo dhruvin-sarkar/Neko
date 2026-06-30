@@ -64,11 +64,18 @@ class HomeScreen extends ConsumerWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
             sliver: SliverToBoxAdapter(
-              child:
-                  HomeGreeting(key: tourKeys.greeting, displayName: displayName)
-                      .animate()
-                      .fadeIn(duration: NekoMotion.entry)
-                      .slideY(begin: 0.15, end: 0),
+              child: MediaQuery.disableAnimationsOf(context)
+                  ? HomeGreeting(
+                      key: tourKeys.greeting,
+                      displayName: displayName,
+                    )
+                  : HomeGreeting(
+                          key: tourKeys.greeting,
+                          displayName: displayName,
+                        )
+                        .animate()
+                        .fadeIn(duration: NekoMotion.entry)
+                        .slideY(begin: 0.15, end: 0),
             ),
           ),
           ...cats.when(
@@ -120,21 +127,27 @@ List<Widget> _catSlivers(
         itemCount: cats.length,
         itemBuilder: (context, index) {
           final CatProfile cat = cats[index];
-          final Widget banner =
-              RepaintBoundary(
-                    child: CatProfileBanner(
-                      cat: cat,
-                      onTap: () => onOpenCat(cat.id),
-                    ),
-                  )
-                  .animate(delay: (80 * index).ms)
-                  .fadeIn(duration: NekoMotion.base)
-                  .slideY(
-                    begin: 0.3,
-                    end: 0,
-                    duration: NekoMotion.entry,
-                    curve: Curves.easeOutCubic,
-                  );
+          final Widget bannerCard = RepaintBoundary(
+            child: CatProfileBanner(cat: cat, onTap: () => onOpenCat(cat.id)),
+          );
+          // Cap the cascade at ~8 items and let fade + slide finish together;
+          // skip the entrance entirely under reduce-motion.
+          final Widget banner = MediaQuery.disableAnimationsOf(context)
+              ? bannerCard
+              : bannerCard
+                    .animate(
+                      delay:
+                          (NekoMotion.staggerItem.inMilliseconds *
+                                  index.clamp(0, 7))
+                              .ms,
+                    )
+                    .fadeIn(duration: NekoMotion.entry)
+                    .slideY(
+                      begin: 0.3,
+                      end: 0,
+                      duration: NekoMotion.entry,
+                      curve: Curves.easeOutCubic,
+                    );
           return Padding(
             key: ValueKey<String>(cat.id),
             padding: const EdgeInsets.only(bottom: 16),

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../core/neko_motion.dart';
 import '../../../features/tour/providers/tour_keys.dart';
 import '../../documents/ui/widgets/documents_section.dart';
 import 'widgets/profile_detail_shimmer.dart';
@@ -44,7 +45,9 @@ class ProfileDetailScreen extends ConsumerWidget {
       body: SafeArea(
         top: false,
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : NekoMotion.standard,
           switchInCurve: Curves.easeOut,
           switchOutCurve: Curves.easeIn,
           child: cat == null
@@ -176,7 +179,9 @@ class _CatProfileBody extends StatelessWidget {
                 child: DocumentsSection(catId: cat.id),
               ),
             ]
-            .animate(interval: 70.ms)
+            // Hold the in-body stagger until the route reveal has settled, so the
+            // stats aren't fading on top of the page's own fade-in.
+            .animate(delay: 220.ms, interval: 70.ms)
             .fadeIn(duration: 250.ms)
             .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
       ],
