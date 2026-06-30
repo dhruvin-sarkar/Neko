@@ -35,60 +35,28 @@ class NekoNavPill extends StatefulWidget {
 }
 
 class _NekoNavPillState extends State<NekoNavPill>
-    with WidgetsBindingObserver, TickerProviderStateMixin {
-  static const double _catSize = 84;
+    with SingleTickerProviderStateMixin {
+  static const double _catSize = 112;
   // Centres of the three tabs within the pill (8px padding + spaceEvenly).
   static const List<double> _tabCenters = <double>[50, 116, 182];
 
+  // Holds the cat at one settled frame so it perches on the pill, stationary.
   late final AnimationController _cat = AnimationController(vsync: this);
-
-  // Mirrors MediaQuery.disableAnimations so the lifecycle callback can respect
-  // the OS reduce-motion setting too.
-  bool _reduceMotion = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _cat.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Pause the cat while the app isn't in the foreground to save battery.
-    if (state == AppLifecycleState.resumed) {
-      if (!_reduceMotion && _cat.duration != null && !_cat.isAnimating) {
-        _cat.repeat();
-      }
-    } else {
-      _cat.stop();
-    }
   }
 
   double get _catLeft => _tabCenters[widget.selectedIndex] - _catSize / 2;
 
   @override
   Widget build(BuildContext context) {
-    _reduceMotion = MediaQuery.disableAnimationsOf(context);
-    // Honor the OS reduce-motion setting: keep the perched cat still.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_reduceMotion) {
-        _cat.stop();
-      } else if (_cat.duration != null && !_cat.isAnimating) {
-        _cat.repeat();
-      }
-    });
     return SizedBox(
       width: _kPillWidth,
-      // Room above the pill for the perched cat (now larger and more visible).
-      height: 64 + 64,
+      // Room above the pill for the large, stationary perched cat.
+      height: 64 + 92,
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.bottomCenter,
@@ -112,9 +80,10 @@ class _NekoNavPillState extends State<NekoNavPill>
                   controller: _cat,
                   width: _catSize,
                   height: _catSize,
+                  // Settle on a single mid-frame instead of looping.
                   onLoaded: (composition) {
                     _cat.duration = composition.duration;
-                    if (!_reduceMotion) _cat.repeat();
+                    _cat.value = 0.5;
                   },
                 ),
               ),
