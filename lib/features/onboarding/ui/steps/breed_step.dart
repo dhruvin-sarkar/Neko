@@ -7,6 +7,7 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/neko_motion.dart';
 import '../../../../core/services/audio_service.dart';
 import '../../data/breed_catalog.dart';
 import '../../providers/onboarding_provider.dart';
@@ -295,9 +296,11 @@ class _BreedGrid extends StatelessWidget {
           itemBuilder: (context, index) {
             final bool isCustom = offerCustom && index == breeds.length;
             return AnimationConfiguration.staggeredGrid(
-              position: index,
+              // Cap the cascade at ~8 cards so a full-catalogue search doesn't
+              // delay the last cards heavily.
+              position: index.clamp(0, 7),
               columnCount: 2,
-              duration: const Duration(milliseconds: 280),
+              duration: NekoMotion.entry,
               child: FadeInAnimation(
                 child: SlideAnimation(
                   verticalOffset: 18,
@@ -386,10 +389,10 @@ class _BreedCard extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: AnimatedScale(
           scale: selected ? 1.03 : 1.0,
-          duration: const Duration(milliseconds: 200),
+          duration: NekoMotion.quick,
           curve: Curves.easeOutBack,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
+            duration: NekoMotion.fast,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: selected ? AppColors.primaryLight : AppColors.surfaceCard,

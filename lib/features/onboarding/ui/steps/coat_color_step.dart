@@ -87,7 +87,12 @@ class CoatColorStep extends ConsumerWidget {
                       notifier.setColorType(option.value);
                     },
                   )
-                  .animate(delay: (60 * index).ms)
+                  .animate(
+                    delay:
+                        (NekoMotion.staggerItem.inMilliseconds *
+                                index.clamp(0, 7))
+                            .ms,
+                  )
                   .fadeIn(duration: NekoMotion.base)
                   .slideY(
                     begin: 0.3,

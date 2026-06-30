@@ -60,19 +60,28 @@ class ColorSwatchCard extends StatelessWidget {
                       alignment: Alignment.center,
                       children: [
                         // A clear selection ring around (not on) the coat, so it
-                        // stays visible against any coat colour or gradient.
-                        if (isSelected)
-                          Container(
-                            width: 64,
-                            height: 64,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.primary,
-                                width: 3,
+                        // stays visible against any coat colour or gradient. It
+                        // grows + fades in with the card tint rather than popping.
+                        AnimatedScale(
+                          scale: isSelected ? 1.0 : 0.85,
+                          duration: NekoMotion.fast,
+                          curve: NekoMotion.standardCurve,
+                          child: AnimatedOpacity(
+                            opacity: isSelected ? 1.0 : 0.0,
+                            duration: NekoMotion.fast,
+                            child: Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primary,
+                                  width: 3,
+                                ),
                               ),
                             ),
                           ),
+                        ),
                         Container(
                           width: 56,
                           height: 56,

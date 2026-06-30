@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/neko_motion.dart';
 import '../../../../shared/services/feedback_service.dart';
 import '../../data/avatar_presets.dart';
 import '../../providers/onboarding_provider.dart';
@@ -61,28 +63,42 @@ class AvatarPickerSheet extends ConsumerWidget {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 20,
-                  crossAxisSpacing: 20,
+              child: AnimationLimiter(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 20,
+                    crossAxisSpacing: 20,
+                  ),
+                  itemCount: AvatarPresets.ids.length,
+                  itemBuilder: (context, index) {
+                    final String id = AvatarPresets.ids[index];
+                    final Widget tile = _AvatarTile(
+                      id: id,
+                      index: index,
+                      selected: selected == id,
+                      onTap: () {
+                        unawaited(
+                          ref.read(feedbackServiceProvider).onSelect(),
+                        );
+                        ref
+                            .read(onboardingNotifierProvider.notifier)
+                            .setAvatarPreset(id);
+                        Navigator.of(context).pop();
+                      },
+                    );
+                    if (MediaQuery.disableAnimationsOf(context)) return tile;
+                    return AnimationConfiguration.staggeredGrid(
+                      position: index,
+                      columnCount: 3,
+                      duration: NekoMotion.entry,
+                      child: ScaleAnimation(
+                        scale: 0.92,
+                        child: FadeInAnimation(child: tile),
+                      ),
+                    );
+                  },
                 ),
-                itemCount: AvatarPresets.ids.length,
-                itemBuilder: (context, index) {
-                  final String id = AvatarPresets.ids[index];
-                  return _AvatarTile(
-                    id: id,
-                    index: index,
-                    selected: selected == id,
-                    onTap: () {
-                      unawaited(ref.read(feedbackServiceProvider).onSelect());
-                      ref
-                          .read(onboardingNotifierProvider.notifier)
-                          .setAvatarPreset(id);
-                      Navigator.of(context).pop();
-                    },
-                  );
-                },
               ),
             ),
           ],

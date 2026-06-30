@@ -39,6 +39,7 @@ class _AnimatedContinueButtonState extends State<AnimatedContinueButton> {
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     return NekoButton.primary(
           label: widget.label,
           enabled: widget.enabled,
@@ -48,9 +49,11 @@ class _AnimatedContinueButtonState extends State<AnimatedContinueButton> {
         )
         .animate(key: ValueKey<int>(_enablePulse))
         .scaleXY(
-          begin: widget.enabled ? 0.95 : 1.0,
+          // Pop only on a real disabled->enabled edge (pulse > 0) — never when a
+          // step opens already-satisfied, and never under reduce-motion.
+          begin: (reduceMotion || _enablePulse == 0) ? 1.0 : 0.95,
           end: 1.0,
-          duration: NekoMotion.quick,
+          duration: reduceMotion ? Duration.zero : NekoMotion.quick,
           curve: NekoMotion.pop,
         );
   }

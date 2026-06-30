@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../core/neko_motion.dart';
 import '../../../shared/motion/page_transitions.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_dialog.dart';
@@ -37,7 +38,7 @@ class OnboardingFlowView extends ConsumerStatefulWidget {
 }
 
 class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
-  int _lastStep = 1;
+  bool _forward = true;
   bool _completing = false;
   final ConfettiController _confetti = ConfettiController(
     duration: const Duration(milliseconds: 1200),
@@ -138,10 +139,17 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
 
     // Re-skin the onboarding chrome live as coat selection changes the theme.
     ref.watch(themeControllerProvider);
+    // Track step direction on real step changes only, so a theme-driven rebuild
+    // mid-transition can't flip the slide direction.
+    ref.listen<int>(onboardingNotifierProvider.select((s) => s.step), (
+      previous,
+      next,
+    ) {
+      if (previous != null) _forward = next >= previous;
+    });
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     final state = ref.watch(onboardingNotifierProvider);
     final StepConfig config = stepConfigOf(state);
-    final bool forward = state.step >= _lastStep;
-    _lastStep = state.step;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -165,15 +173,27 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                     const SizedBox(height: 16),
                     Expanded(
                       child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 260),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeOutCubic,
+                        duration: reduceMotion
+                            ? Duration.zero
+                            : NekoMotion.entry,
+                        switchInCurve: NekoMotion.enter,
+                        switchOutCurve: NekoMotion.enter,
                         transitionBuilder: (child, animation) {
+                          if (reduceMotion) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          }
                           final bool incoming =
                               child.key == ValueKey<int>(state.step);
+                          // A short directional nudge (~12% of width) + cross-
+                          // fade, in step with the app's fade-through language —
+                          // not a full-width fling. The switch curve eases it.
+                          const double mag = 0.12;
                           final double begin = incoming
-                              ? (forward ? 1 : -1)
-                              : (forward ? -1 : 1);
+                              ? (_forward ? mag : -mag)
+                              : (_forward ? -mag : mag);
                           return FadeTransition(
                             opacity: animation,
                             child: SlideTransition(
@@ -181,7 +201,7 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                                 Tween<Offset>(
                                   begin: Offset(begin, 0),
                                   end: Offset.zero,
-                                ).chain(CurveTween(curve: Curves.easeOutCubic)),
+                                ),
                               ),
                               child: child,
                             ),
@@ -189,15 +209,17 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
                         },
                         child: KeyedSubtree(
                           key: ValueKey<int>(state.step),
-                          child: switch (state.step) {
-                            1 => const NameStep(),
-                            2 => const PhotoStep(),
-                            3 => const BreedStep(),
-                            4 => const AgeStep(),
-                            5 => const WeightStep(),
-                            6 => const CoatColorStep(),
-                            _ => const ActivityStep(),
-                          },
+                          child: RepaintBoundary(
+                            child: switch (state.step) {
+                              1 => const NameStep(),
+                              2 => const PhotoStep(),
+                              3 => const BreedStep(),
+                              4 => const AgeStep(),
+                              5 => const WeightStep(),
+                              6 => const CoatColorStep(),
+                              _ => const ActivityStep(),
+                            },
+                          ),
                         ),
                       ),
                     ),

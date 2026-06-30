@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
+import '../../../../core/neko_motion.dart';
 
 /// Thin coral progress bar whose fill width animates as the step changes.
 class OnboardingProgressBar extends StatelessWidget {
@@ -17,8 +18,10 @@ class OnboardingProgressBar extends StatelessWidget {
         height: 8,
         color: AppColors.cloudGray,
         child: AnimatedFractionallySizedBox(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : NekoMotion.standard,
+          curve: NekoMotion.standardCurve,
           alignment: Alignment.centerLeft,
           widthFactor: fraction.clamp(0.0, 1.0),
           child: DecoratedBox(

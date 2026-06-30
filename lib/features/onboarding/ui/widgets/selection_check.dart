@@ -14,6 +14,7 @@ class SelectionCheck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     return Container(
           width: size,
           height: size,
@@ -28,11 +29,13 @@ class SelectionCheck extends StatelessWidget {
           ),
         )
         .animate(target: visible ? 1 : 0)
+        // Give the spring room to settle — 150ms clipped the overshoot; the
+        // fade stays quick so it appears promptly while the scale plays out.
         .scaleXY(
           begin: 0,
           end: 1,
-          duration: NekoMotion.fast,
-          curve: NekoMotion.pop,
+          duration: reduceMotion ? NekoMotion.fast : NekoMotion.standard,
+          curve: reduceMotion ? NekoMotion.standardCurve : NekoMotion.pop,
         )
         .fade(begin: 0, end: 1, duration: NekoMotion.fast);
   }
