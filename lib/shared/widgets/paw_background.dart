@@ -29,7 +29,7 @@ class _PawBackgroundState extends State<PawBackground>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 40),
-  )..repeat();
+  );
 
   // The paw artwork, decoded once and reused for every tile. Null until the
   // asset finishes loading; we just paint the plain amber fill until then.
@@ -39,6 +39,18 @@ class _PawBackgroundState extends State<PawBackground>
   void initState() {
     super.initState();
     _loadPaw();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Respect the OS reduce-motion setting: freeze the drift when it's on,
+    // otherwise keep the slow diagonal loop running.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   Future<void> _loadPaw() async {

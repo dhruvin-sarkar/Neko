@@ -144,7 +144,18 @@ class _TypingDotsState extends State<_TypingDots>
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
-  )..repeat();
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Pulse only when motion is allowed; otherwise hold still for static dots.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _c.stop();
+    } else if (!_c.isAnimating) {
+      _c.repeat();
+    }
+  }
 
   @override
   void dispose() {
@@ -156,7 +167,6 @@ class _TypingDotsState extends State<_TypingDots>
   Widget build(BuildContext context) {
     // Respect the OS "reduce motion" setting: show static dots, not the pulse.
     if (MediaQuery.disableAnimationsOf(context)) {
-      if (_c.isAnimating) _c.stop();
       return SizedBox(
         height: 18,
         child: Row(

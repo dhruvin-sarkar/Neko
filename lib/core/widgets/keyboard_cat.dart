@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
+import '../neko_motion.dart';
+
 /// Wraps the app and shows a little cat peeking just above the soft keyboard
 /// whenever it's open (i.e. while typing). It slides in on appear and out on
 /// dismiss, and is wrapped in an [IgnorePointer] so it never intercepts taps on
@@ -63,13 +65,13 @@ class _KeyboardCatState extends State<KeyboardCat>
               offset: keyboardOpen ? Offset.zero : const Offset(0, 0.6),
               duration: _reduceMotion
                   ? Duration.zero
-                  : Duration(milliseconds: keyboardOpen ? 200 : 150),
-              curve: keyboardOpen ? Curves.easeOut : Curves.easeIn,
+                  : (keyboardOpen ? NekoMotion.quick : NekoMotion.fast),
+              curve: keyboardOpen ? NekoMotion.enter : Curves.easeIn,
               child: AnimatedOpacity(
                 opacity: keyboardOpen ? 1 : 0,
                 duration: _reduceMotion
                     ? Duration.zero
-                    : Duration(milliseconds: keyboardOpen ? 200 : 150),
+                    : (keyboardOpen ? NekoMotion.quick : NekoMotion.fast),
                 // Peeks from the far right, above the keyboard, big enough to
                 // read but kept off the centre so it never covers what you type.
                 child: Align(

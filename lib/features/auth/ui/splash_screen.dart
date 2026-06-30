@@ -14,31 +14,37 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final Widget wordmark = Text(
+      'Neko',
+      style: AppTextStyles.displayLarge.copyWith(
+        fontSize: 56,
+        color: AppColors.darkBanner,
+      ),
+    );
+    const Widget loader = NekoLoader(size: 72);
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-                  'Neko',
-                  style: AppTextStyles.displayLarge.copyWith(
-                    fontSize: 56,
-                    color: AppColors.darkBanner,
-                  ),
-                )
-                .animate()
-                .scaleXY(
-                  begin: 0.7,
-                  end: 1.0,
-                  duration: 500.ms,
-                  curve: Curves.elasticOut,
-                )
-                .fadeIn(duration: 300.ms),
+            // Under reduce-motion just fade in; otherwise the wordmark springs.
+            reduceMotion
+                ? wordmark.animate().fadeIn(duration: 300.ms)
+                : wordmark
+                      .animate()
+                      .scaleXY(
+                        begin: 0.7,
+                        end: 1.0,
+                        duration: 500.ms,
+                        curve: Curves.elasticOut,
+                      )
+                      .fadeIn(duration: 300.ms),
             const SizedBox(height: 28),
-            const NekoLoader(
-              size: 72,
-            ).animate(delay: 250.ms).fadeIn(duration: 300.ms),
+            reduceMotion
+                ? loader.animate().fadeIn(duration: 300.ms)
+                : loader.animate(delay: 250.ms).fadeIn(duration: 300.ms),
           ],
         ),
       ),
