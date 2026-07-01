@@ -81,7 +81,24 @@ class AuthRepository {
         );
       }
       final String displayName = _displayNameFromEmail(email);
-      await user.updateDisplayName(displayName);
+      // `updateDisplayName` trips the same firebase_auth_platform_interface
+      // 7.3.0 `PigeonUserDetails` decode bug that `_runAuth` already tolerates
+      // for the sign-in call: the native update succeeds (the name is set on the
+      // backend and written to Firestore on the next line), but decoding the
+      // returned user details throws a type-cast error. Account creation has
+      // already succeeded above, so a spurious decode error here must not fail
+      // it. A real `FirebaseAuthException` still propagates.
+      try {
+        await user.updateDisplayName(displayName);
+      } on FirebaseAuthException {
+        rethrow;
+      } on Object catch (e, st) {
+        AppLogger.warning(
+          'Ignored display-name decode bug after successful registration',
+          e,
+          st,
+        );
+      }
       await _ensureUserDocument(user, displayName: displayName);
     } on FirebaseAuthException catch (e, st) {
       throw _mapAuthError(e, st);

@@ -9,8 +9,8 @@ import '../utils/logger.dart';
 ///
 /// Each value maps to a clip under `assets/sounds/` (see [_assets]). The set is
 /// the single source of truth for "what sounds exist" — widgets reference a
-/// [SoundId], never a path. [catPurrLoop] is the one looping clip; play it with
-/// [AudioService.startPurr]/[AudioService.stopPurr], not [AudioService.playSound].
+/// [SoundId], never a path. [catPurrLoop] and [cottagecoreLoop] are the two
+/// looping clips; drive them with the ambient/music controls, not [playSound].
 enum SoundId {
   catMeowGreet,
   catMeowSuccess,
@@ -38,6 +38,9 @@ enum SoundId {
   cameraShutter,
   uploadDone,
   saveConfirm,
+
+  /// The continuous cottagecore background-music loop (its own volume channel).
+  cottagecoreLoop,
 }
 
 /// The app's single sound engine: one low-latency [AudioPlayer] per clip,
@@ -58,6 +61,10 @@ class AudioService {
   /// Loudest the ambient purr may ever get.
   static const double _maxAmbient = 0.7;
 
+  /// Loudest the background music may ever get — capped low so it stays a gentle,
+  /// non-intrusive backdrop.
+  static const double _maxMusic = 0.5;
+
   static double _sfxVolume = 1.0;
   static double _ambientVolume = 0.4;
   static bool _muted = false;
@@ -74,11 +81,17 @@ class AudioService {
   static Timer? _purrFade;
   static AppLifecycleListener? _lifecycle;
 
+  // Background-music state (the continuous cottagecore loop).
+  static bool _musicStarted = false;
+  static double _musicVolume = 0.15;
+  static double _musicCurrent = 0;
+  static Timer? _musicFade;
+
   /// Clip filenames, relative to `assets/` (audioplayers' default prefix).
   ///
-  /// Nine real clips ship under `assets/sounds/`. Every [SoundId] resolves to
-  /// one of them: IDs without a dedicated clip reuse a sensible stand-in (the
-  /// primary tap for UI sounds, the success meow for positive moments), so every
+  /// The bundled clips are cat vocals plus one background-music loop. IDs
+  /// without a dedicated clip reuse a sensible stand-in — the short cat chirp for
+  /// UI taps/toggles, the success meow for positive moments — so every
   /// interaction is audible. Drop more clips in and point their IDs here.
   static const Map<SoundId, String> _assets = <SoundId, String>{
     // Cat vocals.
@@ -89,21 +102,23 @@ class AudioService {
     SoundId.catPurrLoop: 'sounds/sfx_cat_purr_loop.mp3',
     SoundId.catMeowNotif: 'sounds/sfx_cat_meow_notif.mp3',
     SoundId.notchPing: 'sounds/sfx_cat_meow_notif.mp3',
-    // Taps, navigation and sheet/notch UI — reuse the primary tap clip.
-    SoundId.btnTapPrimary: 'sounds/sfx_toggle.mp3',
-    SoundId.btnTapSoft: 'sounds/sfx_toggle.mp3',
-    SoundId.selectOption: 'sounds/sfx_toggle.mp3',
-    SoundId.progressTick: 'sounds/sfx_toggle.mp3',
-    SoundId.cameraShutter: 'sounds/sfx_toggle.mp3',
-    SoundId.swipeForward: 'sounds/sfx_toggle.mp3',
-    SoundId.swipeBack: 'sounds/sfx_toggle.mp3',
-    SoundId.sheetOpen: 'sounds/sfx_toggle.mp3',
-    SoundId.sheetClose: 'sounds/sfx_toggle.mp3',
-    SoundId.notchExpand: 'sounds/sfx_toggle.mp3',
-    SoundId.notchCollapse: 'sounds/sfx_toggle.mp3',
-    SoundId.navTap: 'sounds/sfx_nav_tap.wav',
-    SoundId.toggle: 'sounds/sfx_toggle.mp3',
-    SoundId.wrong: 'sounds/sfx_toggle.mp3',
+    // Continuous background music.
+    SoundId.cottagecoreLoop: 'sounds/freesound_community-cottagecore-17463.mp3',
+    // Taps, navigation and sheet/notch UI — reuse the short cat chirp.
+    SoundId.btnTapPrimary: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.btnTapSoft: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.selectOption: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.progressTick: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.cameraShutter: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.swipeForward: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.swipeBack: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.sheetOpen: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.sheetClose: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.notchExpand: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.notchCollapse: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.navTap: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.toggle: 'sounds/sfx_cat_chirp.mp3',
+    SoundId.wrong: 'sounds/sfx_cat_chirp.mp3',
     // Positive feedback — reuse the success meow.
     SoundId.correct: 'sounds/sfx_cat_meow_success.mp3',
     SoundId.celebrate: 'sounds/sfx_cat_meow_success.mp3',
@@ -112,12 +127,15 @@ class AudioService {
     SoundId.saveConfirm: 'sounds/sfx_cat_meow_success.mp3',
   };
 
-  /// Safety net for the two `.wav` clips: if a device can't decode the wav, fall
-  /// back to an mp3 so the sound still plays.
+  /// Safety net for the `.wav` clip: if a device can't decode the wav, fall back
+  /// to an mp3 so the sound still plays.
   static const Map<SoundId, String> _fallbackAssets = <SoundId, String>{
-    SoundId.navTap: 'sounds/sfx_toggle.mp3',
     SoundId.catMeowGreet: 'sounds/sfx_cat_meow_success.mp3',
   };
+
+  /// The two clips that loop rather than firing as one-shots.
+  static bool _isLoop(SoundId id) =>
+      id == SoundId.catPurrLoop || id == SoundId.cottagecoreLoop;
 
   /// Preloads every clip that exists. Call once from `main()` before `runApp`.
   /// Each clip is loaded independently, so one missing file never aborts the
@@ -125,8 +143,11 @@ class AudioService {
   static Future<void> init() async {
     if (_ready) return;
     for (final MapEntry<SoundId, String> clip in _assets.entries) {
-      final bool isLoop = clip.key == SoundId.catPurrLoop;
-      final AudioPlayer? player = await _prepare(clip.key, clip.value, isLoop);
+      final AudioPlayer? player = await _prepare(
+        clip.key,
+        clip.value,
+        _isLoop(clip.key),
+      );
       if (player != null) _players[clip.key] = player;
     }
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
@@ -152,7 +173,7 @@ class AudioService {
           isLoop ? ReleaseMode.loop : ReleaseMode.stop,
         );
         if (!isLoop) {
-          // Low latency is for one-shots; the looping purr uses the default
+          // Low latency is for one-shots; the looping clips use the default
           // media player, which loops reliably across platforms.
           await player.setPlayerMode(PlayerMode.lowLatency);
         }
@@ -171,9 +192,9 @@ class AudioService {
   }
 
   /// Plays a one-shot effect. Fire-and-forget: callers never await it. A no-op
-  /// when muted, before [init], for a missing clip, or for the purr loop.
+  /// when muted, before [init], for a missing clip, or for a looping clip.
   static Future<void> playSound(SoundId id) async {
-    if (_muted || !_ready || id == SoundId.catPurrLoop) return;
+    if (_muted || !_ready || _isLoop(id)) return;
     final AudioPlayer? player = _players[id];
     if (player == null) return;
     try {
@@ -233,17 +254,42 @@ class AudioService {
     );
   }
 
-  /// Mutes or unmutes all sound. Muting also fades out any active purr.
+  /// Starts the continuous background-music loop and gently fades it in to the
+  /// configured (deliberately tame) volume. Call once after [init], once the
+  /// saved volume has been applied. No-op if the clip isn't bundled or the loop
+  /// already started; starts silent when muted so unmuting brings it up.
+  static Future<void> startMusic() async {
+    if (!_ready || _musicStarted) return;
+    final AudioPlayer? player = _players[SoundId.cottagecoreLoop];
+    if (player == null) return;
+    _musicStarted = true;
+    try {
+      _musicCurrent = 0;
+      await player.setVolume(0);
+      await player.resume();
+    } on Object catch (e) {
+      AppLogger.warning('Background music failed to start', e);
+      _musicStarted = false;
+      return;
+    }
+    _rampMusic(_muted ? 0.0 : _musicVolume, const Duration(milliseconds: 2500));
+  }
+
+  /// Mutes or unmutes all sound. Muting fades out any active purr and ducks the
+  /// background music to silence (the loop keeps running so unmute is seamless).
   static void setMuted(bool value) {
     _muted = value;
     if (value && _purrPlaying) unawaited(stopPurr());
+    if (_musicStarted) {
+      _rampMusic(value ? 0.0 : _musicVolume, const Duration(milliseconds: 300));
+    }
   }
 
   /// Sets the one-shot effects volume (0.0–1.0) and applies it live.
   static void setSfxVolume(double value) {
     _sfxVolume = value.clamp(0.0, 1.0);
     for (final MapEntry<SoundId, AudioPlayer> entry in _players.entries) {
-      if (entry.key == SoundId.catPurrLoop) continue;
+      if (_isLoop(entry.key)) continue;
       unawaited(entry.value.setVolume(_sfxVolume));
     }
   }
@@ -253,6 +299,15 @@ class AudioService {
     _ambientVolume = value.clamp(0.0, _maxAmbient);
     if (_purrPlaying && !_muted) {
       _fadePurr(_ambientVolume, const Duration(milliseconds: 250));
+    }
+  }
+
+  /// Sets the background-music volume (0.0–[_maxMusic]) and eases to it if the
+  /// loop is playing and unmuted.
+  static void setMusicVolume(double value) {
+    _musicVolume = value.clamp(0.0, _maxMusic);
+    if (_musicStarted && !_muted) {
+      _rampMusic(_musicVolume, const Duration(milliseconds: 200));
     }
   }
 
@@ -285,14 +340,50 @@ class AudioService {
     });
   }
 
-  /// Pauses the purr while the app is backgrounded; resumes it on return.
+  /// Ramps the music player's volume from its current level to [target] over
+  /// [duration] (audioplayers has no native volume ramp).
+  static void _rampMusic(double target, Duration duration) {
+    final AudioPlayer? player = _players[SoundId.cottagecoreLoop];
+    if (player == null) return;
+    _musicFade?.cancel();
+    const int steps = 20;
+    final int stepMs = (duration.inMilliseconds / steps).round().clamp(1, 1000);
+    final double start = _musicCurrent;
+    final double delta = target - start;
+    int i = 0;
+    _musicFade = Timer.periodic(Duration(milliseconds: stepMs), (Timer timer) {
+      i++;
+      final double v = (start + delta * (i / steps)).clamp(0.0, 1.0);
+      _musicCurrent = v;
+      unawaited(player.setVolume(v));
+      if (i >= steps) {
+        timer.cancel();
+        _musicFade = null;
+        _musicCurrent = target;
+      }
+    });
+  }
+
+  /// Pauses the looping clips while the app is backgrounded; resumes on return.
   static void _onLifecycle(AppLifecycleState state) {
-    final AudioPlayer? player = _players[SoundId.catPurrLoop];
-    if (player == null || !_purrPlaying) return;
-    if (state == AppLifecycleState.resumed) {
-      if (!_muted) unawaited(player.resume());
-    } else {
-      unawaited(player.pause());
+    final bool foreground = state == AppLifecycleState.resumed;
+    final AudioPlayer? purr = _players[SoundId.catPurrLoop];
+    if (purr != null && _purrPlaying) {
+      if (foreground) {
+        if (!_muted) unawaited(purr.resume());
+      } else {
+        unawaited(purr.pause());
+      }
+    }
+    // The music loop pauses/resumes with the lifecycle; its volume already
+    // reflects the mute state, so no re-ducking is needed here.
+    final AudioPlayer? music = _players[SoundId.cottagecoreLoop];
+    if (music != null && _musicStarted) {
+      if (foreground) {
+        unawaited(music.resume());
+      } else {
+        unawaited(music.pause());
+      }
     }
   }
 
@@ -300,6 +391,8 @@ class AudioService {
   static Future<void> dispose() async {
     _purrFade?.cancel();
     _purrFade = null;
+    _musicFade?.cancel();
+    _musicFade = null;
     _lifecycle?.dispose();
     _lifecycle = null;
     for (final AudioPlayer player in _players.values) {
@@ -308,5 +401,6 @@ class AudioService {
     _players.clear();
     _ready = false;
     _purrPlaying = false;
+    _musicStarted = false;
   }
 }

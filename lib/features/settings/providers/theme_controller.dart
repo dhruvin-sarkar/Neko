@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -23,6 +24,7 @@ class ThemeController extends Notifier<NekoPalette> {
     final NekoPalette palette = NekoPalettes.byId(prefs.getString(_kThemeKey));
     // Apply immediately so the very first frame uses the saved theme.
     AppColors.palette = palette;
+    _applySystemOverlayStyle();
     return palette;
   }
 
@@ -31,6 +33,28 @@ class ThemeController extends Notifier<NekoPalette> {
     if (palette.id == state.id) return;
     AppColors.palette = palette;
     state = palette;
+    _applySystemOverlayStyle();
     await ref.read(sharedPreferencesProvider).setString(_kThemeKey, palette.id);
   }
+}
+
+/// Transparent status/nav bars with icon brightness that contrasts the active
+/// palette — light icons on the dark themes, dark icons on the light ones — so
+/// the system bars stay legible over both the app content and the notch pill.
+/// Re-applied on every theme change (see [ThemeController]).
+void _applySystemOverlayStyle() {
+  final Brightness iconBrightness = AppColors.isDark
+      ? Brightness.light
+      : Brightness.dark;
+  SystemChrome.setSystemUIOverlayStyle(
+    SystemUiOverlayStyle(
+      statusBarColor: const Color(0x00000000),
+      statusBarIconBrightness: iconBrightness, // Android
+      statusBarBrightness: AppColors.isDark
+          ? Brightness.dark
+          : Brightness.light, // iOS
+      systemNavigationBarColor: const Color(0x00000000),
+      systemNavigationBarIconBrightness: iconBrightness,
+    ),
+  );
 }

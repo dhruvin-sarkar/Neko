@@ -1,18 +1,25 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/neko_motion.dart';
+import 'cat_eared_icon.dart';
 
-/// The pill width (and the cat's travel track), shared by the state and the
-/// pill widget.
-const double _kPillWidth = 232;
+/// The pill's natural (max) width; it shrinks to fit unusually narrow screens.
+const double _kPillMaxWidth = 232;
+const double _kPillHeight = 64;
 
-/// The custom bottom navigation pill: a white rounded pill where the selected
-/// destination sits inside a filled coral circle (Duolingo-style). A little cat
-/// perches on top of the pill, above the active tab, and slides across when you
-/// switch tabs.
-class NekoNavPill extends StatefulWidget {
+/// Headroom above the pill so the selected tab's cat ears (which poke above the
+/// selection circle) are never clipped, spring overshoot included.
+const double _kEarHeadroom = 16;
+
+/// The custom bottom navigation pill: a white rounded pill (Duolingo-style)
+/// where the selected destination sits inside a filled coral circle that sprouts
+/// two coral cat ears above it.
+///
+/// Stateless — the ears use implicit animation, so no [AnimationController].
+class NekoNavPill extends StatelessWidget {
   const NekoNavPill({
     super.key,
     required this.selectedIndex,
@@ -31,76 +38,25 @@ class NekoNavPill extends StatefulWidget {
   final Key? settingsKey;
 
   @override
-  State<NekoNavPill> createState() => _NekoNavPillState();
-}
-
-class _NekoNavPillState extends State<NekoNavPill>
-    with SingleTickerProviderStateMixin {
-  static const double _catSize = 112;
-  // Centres of the three tabs within the pill (8px padding + spaceEvenly).
-  static const List<double> _tabCenters = <double>[50, 116, 182];
-
-  // Holds the cat at one settled frame so it perches on the pill, stationary.
-  late final AnimationController _cat = AnimationController(vsync: this);
-
-  @override
-  void initState() {
-    super.initState();
-    // Render the settled mid-frame from the first paint so the cat never
-    // flashes frame 0 before the Lottie composition finishes loading.
-    _cat.value = 0.5;
-  }
-
-  @override
-  void dispose() {
-    _cat.dispose();
-    super.dispose();
-  }
-
-  double get _catLeft => _tabCenters[widget.selectedIndex] - _catSize / 2;
-
-  @override
   Widget build(BuildContext context) {
-    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // Shrink to fit narrow devices; stay a centred island on wide ones.
+    final double width = math.min(
+      _kPillMaxWidth,
+      MediaQuery.sizeOf(context).width - 48,
+    );
     return SizedBox(
-      width: _kPillWidth,
-      // Room above the pill for the large, stationary perched cat.
-      height: 64 + 92,
-      child: Stack(
-        clipBehavior: Clip.none,
+      width: width,
+      height: _kPillHeight + _kEarHeadroom,
+      child: Align(
         alignment: Alignment.bottomCenter,
-        children: [
-          _NavPill(
-            selectedIndex: widget.selectedIndex,
-            onSelect: widget.onSelect,
-            homeKey: widget.homeKey,
-            chatKey: widget.chatKey,
-            settingsKey: widget.settingsKey,
-          ),
-          AnimatedPositioned(
-            // Arrive with the tab's selection circle (200ms); a gentle overshoot
-            // unless the OS asks for reduced motion.
-            duration: reduceMotion ? Duration.zero : NekoMotion.quick,
-            curve: reduceMotion ? Curves.linear : Curves.easeOutBack,
-            left: _catLeft,
-            bottom: 44,
-            child: IgnorePointer(
-              child: RepaintBoundary(
-                child: Lottie.asset(
-                  'assets/animations/loader_cat.json',
-                  controller: _cat,
-                  width: _catSize,
-                  height: _catSize,
-                  // Settle on a single mid-frame instead of looping.
-                  onLoaded: (composition) {
-                    _cat.duration = composition.duration;
-                    _cat.value = 0.5;
-                  },
-                ),
-              ),
-            ),
-          ),
-        ],
+        child: _NavPill(
+          width: width,
+          selectedIndex: selectedIndex,
+          onSelect: onSelect,
+          homeKey: homeKey,
+          chatKey: chatKey,
+          settingsKey: settingsKey,
+        ),
       ),
     );
   }
@@ -109,6 +65,7 @@ class _NekoNavPillState extends State<NekoNavPill>
 /// The rounded pill itself with its three destinations.
 class _NavPill extends StatelessWidget {
   const _NavPill({
+    required this.width,
     required this.selectedIndex,
     required this.onSelect,
     this.homeKey,
@@ -116,6 +73,7 @@ class _NavPill extends StatelessWidget {
     this.settingsKey,
   });
 
+  final double width;
   final int selectedIndex;
   final ValueChanged<int> onSelect;
   final Key? homeKey;
@@ -125,8 +83,8 @@ class _NavPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: _kPillWidth,
-      height: 64,
+      width: width,
+      height: _kPillHeight,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: AppColors.snowWhite,
@@ -190,6 +148,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     return Semantics(
       button: true,
       selected: selected,
@@ -198,7 +157,7 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: NekoMotion.quick,
+          duration: reduceMotion ? Duration.zero : NekoMotion.quick,
           curve: NekoMotion.standardCurve,
           width: 48,
           height: 48,
@@ -206,9 +165,13 @@ class _NavItem extends StatelessWidget {
             color: selected ? AppColors.primary : Colors.transparent,
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            selected ? selectedIcon : unselectedIcon,
+          child: CatEaredIcon(
+            icon: selected ? selectedIcon : unselectedIcon,
+            isSelected: selected,
             color: selected ? AppColors.textOnPrimary : AppColors.navInactive,
+            // Coral ears poke above the circle onto the white pill, so they
+            // read (the on-primary colour used before was white-on-white).
+            earColor: AppColors.primary,
             size: 26,
           ),
         ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/settings/providers/theme_controller.dart';
+import '../core/notch/overlay/notch_overlay_manager.dart';
 import '../core/widgets/keyboard_cat.dart';
 import '../shared/widgets/paw_background.dart';
 import 'router.dart';
@@ -26,8 +27,12 @@ class NekoApp extends ConsumerWidget {
       builder: (context, child) => Consumer(
         builder: (context, ref, _) {
           ref.watch(themeControllerProvider);
-          return PawBackground(
-            child: KeyboardCat(child: child ?? const SizedBox.shrink()),
+          // The notch pill floats above the app (and every route/dialog); the
+          // paw background + app sit beneath it.
+          return NotchOverlayManager(
+            child: PawBackground(
+              child: KeyboardCat(child: child ?? const SizedBox.shrink()),
+            ),
           );
         },
       ),

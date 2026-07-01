@@ -122,13 +122,17 @@ class SettingsScreen extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 1),
                         RepaintBoundary(
                           child: Lottie.asset(
                             'assets/animations/rainbow_cat.json',
-                            width: 124,
+                            width: 84,
                             height: 74,
                             fit: BoxFit.contain,
+                            // Hug the left of the box so the sprite sits right at
+                            // the end of the "Settings" text instead of being
+                            // centred with a wide transparent gap before it.
+                            alignment: Alignment.centerLeft,
                             repeat: !MediaQuery.disableAnimationsOf(context),
                           ),
                         ),
@@ -508,6 +512,14 @@ class _SoundCard extends ConsumerWidget {
             max: 0.7,
             enabled: soundOn,
             onChanged: controller.setAmbientVolume,
+          ),
+          _VolumeRow(
+            label: 'Music volume',
+            icon: Icons.music_note_rounded,
+            value: settings.musicVolume,
+            max: 0.5,
+            enabled: soundOn,
+            onChanged: controller.setMusicVolume,
           ),
         ],
       ),

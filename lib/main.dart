@@ -61,14 +61,11 @@ void main() {
         return;
       }
 
-      SystemChrome.setSystemUIOverlayStyle(
-        const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          systemNavigationBarColor: Colors.transparent,
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
-      );
+      // Edge-to-edge so Flutter draws into the status-bar zone where the Neko
+      // Notch pill lives. The transparent bars + palette-aware icon brightness
+      // are owned by ThemeController (applied on first build below and on every
+      // theme change), so dark themes get light icons and light ones dark icons.
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
       final SharedPreferences prefs = await SharedPreferences.getInstance();
 
@@ -98,6 +95,9 @@ void main() {
       // the app opens muted/at-volume and in the user's chosen theme.
       container.read(soundSettingsControllerProvider);
       container.read(themeControllerProvider);
+      // Kick off the continuous cottagecore background music (gentle fade-in;
+      // stays silent if the user has muted). Fire-and-forget — never blocks.
+      unawaited(AudioService.startMusic());
 
       runApp(
         UncontrolledProviderScope(container: container, child: const NekoApp()),

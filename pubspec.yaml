@@ -77,6 +77,11 @@ dependencies:
 
   # Logging
   logger: ^2.4.0
+  live_activities: ^2.4.9
+  speech_to_text: ^7.4.0
+  flutter_tts: ^4.2.5
+  permission_handler: ^12.0.3
+  sensors_plus: ^7.1.0
 
 dev_dependencies:
   flutter_test:

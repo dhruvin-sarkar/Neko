@@ -25,7 +25,9 @@ android {
         applicationId = "com.example.neko"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // live_activities' RemoteViews notifications need API 24+; never drop
+        // below whatever Flutter/other plugins already require.
+        minSdk = maxOf(24, flutter.minSdkVersion)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -37,6 +39,16 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+}
+
+// live_activities pins firebase-messaging:24.0.0, which drags firebase-common up
+// to 21.0.0 and duplicates com.google.firebase.Timestamp against this project's
+// firebase-firestore 24.11.0 (Firebase BoM 32.8.0). Pin messaging back to the
+// BoM's 23.4.1 so firebase-common stays 20.4.3 and the Firebase set stays aligned.
+configurations.all {
+    resolutionStrategy {
+        force("com.google.firebase:firebase-messaging:23.4.1")
     }
 }
 

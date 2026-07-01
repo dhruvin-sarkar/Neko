@@ -7,6 +7,7 @@ import '../../onboarding/data/onboarding_persistence.dart';
 const String _kMutedKey = 'sound_muted';
 const String _kSfxVolumeKey = 'sound_sfx_volume';
 const String _kAmbientVolumeKey = 'sound_ambient_volume';
+const String _kMusicVolumeKey = 'sound_music_volume';
 
 /// The user's sound preferences: master mute, effects volume, and the ambient
 /// "purring" volume. Immutable; mutate through [SoundSettingsController].
@@ -16,6 +17,7 @@ class SoundSettings {
     required this.muted,
     required this.sfxVolume,
     required this.ambientVolume,
+    required this.musicVolume,
   });
 
   /// When true, every sound is silenced.
@@ -24,17 +26,23 @@ class SoundSettings {
   /// One-shot effects volume, 0.0–1.0.
   final double sfxVolume;
 
-  /// Ambient purr volume, 0.0–0.3 (kept low so it stays a background texture).
+  /// Ambient purr volume, 0.0–0.7 (kept low so it stays a background texture).
   final double ambientVolume;
+
+  /// Cottagecore background-music volume, 0.0–0.5 (kept tame so it never
+  /// intrudes on the experience).
+  final double musicVolume;
 
   SoundSettings copyWith({
     bool? muted,
     double? sfxVolume,
     double? ambientVolume,
+    double? musicVolume,
   }) => SoundSettings(
     muted: muted ?? this.muted,
     sfxVolume: sfxVolume ?? this.sfxVolume,
     ambientVolume: ambientVolume ?? this.ambientVolume,
+    musicVolume: musicVolume ?? this.musicVolume,
   );
 }
 
@@ -55,11 +63,13 @@ class SoundSettingsController extends Notifier<SoundSettings> {
       muted: prefs.getBool(_kMutedKey) ?? false,
       sfxVolume: prefs.getDouble(_kSfxVolumeKey) ?? 1.0,
       ambientVolume: prefs.getDouble(_kAmbientVolumeKey) ?? 0.4,
+      musicVolume: prefs.getDouble(_kMusicVolumeKey) ?? 0.15,
     );
     // Push the saved preference into the engine straight away.
     AudioService.setMuted(settings.muted);
     AudioService.setSfxVolume(settings.sfxVolume);
     AudioService.setAmbientVolume(settings.ambientVolume);
+    AudioService.setMusicVolume(settings.musicVolume);
     return settings;
   }
 
@@ -85,5 +95,13 @@ class SoundSettingsController extends Notifier<SoundSettings> {
     state = state.copyWith(ambientVolume: v);
     AudioService.setAmbientVolume(v);
     await ref.read(sharedPreferencesProvider).setDouble(_kAmbientVolumeKey, v);
+  }
+
+  /// Sets the cottagecore background-music volume (0.0–0.5).
+  Future<void> setMusicVolume(double value) async {
+    final double v = value.clamp(0.0, 0.5);
+    state = state.copyWith(musicVolume: v);
+    AudioService.setMusicVolume(v);
+    await ref.read(sharedPreferencesProvider).setDouble(_kMusicVolumeKey, v);
   }
 }

@@ -163,7 +163,7 @@ class _DocumentsProviderElement
 }
 
 String _$documentActionControllerHash() =>
-    r'da9a4de1fe1080e7dcf71d498961793a7aba5d3a';
+    r'9eaa2eda728ae629fc86a3e3e7c48165afaf878e';
 
 /// Drives document upload/delete actions and exposes progress as [AsyncValue].
 ///
