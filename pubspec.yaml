@@ -77,7 +77,10 @@ dependencies:
 
   # Logging
   logger: ^2.4.0
-  live_activities: ^2.4.9
+
+  # Neko Notch: true Android draw-over-other-apps system overlay, rendered by a
+  # separate Flutter engine so the notch survives the app closing.
+  flutter_overlay_window: ^0.4.5
   speech_to_text: ^7.4.0
   flutter_tts: ^4.2.5
   permission_handler: ^12.0.3

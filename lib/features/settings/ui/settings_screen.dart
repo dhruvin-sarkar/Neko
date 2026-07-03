@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../app/app_info.dart';
+import '../../../core/notch/controller/notch_controller.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/neko_palette.dart';
@@ -152,6 +153,8 @@ class SettingsScreen extends ConsumerWidget {
                             const _ThemeCard(),
                             const SizedBox(height: 16),
                             const _SoundCard(),
+                            const SizedBox(height: 16),
+                            const _NotchCard(),
                             const SizedBox(height: 16),
                             const _AboutCard(),
                           ],
@@ -365,6 +368,85 @@ class _AccountCard extends StatelessWidget {
                 ],
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The single notch setting: a switch that turns the top-of-screen live
+/// activity notch on or off (and requests the permissions it needs).
+class _NotchCard extends ConsumerStatefulWidget {
+  const _NotchCard();
+
+  @override
+  ConsumerState<_NotchCard> createState() => _NotchCardState();
+}
+
+class _NotchCardState extends ConsumerState<_NotchCard> {
+  bool _enabled = false;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _enabled = ref.read(notchControllerProvider.notifier).isEnabled;
+  }
+
+  Future<void> _toggle(bool value) async {
+    if (_busy) return;
+    setState(() {
+      _enabled = value;
+      _busy = true;
+    });
+    unawaited(ref.read(feedbackServiceProvider).onSelect());
+    await ref.read(notchControllerProvider.notifier).setEnabled(value);
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(themeControllerProvider);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.selectedFill,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.crop_16_9_rounded, color: AppColors.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Neko notch', style: AppTextStyles.bodyLarge),
+                const SizedBox(height: 2),
+                Text(
+                  _enabled
+                      ? 'Live activities, music & notifications up top'
+                      : 'Off',
+                  style: AppTextStyles.caption,
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: _enabled,
+            activeThumbColor: AppColors.primary,
+            onChanged: _busy ? null : _toggle,
           ),
         ],
       ),

@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/neko_app.dart';
 import 'core/neko_motion.dart';
+import 'core/notch/overlay/notch_overlay_entry.dart';
 import 'core/services/audio_service.dart';
 import 'core/services/local_storage_service.dart';
 import 'core/utils/logger.dart';
@@ -107,6 +108,20 @@ void main() {
       AppLogger.error('Uncaught zone error', error, stack);
     },
   );
+}
+
+/// Entry point for the notch overlay's separate Flutter engine.
+/// `flutter_overlay_window` launches the top-level function named `overlayMain`
+/// in the overlay isolate; it must stay in the default entrypoint library and
+/// be kept by the tree-shaker via the pragma.
+@pragma('vm:entry-point')
+void overlayMain() => runNotchOverlay();
+
+/// Entry point for the tiny Flutter engine the native boot service starts after
+/// a reboot; it re-shows the overlay from persisted state, then stops itself.
+@pragma('vm:entry-point')
+void notchBootMain() {
+  unawaited(runNotchBoot());
 }
 
 /// A minimal fallback shown when the app can't initialise its backend (e.g. a
