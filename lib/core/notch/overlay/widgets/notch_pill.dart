@@ -46,6 +46,8 @@ class _NotchPillState extends State<NotchPill>
   NotchTheme _theme = NotchTheme.fallback;
   double _topInset = 28;
   bool _expanded = false;
+  bool _idleEmpty = false;
+  Timer? _idleEmptyTimer;
   int _shownIndex = 0;
   int _cycleDir = 1;
 
@@ -89,6 +91,7 @@ class _NotchPillState extends State<NotchPill>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
+    _idleEmptyTimer?.cancel();
     _expand.dispose();
     _pawDrift.dispose();
     for (final Timer t in _dismissTimers.values) {
@@ -118,6 +121,7 @@ class _NotchPillState extends State<NotchPill>
   }
 
   void _push(NotchActivity activity) {
+    _hideIdleEmpty(animate: false);
     setState(() {
       _stack.removeWhere((NotchActivity a) => a.key == activity.key);
       _stack.add(activity);
@@ -161,6 +165,7 @@ class _NotchPillState extends State<NotchPill>
       t.cancel();
     }
     _dismissTimers.clear();
+    _hideIdleEmpty(animate: false);
     setState(() {
       _stack.clear();
       _expanded = false;
@@ -201,6 +206,56 @@ class _NotchPillState extends State<NotchPill>
 
   void _toggleExpanded() => _setExpanded(!_expanded);
 
+  void _showIdleEmpty() {
+    if (_primary != null || _idleEmpty) return;
+    setState(() => _idleEmpty = true);
+    _idleEmptyTimer?.cancel();
+    _idleEmptyTimer = Timer(const Duration(seconds: 5), () => _hideIdleEmpty());
+    _applyWindow(force: true);
+    _applyFlag();
+    _expand.forward(from: 0);
+  }
+
+  void _hideIdleEmpty({bool animate = true}) {
+    _idleEmptyTimer?.cancel();
+    if (!_idleEmpty) return;
+    setState(() => _idleEmpty = false);
+    if (animate) {
+      _expand.reverse();
+    } else {
+      _expand.value = 0;
+      _applyWindow(force: true);
+      _applyFlag();
+    }
+  }
+
+  void _onTap() {
+    if (_primary != null) {
+      _toggleExpanded();
+    } else if (_idleEmpty) {
+      _hideIdleEmpty();
+    } else {
+      _showIdleEmpty();
+    }
+  }
+
+  void _onVerticalDragEnd(DragEndDetails d) {
+    final double v = d.primaryVelocity ?? 0;
+    if (_primary != null) {
+      if (v > 80) {
+        _setExpanded(true);
+      } else if (v < -80) {
+        _setExpanded(false);
+      }
+      return;
+    }
+    if (v > 80) {
+      _showIdleEmpty();
+    } else if (v < -80) {
+      _hideIdleEmpty();
+    }
+  }
+
   void _cycle(int dir) {
     if (_stack.length < 2) return;
     setState(() {
@@ -224,7 +279,10 @@ class _NotchPillState extends State<NotchPill>
 
 
   void _onExpandStatus(AnimationStatus status) {
-    if (status == AnimationStatus.dismissed) _applyWindow();
+    if (status == AnimationStatus.dismissed) {
+      _applyWindow();
+      _applyFlag();
+    }
   }
 
   int get _idleH => NotchMetrics.idleContent + _topInset.round();
@@ -235,7 +293,7 @@ class _NotchPillState extends State<NotchPill>
   void _applyWindow({bool force = false}) {
     final _Win target;
     if (_primary == null) {
-      target = _Win.idle;
+      target = _idleEmpty || _expand.value > 0.001 ? _Win.compact : _Win.idle;
     } else if (_expanded || _expand.value > 0.001) {
       target = _Win.expanded;
     } else {
@@ -254,8 +312,10 @@ class _NotchPillState extends State<NotchPill>
   }
 
   void _applyFlag() {
+    final bool interactive =
+        _primary != null || _idleEmpty || _expand.value > 0.001;
     final OverlayFlag want =
-        _primary == null ? OverlayFlag.clickThrough : OverlayFlag.defaultFlag;
+        interactive ? OverlayFlag.defaultFlag : OverlayFlag.clickThrough;
     if (want == _flag) return;
     _flag = want;
     unawaited(FlutterOverlayWindow.updateFlag(want));
@@ -280,15 +340,8 @@ class _NotchPillState extends State<NotchPill>
         alignment: Alignment.topCenter,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: _toggleExpanded,
-          onVerticalDragEnd: (DragEndDetails d) {
-            final double v = d.primaryVelocity ?? 0;
-            if (v > 80) {
-              _setExpanded(true);
-            } else if (v < -80) {
-              _setExpanded(false);
-            }
-          },
+          onTap: _onTap,
+          onVerticalDragEnd: _onVerticalDragEnd,
           onHorizontalDragEnd: (DragEndDetails d) {
             final double v = d.primaryVelocity ?? 0;
             if (v < -80) {
@@ -307,13 +360,18 @@ class _NotchPillState extends State<NotchPill>
   }
 
   Widget _buildIsland() {
-    final bool idle = _primary == null;
+    final bool hasActivity = _primary != null;
+    final bool emptyExpanded = !hasActivity && (_idleEmpty || _expand.value > 0.001);
     final double t = _expandCurve.transform(_expand.value.clamp(0.0, 1.0));
-    final double width = (idle ? NotchMetrics.idleWidth : NotchMetrics.activeWidth).toDouble();
-    final double height = idle
-        ? _idleH.toDouble()
-        : (_compactH + (_expandedH - _compactH) * t);
-    final double radius = 14 + 18 * t; // 14 (tab) → 32 (drawer), bottom only
+    final double emptyT = emptyExpanded ? t : 0.0;
+    final double width = hasActivity
+        ? NotchMetrics.activeWidth.toDouble()
+        : NotchMetrics.idleWidth +
+            (NotchMetrics.activeWidth - NotchMetrics.idleWidth) * emptyT;
+    final double height = hasActivity
+        ? (_compactH + (_expandedH - _compactH) * t)
+        : _idleH + (_compactH - _idleH) * emptyT;
+    final double radius = 14 + 18 * (hasActivity ? t : emptyT);
 
     return Container(
       width: width,
@@ -323,9 +381,8 @@ class _NotchPillState extends State<NotchPill>
         color: _theme.background,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
       ),
-      child: idle
-          ? const SizedBox.shrink()
-          : Stack(
+      child: hasActivity
+          ? Stack(
               children: <Widget>[
                 if (_pawImage != null && _expand.value > 0.5)
                   Positioned.fill(
@@ -381,7 +438,45 @@ class _NotchPillState extends State<NotchPill>
                   ),
                 ),
               ],
+            )
+          : emptyExpanded
+              ? _IdleEmptyContent(theme: _theme, topInset: _topInset, opacity: emptyT)
+              : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _IdleEmptyContent extends StatelessWidget {
+  const _IdleEmptyContent({
+    required this.theme,
+    required this.topInset,
+    required this.opacity,
+  });
+
+  final NotchTheme theme;
+  final double topInset;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: opacity.clamp(0.0, 1.0),
+      child: Padding(
+        padding: EdgeInsets.only(top: topInset),
+        child: Center(
+          child: Text(
+            'Nothing to display',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: theme.subdued,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              height: 1.1,
             ),
+          ),
+        ),
+      ),
     );
   }
 }

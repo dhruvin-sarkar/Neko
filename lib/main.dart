@@ -11,7 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/neko_app.dart';
 import 'core/neko_motion.dart';
-import 'core/notch/overlay/notch_overlay_entry.dart';
+import 'core/Notch/overlay/notch_overlay_entry.dart';
 import 'core/services/audio_service.dart';
 import 'core/services/local_storage_service.dart';
 import 'core/utils/logger.dart';

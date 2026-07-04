@@ -92,8 +92,11 @@ class NotchController extends Notifier<NotchState> {
       }
       await _prefs.setBool(NotchPrefs.enabled, true);
       state = state.copyWith(enabled: true);
-      await _service.show();
+      await _service.show(restart: true);
       await syncTheme(force: true);
+      // Drop any activities left in the cached overlay engine (e.g. the Android
+      // System "displaying over other apps" nag) before we resync live state.
+      await _emit(const ClearCommand());
 
       final bool access = await _service.hasNotificationAccess();
       state = state.copyWith(hasNotificationAccess: access);
@@ -110,6 +113,7 @@ class NotchController extends Notifier<NotchState> {
       state = state.copyWith(enabled: false);
       _ongoing.clear();
       await _prefs.remove(NotchPrefs.restore);
+      await _emit(const ClearCommand());
       await _service.close();
     }
   }
@@ -217,6 +221,10 @@ class NotchController extends Notifier<NotchState> {
   }
 
   Future<void> _onNotificationEvent(Map<String, dynamic> event) async {
+    final String title = (event['title'] ?? '').toString();
+    final String packageLabel = (event['package'] ?? '').toString();
+    if (_isSystemOverlayNotification(packageLabel, title)) return;
+
     final String category = (event['category'] ?? '').toString();
     final bool ongoingFlag = event['ongoing'] == true;
     final double? prog = (event['progress'] as num?)?.toDouble();
@@ -253,6 +261,15 @@ class NotchController extends Notifier<NotchState> {
     } else {
       await _emit(PushActivityCommand(activity));
     }
+  }
+
+  bool _isSystemOverlayNotification(String packageLabel, String title) {
+    final String pkg = packageLabel.toLowerCase();
+    if (pkg == 'android system' || pkg == 'system ui') return true;
+    final String lower = title.toLowerCase();
+    return lower.contains('displaying over') ||
+        lower.contains('draw over') ||
+        lower.contains('display over');
   }
 
   Future<void> _onMediaEvent(Map<String, dynamic> event) async {

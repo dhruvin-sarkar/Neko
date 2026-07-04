@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/settings/providers/theme_controller.dart';
-import '../core/notch/controller/notch_controller.dart';
+import '../core/Notch/controller/notch_controller.dart';
 import '../core/widgets/keyboard_cat.dart';
 import '../shared/widgets/paw_background.dart';
 import 'router.dart';

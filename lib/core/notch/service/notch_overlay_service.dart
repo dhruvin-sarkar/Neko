@@ -78,8 +78,13 @@ class NotchOverlayService {
     }
   }
 
-  Future<void> show() async {
-    if (await FlutterOverlayWindow.isActive()) return;
+  Future<void> show({bool restart = false}) async {
+    if (await FlutterOverlayWindow.isActive()) {
+      if (!restart) return;
+      await FlutterOverlayWindow.closeOverlay();
+      // Let the cached overlay engine tear down before re-showing.
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
 
     final int idleWindow =
         NotchMetrics.idleContent + NotchMetrics.statusBarInset.round();

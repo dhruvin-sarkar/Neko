@@ -3,6 +3,7 @@ package com.example.neko
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
@@ -24,7 +25,17 @@ class BootReceiver : BroadcastReceiver() {
             return
         }
 
-        if (!canDrawOverlays(context) || !hasRestorableState(context)) return
+        val prefs = context.getSharedPreferences(
+            "FlutterSharedPreferences",
+            Context.MODE_PRIVATE,
+        )
+
+        if (!canDrawOverlays(context)) return
+        if (!prefs.getBoolean("flutter.notch_enabled", false) &&
+            !hasRestorableState(prefs)
+        ) {
+            return
+        }
 
         val serviceIntent = Intent(context, NotchBootService::class.java)
         ContextCompat.startForegroundService(context, serviceIntent)
@@ -35,11 +46,7 @@ class BootReceiver : BroadcastReceiver() {
 
     /// Mirrors NotchController: the restore payload lives under the Flutter
     /// SharedPreferences key "flutter.notch_restore".
-    private fun hasRestorableState(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(
-            "FlutterSharedPreferences",
-            Context.MODE_PRIVATE,
-        )
+    private fun hasRestorableState(prefs: SharedPreferences): Boolean {
         return !prefs.getString("flutter.notch_restore", null).isNullOrEmpty()
     }
 }

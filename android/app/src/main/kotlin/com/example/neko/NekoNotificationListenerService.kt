@@ -99,6 +99,7 @@ class NekoNotificationListenerService : NotificationListenerService() {
             ?: n.tickerText?.toString()
             ?: appLabel(sbn.packageName)
         if (title.isBlank()) return
+        if (shouldIgnoreNotification(sbn.packageName, title, n.category)) return
         val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
@@ -135,6 +136,36 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 "progress" to progress,
             ),
         )
+    }
+
+    /// Drops Android's overlay-permission nag and other system chrome that would
+    /// otherwise expand the idle pill after a disable/re-enable cycle.
+    private fun shouldIgnoreNotification(
+        packageName: String,
+        title: String,
+        category: String?,
+    ): Boolean {
+        if (packageName == "android" || packageName == "com.android.systemui") {
+            return true
+        }
+        val lower = title.lowercase()
+        if (lower.contains("displaying over") ||
+            lower.contains("draw over") ||
+            lower.contains("display over")
+        ) {
+            return true
+        }
+        if (category == Notification.CATEGORY_SYSTEM ||
+            category == Notification.CATEGORY_SERVICE
+        ) {
+            // System/service posts from non-user apps (e.g. overlay FGS nags).
+            if (packageName.startsWith("com.android.") ||
+                packageName.startsWith("android.")
+            ) {
+                return true
+            }
+        }
+        return false
     }
 
     /// Human-readable app name (e.g. "WhatsApp") rather than a raw package id.

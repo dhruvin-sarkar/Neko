@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../app/app_info.dart';
-import '../../../core/notch/controller/notch_controller.dart';
+import '../../../core/Notch/controller/notch_controller.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/neko_palette.dart';
@@ -385,21 +385,11 @@ class _NotchCard extends ConsumerStatefulWidget {
 }
 
 class _NotchCardState extends ConsumerState<_NotchCard> {
-  bool _enabled = false;
   bool _busy = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _enabled = ref.read(notchControllerProvider.notifier).isEnabled;
-  }
 
   Future<void> _toggle(bool value) async {
     if (_busy) return;
-    setState(() {
-      _enabled = value;
-      _busy = true;
-    });
+    setState(() => _busy = true);
     unawaited(ref.read(feedbackServiceProvider).onSelect());
     await ref.read(notchControllerProvider.notifier).setEnabled(value);
     if (mounted) setState(() => _busy = false);
@@ -408,6 +398,7 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
   @override
   Widget build(BuildContext context) {
     ref.watch(themeControllerProvider);
+    final bool enabled = ref.watch(notchControllerProvider).enabled;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -435,7 +426,7 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
                 Text('Neko notch', style: AppTextStyles.bodyLarge),
                 const SizedBox(height: 2),
                 Text(
-                  _enabled
+                  enabled
                       ? 'Live activities, music & notifications up top'
                       : 'Off',
                   style: AppTextStyles.caption,
@@ -444,7 +435,7 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
             ),
           ),
           Switch(
-            value: _enabled,
+            value: enabled,
             activeThumbColor: AppColors.primary,
             onChanged: _busy ? null : _toggle,
           ),

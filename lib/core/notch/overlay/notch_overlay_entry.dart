@@ -61,6 +61,10 @@ Future<void> runNotchBoot() async {
 
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
+    if (!(prefs.getBool(NotchPrefs.enabled) ?? false)) {
+      return;
+    }
+
     final NekoPalette palette = NekoPalettes.byId(
       prefs.getString('app_theme_palette'),
     );
