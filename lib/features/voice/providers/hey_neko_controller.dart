@@ -16,7 +16,6 @@ import '../../onboarding/models/cat_profile.dart';
 import '../../profiles/providers/profile_provider.dart';
 import '../../../shared/services/search_service.dart';
 import '../data/speech_service.dart';
-import '../data/tts_service.dart';
 
 /// What a spoken request wants — decided once, in [_route], on the final
 /// transcript, in priority order. Camera is checked first ("look at this, is it
@@ -118,7 +117,6 @@ class HeyNekoController extends Notifier<HeyNekoState> {
   bool _disposed = false;
 
   SpeechService get _speech => ref.read(speechServiceProvider);
-  TtsService get _tts => ref.read(ttsServiceProvider);
 
   @override
   HeyNekoState build() {
@@ -126,7 +124,6 @@ class HeyNekoController extends Notifier<HeyNekoState> {
       _disposed = true;
       _replySub?.cancel();
       unawaited(_speech.cancel());
-      unawaited(_tts.stop());
     });
     return const HeyNekoState();
   }
@@ -195,7 +192,6 @@ class HeyNekoController extends Notifier<HeyNekoState> {
     _replySub?.cancel();
     _replySub = null;
     await _speech.cancel();
-    await _tts.stop();
     await _removeActivity();
     if (_disposed) return;
     state = const HeyNekoState();
@@ -360,7 +356,6 @@ class HeyNekoController extends Notifier<HeyNekoState> {
             'Here are a few options I found:\n'
             '${results.map((SearchResult r) => '• ${r.title}').join('\n')}',
           );
-      unawaited(_tts.speak('Here are a few options I found.'));
       return;
     }
 
@@ -384,9 +379,6 @@ class HeyNekoController extends Notifier<HeyNekoState> {
     ref
         .read(chatControllerProvider.notifier)
         .appendVoiceTurn(_prompt, 'Tap the card to search the web for that.');
-    unawaited(
-      _tts.speak('I can look that up — tap the card to see web results.'),
-    );
   }
 
   /// The camera branch: snap a photo and run it through the exact same
@@ -506,7 +498,6 @@ class HeyNekoController extends Notifier<HeyNekoState> {
     );
     // Record the exchange so it shows in the chat transcript and history.
     ref.read(chatControllerProvider.notifier).appendVoiceTurn(_prompt, reply);
-    await _tts.speak(reply);
     if (_disposed) return;
     await _removeActivity();
     if (_disposed) return;

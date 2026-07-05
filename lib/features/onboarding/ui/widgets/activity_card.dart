@@ -32,8 +32,8 @@ class ActivityCard extends StatelessWidget {
         child: AnimatedContainer(
           duration: NekoMotion.fast,
           curve: NekoMotion.standardCurve,
-          height: 88,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          constraints: const BoxConstraints(minHeight: 88),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.primaryLight : AppColors.snowWhite,
             borderRadius: BorderRadius.circular(16),
@@ -51,6 +51,7 @@ class ActivityCard extends StatelessWidget {
                   ],
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: 48,
@@ -71,11 +72,13 @@ class ActivityCard extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(option.label, style: AppTextStyles.bodyLarge),
-                    const SizedBox(height: 2),
+                    Text(
+                      option.label,
+                      style: AppTextStyles.bodyLarge,
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       option.description,
                       style: AppTextStyles.bodyMedium.copyWith(

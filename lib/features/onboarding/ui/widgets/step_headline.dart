@@ -10,6 +10,14 @@ class StepHeadline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text, style: AppTextStyles.displayLarge);
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.25,
+      child: Text(
+        text,
+        style: AppTextStyles.displayLarge,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
   }
 }

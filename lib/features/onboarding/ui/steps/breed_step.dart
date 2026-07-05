@@ -238,6 +238,8 @@ class _CategoryChips extends StatelessWidget {
               ),
               child: Text(
                 c?.label ?? 'All',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: active
                       ? AppColors.textOnPrimary

@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/routes.dart';
 
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_responsive.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/neko_motion.dart';
 import '../../../shared/services/feedback_service.dart';
@@ -168,7 +169,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 8, 8),
+            padding: EdgeInsets.fromLTRB(
+              AppResponsive.horizontalPadding(context),
+              16,
+              8,
+              8,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -201,7 +207,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ? _EmptyState(onSelect: _selectPrompt)
                 : ListView.builder(
                     controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                    padding: EdgeInsets.fromLTRB(
+                      12,
+                      8,
+                      12,
+                      16,
+                    ),
                     itemCount: state.messages.length,
                     itemBuilder: (context, index) {
                       final ChatMessage m = state.messages[index];

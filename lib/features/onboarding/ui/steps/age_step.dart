@@ -74,7 +74,7 @@ class _AgeStepState extends ConsumerState<AgeStep> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         StepHeadline('How old is $display?'),
-        const SizedBox(height: 28),
+        const SizedBox(height: 24),
         Row(
           children: [
             Expanded(

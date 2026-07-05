@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_responsive.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/neko_motion.dart';
 import '../../../shared/services/feedback_service.dart';
@@ -27,7 +28,7 @@ class WelcomeScreen extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: AppResponsive.screenPadding(context),
           child: Column(
             children: [
               const Expanded(child: Center(child: _WelcomeMark())),

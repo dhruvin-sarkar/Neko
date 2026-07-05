@@ -37,7 +37,7 @@ class _NameStepState extends ConsumerState<NameStep> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const StepHeadline("What's your cat called?"),
-        const SizedBox(height: 28),
+        const SizedBox(height: 24),
         NekoTextField(
           controller: _controller,
           hint: 'Mochi, Luna, Whiskers...',

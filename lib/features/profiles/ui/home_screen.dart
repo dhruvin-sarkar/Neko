@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_responsive.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/neko_motion.dart';
 import '../../../core/providers/firebase_providers.dart';
@@ -62,7 +63,12 @@ class HomeScreen extends ConsumerWidget {
         controller: ref.read(homeScrollControllerProvider),
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            padding: EdgeInsets.fromLTRB(
+              AppResponsive.horizontalPadding(context),
+              16,
+              AppResponsive.horizontalPadding(context),
+              24,
+            ),
             sliver: SliverToBoxAdapter(
               child: MediaQuery.disableAnimationsOf(context)
                   ? HomeGreeting(
@@ -79,15 +85,19 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           ...cats.when(
-            loading: () => const [
+            loading: () => [
               SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppResponsive.horizontalPadding(context),
+                ),
                 sliver: SliverToBoxAdapter(child: CatBannerShimmer()),
               ),
             ],
             error: (_, _) => [
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppResponsive.horizontalPadding(context),
+                ),
                 sliver: SliverToBoxAdapter(
                   child: HomeErrorCard(
                     onRetry: () => ref.invalidate(catProfilesProvider),
@@ -95,7 +105,13 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ],
-            data: (list) => _catSlivers(list, openCat, addCat, tourKeys),
+            data: (list) => _catSlivers(
+              context,
+              list,
+              openCat,
+              addCat,
+              tourKeys,
+            ),
           ),
         ],
       ),
@@ -105,6 +121,7 @@ class HomeScreen extends ConsumerWidget {
 
 /// Builds the cat-list slivers for the data state.
 List<Widget> _catSlivers(
+  BuildContext context,
   List<CatProfile> cats,
   void Function(String) onOpenCat,
   VoidCallback onAddCat,
@@ -113,7 +130,12 @@ List<Widget> _catSlivers(
   if (cats.isEmpty) {
     return [
       SliverPadding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        padding: EdgeInsets.fromLTRB(
+          AppResponsive.horizontalPadding(context),
+          8,
+          AppResponsive.horizontalPadding(context),
+          24,
+        ),
         sliver: SliverToBoxAdapter(
           child: _EmptyCats(onAddCat: onAddCat, plusKey: tourKeys.addCatPlus),
         ),
@@ -160,7 +182,12 @@ List<Widget> _catSlivers(
       ),
     ),
     SliverPadding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      padding: EdgeInsets.fromLTRB(
+        AppResponsive.horizontalPadding(context),
+        24,
+        AppResponsive.horizontalPadding(context),
+        40,
+      ),
       sliver: SliverToBoxAdapter(
         child: AddCatSection(plusKey: tourKeys.addCatPlus, onTap: onAddCat),
       ),
