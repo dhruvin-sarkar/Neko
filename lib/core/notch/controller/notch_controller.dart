@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme/app_colors.dart';
@@ -89,7 +91,9 @@ class NotchController extends Notifier<NotchState> {
           AppLogger.warning('Notch event stream error', e, st),
     );
 
-    _overlaySub = FlutterOverlayWindow.overlayListener.listen(_onOverlayMessage);
+    _overlaySub = FlutterOverlayWindow.overlayListener.listen(
+      _onOverlayMessage,
+    );
 
     ref.onDispose(() {
       _eventsSub?.cancel();
@@ -116,6 +120,13 @@ class NotchController extends Notifier<NotchState> {
       }
       await _prefs.setBool(NotchPrefs.enabled, true);
       state = state.copyWith(enabled: true);
+      // Android 13+ gates the notch's foreground-service tray notification behind
+      // the runtime notification permission. Best-effort + non-blocking — the
+      // island still shows via SYSTEM_ALERT_WINDOW if it's denied, and
+      // permission_handler auto-grants on Android < 13.
+      if (Platform.isAndroid) {
+        await Permission.notification.request();
+      }
       await _service.show(restart: true);
       await syncTheme(force: true);
       // Drop any activities left in the cached overlay engine (e.g. the Android
@@ -150,7 +161,10 @@ class NotchController extends Notifier<NotchState> {
     _lastSyncedThemeId = id;
     await _service.send(
       NotchThemeCommand(
-        NotchThemeMapper.fromPalette(AppColors.palette, topInset: _statusBarDp()),
+        NotchThemeMapper.fromPalette(
+          AppColors.palette,
+          topInset: _statusBarDp(),
+        ),
       ),
     );
   }
@@ -173,8 +187,9 @@ class NotchController extends Notifier<NotchState> {
   Future<void> updateActivity(NotchActivity activity) async {
     if (activity.isOngoing) {
       final NotchActivity? existing = _ongoing[activity.key];
-      _ongoing[activity.key] =
-          existing == null ? activity : existing.mergedWith(activity);
+      _ongoing[activity.key] = existing == null
+          ? activity
+          : existing.mergedWith(activity);
       await _persistRestore();
     }
     await _emit(UpdateActivityCommand(activity));
@@ -258,13 +273,13 @@ class NotchController extends Notifier<NotchState> {
       }
     });
   }
+
   //clear
   Future<void> clear() async {
     _ongoing.clear();
     await _persistRestore();
     await _emit(const ClearCommand());
   }
-
 
   void _onOverlayMessage(Object? raw) {
     if (raw is! String) return;
@@ -320,12 +335,14 @@ class NotchController extends Notifier<NotchState> {
     };
     final bool ongoing = ongoingFlag || type != NotchActivityType.notification;
 
+    final String rawPkg = (event['packageId'] ?? '').toString();
     final NotchActivity activity = NotchActivity(
       type: type,
       id: (event['key'] ?? '').toString(),
       title: (event['title'] ?? '').toString(),
       subtitle: (event['body'] ?? '').toString(),
       appName: (event['package'] ?? '').toString(),
+      packageId: rawPkg.isEmpty ? null : rawPkg,
       progress: hasProgress ? prog : null,
       endsAtMs: type == NotchActivityType.timer && endsAtMs > 0
           ? endsAtMs
@@ -360,11 +377,13 @@ class NotchController extends Notifier<NotchState> {
   Future<void> _onMediaEvent(Map<String, dynamic> event) async {
     final int durMs = (event['duration'] as num?)?.toInt() ?? 0;
     final int posMs = (event['position'] as num?)?.toInt() ?? 0;
+    final String rawPkg = (event['packageId'] ?? '').toString();
     final NotchActivity music = NotchActivity(
       type: NotchActivityType.music,
       id: 'music',
       title: (event['title'] ?? '').toString(),
       subtitle: (event['artist'] ?? '').toString(),
+      packageId: rawPkg.isEmpty ? null : rawPkg,
       isPlaying: event['playing'] == true,
       progress: durMs > 0 ? (posMs / durMs).clamp(0.0, 1.0) : null,
       durationMs: durMs > 0 ? durMs : null,
@@ -379,7 +398,6 @@ class NotchController extends Notifier<NotchState> {
     );
   }
 
-  
   Future<void> _emit(NotchCommand command) async {
     if (!state.enabled) return;
     try {
@@ -395,7 +413,7 @@ class NotchController extends Notifier<NotchState> {
         await _service.show();
       }
       await syncTheme(force: true);
-     
+
       await _service.resync();
       final String? restore = _prefs.getString(NotchPrefs.restore);
       if (restore != null && restore.isNotEmpty) {
@@ -412,8 +430,7 @@ class NotchController extends Notifier<NotchState> {
               final bool expired =
                   a.type == NotchActivityType.timer &&
                   a.endsAtMs != null &&
-                  a.endsAtMs! <=
-                      DateTime.now().millisecondsSinceEpoch;
+                  a.endsAtMs! <= DateTime.now().millisecondsSinceEpoch;
               if (expired) {
                 dropped = true;
                 continue;

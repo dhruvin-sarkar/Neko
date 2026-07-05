@@ -8,12 +8,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show ByteData, MethodChannel, rootBundle;
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 
+import '../../../neko_motion.dart';
 import '../../model/notch_activity.dart';
 import '../../model/notch_command.dart';
 import '../../notch_channels.dart';
 import '../../service/notch_overlay_service.dart';
-import '../notch_sfx.dart';
 
 /// The Dynamic pill that lives in the overlay engine.
 
@@ -26,10 +27,6 @@ class NotchPill extends StatefulWidget {
 
 const Cubic _expandCurve = Cubic(0.22, 1.0, 0.36, 1.0);
 const Duration _expandDuration = Duration(milliseconds: 460);
-
-/// Transparent margin (dp) around the active pill, giving the accent lift-glow
-/// room to render outside the pill body without being clipped by the window.
-const int _glowPad = 18;
 
 enum _Win { idle, compact, expanded }
 
@@ -51,14 +48,53 @@ class _NotchPillState extends State<NotchPill>
     duration: const Duration(seconds: 40),
   );
 
+  /// 1 = present at the compact peek; 0 = the minimal idle pill. Drives the
+  /// grow-in on arrival and the melt on recede so neither is a one-frame snap.
+  /// Rests at 1 (steady compact) so every other state is unchanged.
+  late final AnimationController _presence = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 340),
+    value: 1,
+  )..addStatusListener(_onPresenceStatus);
+
+  /// A forward-only rubber-band settle fired when the card expands (0→1 once),
+  /// giving the expanded content a subtle overshoot like iOS's Dynamic Island.
+  late final AnimationController _settle = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  );
+
   NotchTheme _theme = NotchTheme.fallback;
   double _topInset = 28;
   bool _expanded = false;
   bool _reduceMotion = false;
   bool _idleEmpty = false;
+  // An activity is present but has receded to the minimal pill after its brief
+  // peek — tap to bring it back. Keeps the notch out of the way like Apple's
+  // Dynamic Island rather than sitting expanded forever.
+  bool _minimized = false;
   Timer? _idleEmptyTimer;
+  Timer? _recedeTimer;
+  static const Duration _peekDuration = Duration(seconds: 4);
   int _shownIndex = 0;
   int _cycleDir = 1;
+  // While cycling an EXPANDED card between activity types, hold the box at the
+  // taller of the two per-type heights for the cross-fade, so neither the
+  // outgoing nor the incoming card is clipped.
+  NotchActivityType? _cycleHoldType;
+  Timer? _cycleHoldTimer;
+
+  // Content-hugging compact width (Dynamic-Island style): the compact pill sizes
+  // to its ACTUAL content, not a fixed 212dp. Measured deterministically with a
+  // TextPainter (no layout round-trip → no flicker) and animated between values.
+  double _fromCompactW = NotchMetrics.activeWidth.toDouble();
+  double _toCompactW = NotchMetrics.activeWidth.toDouble();
+  TextScaler _textScaler = TextScaler.noScaling;
+  late final AnimationController _widthCtl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+    value: 1,
+  )..addStatusListener(_onWidthStatus);
 
   int _winW = NotchMetrics.idleWidth;
   int _winH = NotchMetrics.idleContent + 28;
@@ -83,7 +119,9 @@ class _NotchPillState extends State<NotchPill>
   Future<void> _loadPaw() async {
     try {
       final ByteData data = await rootBundle.load('assets/images/paw.png');
-      final ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final ui.Codec codec = await ui.instantiateImageCodec(
+        data.buffer.asUint8List(),
+      );
       final ui.FrameInfo frame = await codec.getNextFrame();
       if (mounted) setState(() => _pawImage = frame.image);
     } on Object {
@@ -101,8 +139,13 @@ class _NotchPillState extends State<NotchPill>
     WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
     _idleEmptyTimer?.cancel();
+    _recedeTimer?.cancel();
+    _cycleHoldTimer?.cancel();
     _expand.dispose();
     _pawDrift.dispose();
+    _presence.dispose();
+    _settle.dispose();
+    _widthCtl.dispose();
     for (final Timer t in _dismissTimers.values) {
       t.cancel();
     }
@@ -123,7 +166,10 @@ class _NotchPillState extends State<NotchPill>
         _push(activity);
       case UpdateActivityCommand(:final NotchActivity activity):
         _update(activity);
-      case RemoveActivityCommand(:final String? id, :final NotchActivityType? type):
+      case RemoveActivityCommand(
+        :final String? id,
+        :final NotchActivityType? type,
+      ):
         _remove(id: id, type: type);
       case ClearCommand():
         _clearAll();
@@ -143,13 +189,93 @@ class _NotchPillState extends State<NotchPill>
       _stack.add(activity);
       _shownIndex = _stack.length - 1;
       _cycleDir = 1;
+      // A fresh activity peeks out (un-minimises), then recedes again.
+      _minimized = false;
     });
+    // Size the compact pill to this activity's content (snap; the arrival
+    // grow-in below animates idle → this width).
+    _syncCompactWidth(animate: false);
     _scheduleDismissIfTransient(activity);
     _scheduleTimerEnd(activity);
-    // A soft chirp as the island wakes from nothing — Neko noticing.
-    if (wasQuiet) unawaited(NotchSfx.chirp(scale: 0.6));
-    _applyWindow();
+    _scheduleRecede();
     _applyFlag();
+    if (activity.type == NotchActivityType.assistant) {
+      // The AI (Hey Neko) activity is a takeover: present immediately and
+      // auto-expand for the whole session — no peek, no auto-recede. (_setExpanded
+      // cancels the recede timer scheduled above.)
+      _presence.value = 1;
+      unawaited(_setExpanded(true));
+    } else if (wasQuiet && !_reduceMotion) {
+      // Grow the pill in from the idle sliver instead of snapping to compact (the
+      // most-seen notch transition). Writing .value = 0 (the lower bound)
+      // synchronously reports a `dismissed` status; detach the listener across
+      // this reset so it isn't mistaken for a completed recede (which would
+      // instantly minimise the fresh arrival).
+      _presence
+        ..removeStatusListener(_onPresenceStatus)
+        ..value = 0
+        ..addStatusListener(_onPresenceStatus);
+      unawaited(_growInFromIdle());
+    } else {
+      _presence.value = 1;
+      unawaited(_applyWindow());
+    }
+  }
+
+  /// Sizes the OS window to compact FIRST (so the growing pill isn't clipped by
+  /// a still-idle surface), then grows the presence factor 0→1.
+  Future<void> _growInFromIdle() async {
+    await _applyWindow();
+    if (!mounted || _primary == null || _minimized || _expanded) return;
+    _presence.forward();
+  }
+
+  /// Once a recede has fully melted the pill to idle size, settle into the
+  /// minimal state and only NOW shrink the OS window (the inverse of the
+  /// grow-window-before-pill order used on arrival), so the compact-sized
+  /// surface never clips the shrinking pill mid-melt.
+  void _onPresenceStatus(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed && !_minimized && mounted) {
+      setState(() => _minimized = true);
+      unawaited(_applyWindow());
+      _applyFlag();
+      _updatePawDrift();
+    }
+  }
+
+  /// After a fresh activity has peeked for a few seconds, recede it to the
+  /// minimal pill (like Apple's Dynamic Island) — unless the user has expanded
+  /// it. Tapping the minimal pill brings the activity back.
+  void _scheduleRecede() {
+    _recedeTimer?.cancel();
+    _recedeTimer = Timer(_peekDuration, () {
+      if (!mounted || _expanded || _primary == null || _minimized) return;
+      _expand.value = 0;
+      if (_reduceMotion) {
+        setState(() => _minimized = true);
+        unawaited(_applyWindow());
+        _applyFlag();
+        _updatePawDrift();
+      } else {
+        // Melt back to the minimal pill; _onPresenceStatus settles _minimized
+        // and shrinks the OS window once the pill has fully receded.
+        _presence.reverse();
+      }
+    });
+  }
+
+  void _unminimize() {
+    _recedeTimer?.cancel();
+    setState(() => _minimized = false);
+    _applyFlag();
+    if (_reduceMotion) {
+      _presence.value = 1;
+      unawaited(_applyWindow());
+    } else {
+      // Grow the pill back out of the minimal sliver (same path as arrival).
+      unawaited(_growInFromIdle());
+    }
+    _scheduleRecede();
   }
 
   void _update(NotchActivity activity) {
@@ -160,6 +286,15 @@ class _NotchPillState extends State<NotchPill>
     }
     setState(() => _stack[i] = _stack[i].mergedWith(activity));
     _scheduleTimerEnd(_stack[i]);
+    // If the VISIBLE activity's content changed size (e.g. a new track title),
+    // re-hug it — animated while at the compact peek, snapped while expanded.
+    if (i == _shownIndex.clamp(0, _stack.length - 1)) {
+      _syncCompactWidth(animate: !_expanded);
+      // An expanded card whose content grew (the AI card gaining a results list,
+      // a longer reply) needs the OS window resized to fit — otherwise the taller
+      // card is clipped by a still-short surface.
+      if (_expanded) unawaited(_applyWindow());
+    }
   }
 
   bool _isExpiredTimer(NotchActivity a) =>
@@ -180,7 +315,8 @@ class _NotchPillState extends State<NotchPill>
           const Duration(milliseconds: 1200),
       () {
         _timerEnders.remove(a.key);
-        unawaited(NotchSfx.trill());
+        // A firm haptic marks the finish (the SFX chime was removed).
+        _haptic('success');
         _remove(id: a.id);
       },
     );
@@ -201,11 +337,22 @@ class _NotchPillState extends State<NotchPill>
         }
         return match;
       });
-      if (_stack.isEmpty) _expanded = false;
+      if (_stack.isEmpty) {
+        _expanded = false;
+        _minimized = false;
+      }
       if (_shownIndex >= _stack.length) {
         _shownIndex = _stack.isEmpty ? 0 : _stack.length - 1;
       }
     });
+    if (_stack.isEmpty) {
+      _recedeTimer?.cancel();
+      _presence.value = 1;
+    }
+    _cycleHoldTimer?.cancel();
+    _cycleHoldType = null;
+    // A different activity may now be the shown one — hug its width.
+    if (_primary != null) _syncCompactWidth(animate: false);
     if (!_expanded) _expand.value = 0;
     _applyWindow();
     _applyFlag();
@@ -217,13 +364,18 @@ class _NotchPillState extends State<NotchPill>
       t.cancel();
     }
     _dismissTimers.clear();
+    _recedeTimer?.cancel();
+    _cycleHoldTimer?.cancel();
     _hideIdleEmpty(animate: false);
     setState(() {
       _stack.clear();
       _expanded = false;
+      _minimized = false;
       _shownIndex = 0;
+      _cycleHoldType = null;
     });
     _expand.value = 0;
+    _presence.value = 1;
     _applyWindow();
     _applyFlag();
     _updatePawDrift();
@@ -243,13 +395,25 @@ class _NotchPillState extends State<NotchPill>
     return _stack[_shownIndex.clamp(0, _stack.length - 1)];
   }
 
-
   Future<void> _setExpanded(bool value) async {
     if (_primary == null || _expanded == value) return;
     setState(() => _expanded = value);
+    if (!value) {
+      // Collapsing mid-cycle: drop any height hold so it can't strand the box
+      // oversized.
+      _cycleHoldTimer?.cancel();
+      _cycleHoldType = null;
+    }
     if (value) {
-      // A happy chirp as the island opens up.
-      unawaited(NotchSfx.chirp());
+      // Don't recede while the user is looking at the expanded card.
+      _recedeTimer?.cancel();
+      // Snap fully present before expanding (a swipe-down could land mid-melt).
+      _presence.value = 1;
+      // A light tick + a gentle rubber-band settle on the expanded content.
+      // Manual expands are silent, like Apple's Dynamic Island — the chirp is
+      // reserved for Neko noticing something, not for the user's own taps.
+      _haptic('selection');
+      if (!_reduceMotion) _settle.forward(from: 0);
       if (_reduceMotion) {
         _expand.value = 1;
         await _applyWindow();
@@ -262,8 +426,11 @@ class _NotchPillState extends State<NotchPill>
       }
     } else if (_reduceMotion) {
       _expand.value = 0;
+      _scheduleRecede();
     } else {
       _expand.reverse();
+      // Collapsed back to the compact peek — start the recede countdown again.
+      _scheduleRecede();
     }
     _updatePawDrift();
   }
@@ -299,7 +466,12 @@ class _NotchPillState extends State<NotchPill>
 
   void _onTap() {
     if (_primary != null) {
-      _toggleExpanded();
+      if (_minimized) {
+        // First tap on a receded activity brings it back to the compact peek.
+        _unminimize();
+      } else {
+        _toggleExpanded();
+      }
     } else if (_idleEmpty) {
       _hideIdleEmpty();
     } else {
@@ -310,6 +482,10 @@ class _NotchPillState extends State<NotchPill>
   void _onVerticalDragEnd(DragEndDetails d) {
     final double v = d.primaryVelocity ?? 0;
     if (_primary != null) {
+      if (_minimized && v > 80) {
+        _unminimize();
+        return;
+      }
       if (v > 80) {
         _setExpanded(true);
       } else if (v < -80) {
@@ -324,27 +500,94 @@ class _NotchPillState extends State<NotchPill>
     }
   }
 
-  void _cycle(int dir) {
+  Future<void> _cycle(int dir) async {
     if (_stack.length < 2) return;
+    final NotchActivityType? from = _primary?.type;
     setState(() {
       _cycleDir = dir;
       _shownIndex = (_shownIndex + dir) % _stack.length;
       if (_shownIndex < 0) _shownIndex += _stack.length;
+      // Hold the expanded box at max(old, new) height for the cross-fade.
+      if (_expanded) _cycleHoldType = from;
     });
+    _haptic('selection');
+    // Hug the newly-shown activity's content width (animated when at the compact
+    // peek; snapped when expanded — it applies on the next collapse).
+    _syncCompactWidth(animate: !_expanded);
+    if (_expanded) {
+      // Grow the OS window to the held (max) height BEFORE the box settles, so a
+      // short→tall cycle can't clip the incoming card (mirrors _setExpanded's
+      // grow-window-before-pill order). resizeOverlay is a native round-trip.
+      await _applyWindow();
+      _cycleHoldTimer?.cancel();
+      _cycleHoldTimer = Timer(const Duration(milliseconds: 320), () {
+        if (!mounted) return;
+        setState(() => _cycleHoldType = null);
+        // Settle down to the new type's own height once the cross-fade is done.
+        unawaited(_applyWindow());
+      });
+    }
   }
 
   void _sendControl(String action) async {
+    _haptic('light');
     try {
-      await _mediaChannel.invokeMethod<void>('control', <String, dynamic>{'action': action});
+      await _mediaChannel.invokeMethod<void>('control', <String, dynamic>{
+        'action': action,
+      });
     } on Object {
       unawaited(
         FlutterOverlayWindow.shareData(
-          jsonEncode(<String, dynamic>{'cmd': NotchChannels.controlCommand, 'action': action}),
+          jsonEncode(<String, dynamic>{
+            'cmd': NotchChannels.controlCommand,
+            'action': action,
+          }),
         ),
       );
     }
   }
 
+  /// A short native haptic via the overlay bridge — Flutter's own
+  /// `HapticFeedback` is a no-op in the overlay engine, so we round-trip through
+  /// NotchBridge's Vibrator. Best-effort; a missing vibrator is silently fine.
+  void _haptic(String type) async {
+    try {
+      await _mediaChannel.invokeMethod<void>('haptic', <String, dynamic>{
+        'type': type,
+      });
+    } on Object {
+      // No haptic is fine — the island must never break for a buzz.
+    }
+  }
+
+  /// Long-press opens the shown activity's source app, if it carries a package
+  /// id (system notifications / media do; Neko's own activities don't).
+  void _launchShownApp() async {
+    final String? pkg = _primary?.packageId;
+    if (pkg == null || pkg.isEmpty) return;
+    _haptic('selection');
+    try {
+      await _mediaChannel.invokeMethod<void>('launchApp', <String, dynamic>{
+        'package': pkg,
+      });
+    } on Object {
+      // App not launchable / channel not bound — nothing to do.
+    }
+  }
+
+  /// Opens a web result's URL in the browser (from the AI results card), routed
+  /// natively through NotchBridge so it works even when only the overlay is up.
+  void _launchUrl(String url) async {
+    if (url.isEmpty) return;
+    _haptic('light');
+    try {
+      await _mediaChannel.invokeMethod<void>('launchUrl', <String, dynamic>{
+        'url': url,
+      });
+    } on Object {
+      // No browser / channel not bound — nothing to do.
+    }
+  }
 
   void _onExpandStatus(AnimationStatus status) {
     if (status == AnimationStatus.dismissed) {
@@ -353,44 +596,226 @@ class _NotchPillState extends State<NotchPill>
     }
   }
 
-  int get _idleH => NotchMetrics.idleContent + _topInset.round();
-  int get _compactH => NotchMetrics.compactContent + _topInset.round();
-  int get _expandedH => NotchMetrics.expandedContent + _topInset.round();
+  // ── Content-hugging compact width ───────────────────────────────────────────
 
+  /// Measures the ideal compact width for [a] with a [TextPainter]
+  /// (deterministic, no layout round-trip → no flicker), so the pill hugs its
+  /// content like Apple's Dynamic Island instead of a fixed 212dp.
+  double _measureCompactWidth(NotchActivity a) {
+    const double hPad = 22; // horizontal padding (11 * 2)
+    const double lead = 24 + 9; // artwork + gap
+    final double trailing = 10 + _indicatorWidth(a); // gap + indicator
+
+    final String title = a.title.isEmpty ? 'Neko' : a.title;
+    double textW = _measureText(
+      title,
+      _nunito(
+        color: _theme.foreground,
+        fontSize: 12.5,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+    if (a.type == NotchActivityType.timer && a.endsAtMs != null) {
+      final bool hasHours =
+          a.endsAtMs! - DateTime.now().millisecondsSinceEpoch >= 3600000;
+      textW = math.max(
+        textW,
+        _measureText(
+          hasHours ? '0:00:00' : '00:00',
+          _nunito(
+            color: _theme.accent,
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+            tabular: true,
+          ),
+        ),
+      );
+    } else if (a.subtitle.isNotEmpty) {
+      textW = math.max(
+        textW,
+        _measureText(
+          a.subtitle,
+          _nunito(color: _theme.subdued, fontSize: 10.5),
+        ),
+      );
+    }
+
+    // Never wider than the expanded card; never so short it looks stunted.
+    final double maxW = math
+        .min(300, NotchMetrics.expandedWidth - 8)
+        .toDouble();
+    return (hPad + lead + textW + 2 + trailing).clamp(150.0, maxW);
+  }
+
+  double _measureText(String text, TextStyle style) {
+    final TextPainter tp = TextPainter(
+      text: TextSpan(text: text, style: style),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+      textScaler: _textScaler,
+    )..layout();
+    final double w = tp.width;
+    tp.dispose();
+    return w;
+  }
+
+  /// The trailing indicator's width — mirrors the choice made in [_Compact].
+  double _indicatorWidth(NotchActivity a) {
+    if (a.type == NotchActivityType.music ||
+        a.type == NotchActivityType.assistant) {
+      return 20;
+    }
+    if (a.type == NotchActivityType.timer && a.endsAtMs != null) {
+      return a.durationMs != null ? 20 : 18;
+    }
+    if (a.type == NotchActivityType.navigation) return 18;
+    if (a.progress != null) return 20;
+    if (a.type == NotchActivityType.call) return 14;
+    return 9;
+  }
+
+  /// Re-measures the shown activity and retargets the compact width — either
+  /// animating the change (grow the window first on a widen, shrink it after on
+  /// a narrow) or snapping it (fresh arrival / reduce-motion).
+  void _syncCompactWidth({required bool animate}) {
+    final NotchActivity? a = _primary;
+    if (a == null) return;
+    final double target = _measureCompactWidth(a);
+    if ((target - _toCompactW).abs() < 0.5) return; // no meaningful change
+    if (!animate || _reduceMotion) {
+      _fromCompactW = target;
+      _toCompactW = target;
+      _widthCtl.value = 1;
+      return;
+    }
+    _fromCompactW = _compactW; // start from where we visually are now
+    _toCompactW = target;
+    if (target > _fromCompactW) {
+      unawaited(_growWidthThenAnimate());
+    } else {
+      // Narrower: animate now; _onWidthStatus shrinks the window on completion.
+      _widthCtl.forward(from: 0);
+    }
+  }
+
+  /// Grows the OS window to the (larger) target width BEFORE animating the pill
+  /// wider, so the growing pill is never clipped by a still-narrow surface.
+  Future<void> _growWidthThenAnimate() async {
+    await _applyWindow();
+    if (!mounted) return;
+    _widthCtl.forward(from: 0);
+  }
+
+  void _onWidthStatus(AnimationStatus status) {
+    // Once a width change settles, shrink the OS window down to the (possibly
+    // narrower) final compact width.
+    if (status == AnimationStatus.completed && mounted) {
+      unawaited(_applyWindow());
+    }
+  }
+
+  int get _idleH => NotchMetrics.idleContent + _topInset.round();
+
+  /// A receded activity sits a little taller than the empty idle sliver so it's
+  /// a real tap/drag target to bring the activity back (and its accent underline
+  /// is easier to see).
+  int get _minimizedH => NotchMetrics.idleContent + 10 + _topInset.round();
+  int get _compactH => NotchMetrics.compactContent + _topInset.round();
+
+  /// The animated shown compact width (content-hugging). Rests at [_toCompactW].
+  double get _compactW {
+    // The one notch expand curve, shared with the expand + presence transitions
+    // so every size change reads as the same motion.
+    final double wt = _expandCurve.transform(_widthCtl.value.clamp(0.0, 1.0));
+    return ui.lerpDouble(_fromCompactW, _toCompactW, wt) ?? _toCompactW;
+  }
+
+  /// The OS window width for the compact state: the larger of the two endpoints
+  /// while a width change is animating (so the pill is never clipped by a
+  /// too-narrow surface), then the settled target.
+  int get _compactWindowW {
+    final double w = _widthCtl.isAnimating
+        ? math.max(_fromCompactW, _toCompactW)
+        : _toCompactW;
+    return w.ceil();
+  }
+
+  int get _expandedH {
+    final NotchActivity? p = _primary;
+    final int cur;
+    if (p != null && p.type == NotchActivityType.assistant) {
+      // The AI card is a cat animation + text (~78dp), plus a row per web result
+      // shown (max 3).
+      cur = 78 + p.results.length.clamp(0, 3) * 30;
+    } else {
+      cur = _expandedContentForType(p?.type);
+    }
+    final int held = _cycleHoldType != null
+        ? _expandedContentForType(_cycleHoldType)
+        : 0;
+    return math.max(cur, held) + _topInset.round();
+  }
+
+  /// Non-music activities are far shorter than music (which carries a controls
+  /// row), so one fixed 136dp expanded height left a large dead void under them.
+  /// Size the card per type, each with clip-safe margin over its tallest variant.
+  static int _expandedContentForType(NotchActivityType? type) {
+    return switch (type) {
+      NotchActivityType.music => NotchMetrics.expandedContent, // 136, tallest
+      NotchActivityType.timer => 108,
+      _ => 92,
+    };
+  }
 
   Future<void> _applyWindow({bool force = false}) async {
     final _Win target;
     if (_primary == null) {
       target = _idleEmpty || _expand.value > 0.001 ? _Win.compact : _Win.idle;
+    } else if (_minimized && !_expanded && _expand.value < 0.001) {
+      // Activity present but receded — sit as the minimal pill.
+      target = _Win.idle;
     } else if (_expanded || _expand.value > 0.001) {
       target = _Win.expanded;
     } else {
       target = _Win.compact;
     }
 
-    // A transparent margin around the ACTIVE pill so the accent lift-glow (the
-    // Apple-style soft separation from arbitrary backdrops) has room to render
-    // outside the pill body. Idle stays flush and minimal — no glow, no pad.
-    const int glow = _glowPad;
     final (int w, int h) = switch (target) {
-      _Win.idle => (NotchMetrics.idleWidth, _idleH),
-      _Win.compact => (NotchMetrics.activeWidth + 2 * glow, _compactH + glow),
-      _Win.expanded => (NotchMetrics.expandedWidth + 2 * glow, _expandedH + glow),
+      _Win.idle => (
+        NotchMetrics.idleWidth,
+        _minimized && _primary != null ? _minimizedH : _idleH,
+      ),
+      _Win.compact => (_compactWindowW, _compactH),
+      _Win.expanded => (NotchMetrics.expandedWidth, _expandedH),
     };
     if (!force && w == _winW && h == _winH) return;
-    _winW = w;
-    _winH = h;
-    await FlutterOverlayWindow.resizeOverlay(w, h, false);
+    try {
+      await FlutterOverlayWindow.resizeOverlay(w, h, false);
+      _winW = w;
+      _winH = h;
+    } on Object {
+      // At cold start the overlay method channel can lag a beat behind the Dart
+      // UI (MissingPluginException). Leave the cache stale so the next geometry
+      // change retries rather than skipping on the (w == _winW) guard.
+    }
   }
 
   void _applyFlag() {
     final bool interactive =
         _primary != null || _idleEmpty || _expand.value > 0.001;
-    final OverlayFlag want =
-        interactive ? OverlayFlag.defaultFlag : OverlayFlag.clickThrough;
+    final OverlayFlag want = interactive
+        ? OverlayFlag.defaultFlag
+        : OverlayFlag.clickThrough;
     if (want == _flag) return;
-    _flag = want;
-    unawaited(FlutterOverlayWindow.updateFlag(want));
+    // Only cache the flag once it actually lands; if the channel isn't ready
+    // yet at cold start, leave _flag stale so the next _applyFlag retries.
+    unawaited(
+      FlutterOverlayWindow.updateFlag(want)
+          .then<void>((_) {
+            _flag = want;
+          })
+          .catchError((Object _) {}),
+    );
   }
 
   void _updatePawDrift() {
@@ -406,8 +831,13 @@ class _NotchPillState extends State<NotchPill>
   @override
   Widget build(BuildContext context) {
     final double mqTop = MediaQuery.paddingOf(context).top;
-    _topInset = _theme.topInset > 0 ? _theme.topInset : (mqTop > 0 ? mqTop : 28);
+    _topInset = _theme.topInset > 0
+        ? _theme.topInset
+        : (mqTop > 0 ? mqTop : 28);
     _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    // Capture the (clamped) text scaler so compact-width measurement matches
+    // exactly how the text will render.
+    _textScaler = MediaQuery.textScalerOf(context);
 
     return Material(
       type: MaterialType.transparency,
@@ -416,6 +846,7 @@ class _NotchPillState extends State<NotchPill>
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _onTap,
+          onLongPress: _launchShownApp,
           onVerticalDragEnd: _onVerticalDragEnd,
           onHorizontalDragEnd: (DragEndDetails d) {
             final double v = d.primaryVelocity ?? 0;
@@ -426,7 +857,12 @@ class _NotchPillState extends State<NotchPill>
             }
           },
           child: AnimatedBuilder(
-            animation: _expand,
+            animation: Listenable.merge(<Listenable>[
+              _expand,
+              _presence,
+              _settle,
+              _widthCtl,
+            ]),
             builder: (BuildContext context, Widget? _) => _buildIsland(),
           ),
         ),
@@ -436,46 +872,52 @@ class _NotchPillState extends State<NotchPill>
 
   Widget _buildIsland() {
     final bool hasActivity = _primary != null;
-    final bool emptyExpanded = !hasActivity && (_idleEmpty || _expand.value > 0.001);
+    // Activity present but receded to the minimal pill (its peek is over).
+    final bool minimized =
+        hasActivity && _minimized && !_expanded && _expand.value < 0.001;
+    final bool emptyExpanded =
+        !hasActivity && (_idleEmpty || _expand.value > 0.001);
     final double t = _expandCurve.transform(_expand.value.clamp(0.0, 1.0));
     final double emptyT = emptyExpanded ? t : 0.0;
-    // The island widens as it grows (Dynamic-Island style): the expanded window
-    // is already wide, the visual pill animates across it.
-    final double width = hasActivity
-        ? NotchMetrics.activeWidth +
-            (NotchMetrics.expandedWidth - NotchMetrics.activeWidth) * t
-        : NotchMetrics.idleWidth +
-            (NotchMetrics.activeWidth - NotchMetrics.idleWidth) * emptyT;
-    final double height = hasActivity
-        ? (_compactH + (_expandedH - _compactH) * t)
-        : _idleH + (_compactH - _idleH) * emptyT;
-    final double radius = 14 + 18 * (hasActivity ? t : emptyT);
-    final bool assistantActive =
-        _primary?.type == NotchActivityType.assistant;
+    // Presence: 0 = idle-sized (arriving in / receding out), 1 = full compact
+    // peek. Grows the pill in on arrival and melts it out on recede, so neither
+    // transition is a one-frame geometry snap. Rests at 1 in steady compact.
+    final double pT = _expandCurve.transform(_presence.value.clamp(0.0, 1.0));
+    // A subtle rubber-band bump on the expanded content — peaks at ~+3% halfway
+    // through the settle, back to 1.0. Rests at 1.0, so a no-op otherwise.
+    final double settleScale =
+        1 + 0.03 * math.sin(math.pi * _settle.value.clamp(0.0, 1.0));
 
-    // Neko's ears perk up around the punch-hole whenever the island is awake —
-    // subtle against the ink, warmer while Hey Neko is live.
-    final Widget ears = Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      height: _topInset,
-      child: IgnorePointer(
-        child: RepaintBoundary(
-          child: CustomPaint(
-            painter: _CatEarsPainter(
-              // Warm to the accent while Hey Neko is live; otherwise a clearly
-              // readable light silhouette against the dark pill.
-              color: assistantActive
-                  ? _theme.accent
-                  : _theme.foreground.withValues(alpha: 0.4),
-              perk: 0.72 + 0.28 * (hasActivity ? t : emptyT),
-            ),
-          ),
-        ),
-      ),
-    );
-
+    // The island widens/heightens as it grows (Dynamic-Island style): idle→
+    // compact is driven by presence; compact→expanded by the expand curve.
+    final double width;
+    final double height;
+    final double radius;
+    if (minimized) {
+      width = NotchMetrics.idleWidth.toDouble();
+      height = _minimizedH.toDouble();
+      radius = 14;
+    } else if (hasActivity) {
+      // idle → compact hugs the content width (_compactW); compact → expanded
+      // widens to the full card.
+      final double compactBaseW =
+          NotchMetrics.idleWidth + (_compactW - NotchMetrics.idleWidth) * pT;
+      width = compactBaseW + (NotchMetrics.expandedWidth - compactBaseW) * t;
+      // idle/minimized → compact height by presence; compact → expanded by t.
+      final double compactHh = _minimizedH + (_compactH - _minimizedH) * pT;
+      height = compactHh + (_expandedH - compactHh) * t;
+      radius = 14 + 18 * t;
+    } else {
+      width =
+          NotchMetrics.idleWidth +
+          (NotchMetrics.activeWidth - NotchMetrics.idleWidth) * emptyT;
+      height = _idleH + (_compactH - _idleH) * emptyT;
+      radius = 14 + 18 * emptyT;
+    }
+    // The compact content wants its full natural width even while the pill is
+    // still growing in (or receding); pin it there and let the ClipRect crop the
+    // overhang, so the compact Row never overflows its box mid-animation.
+    final double contentW = math.max(width, _compactW);
     return Container(
       width: width,
       height: height,
@@ -483,95 +925,110 @@ class _NotchPillState extends State<NotchPill>
       decoration: BoxDecoration(
         color: _theme.background,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
-        // Soft accent lift so the pill separates from any backdrop (Apple's
-        // Dynamic Island uses the same trick). Active states only; the window
-        // is padded to give it room. The shadow above the pill clips into the
-        // status bar, which is what we want — the glow reads below and beside.
-        boxShadow: (hasActivity || emptyExpanded)
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: _theme.accent.withValues(
-                    alpha: assistantActive ? 0.42 : 0.28,
-                  ),
-                  blurRadius: 20,
-                  spreadRadius: 0.5,
+        // A receded pill wears a faint accent underline so it reads as a
+        // living, tappable activity — not the empty click-through idle pill.
+        border: minimized
+            ? Border(
+                bottom: BorderSide(
+                  color: _theme.accent.withValues(alpha: 0.65),
+                  width: 2,
                 ),
-              ]
+              )
             : null,
       ),
-      child: hasActivity
-          ? Stack(
-              children: <Widget>[
-                if (_pawImage != null && _expand.value > 0.5)
-                  Positioned.fill(
-                    child: Opacity(
-                      opacity: ((_expand.value - 0.5) * 2).clamp(0.0, 1.0),
-                      child: RepaintBoundary(
-                        child: CustomPaint(
-                          painter: _NotchPawPainter(_pawImage!, _theme.foreground, _pawDrift),
-                        ),
-                      ),
-                    ),
-                  ),
-                ears,
-                Positioned.fill(
-                  child: Padding(
-                    padding: EdgeInsets.only(top: _topInset),
-                    child: ClipRect(
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 320),
-                        switchInCurve: Curves.easeOutCubic,
-                        switchOutCurve: Curves.easeInCubic,
-                        layoutBuilder: (Widget? current, List<Widget> previous) =>
-                            Stack(alignment: Alignment.topCenter, children: <Widget>[
-                          ...previous,
-                          ?current,
-                        ]),
-                        transitionBuilder: (Widget child, Animation<double> a) {
-                          final Animation<Offset> slide = Tween<Offset>(
-                            begin: Offset(0.35 * _cycleDir, 0),
-                            end: Offset.zero,
-                          ).animate(a);
-                          return FadeTransition(
-                            opacity: a,
-                            child: SlideTransition(
-                              position: slide,
-                              child: ScaleTransition(
-                                scale: Tween<double>(begin: 0.92, end: 1).animate(a),
-                                child: child,
-                              ),
+      child: minimized
+          ? const SizedBox.shrink()
+          : hasActivity
+          ? Transform.scale(
+              alignment: Alignment.center,
+              scale: settleScale,
+              child: Stack(
+                children: <Widget>[
+                  if (_pawImage != null && _expand.value > 0.5)
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: ((_expand.value - 0.5) * 2).clamp(0.0, 1.0),
+                        child: RepaintBoundary(
+                          child: CustomPaint(
+                            painter: _NotchPawPainter(
+                              _pawImage!,
+                              _theme.foreground,
+                              _pawDrift,
                             ),
-                          );
-                        },
-                        child: _ActivityContent(
-                          key: ValueKey<String>(_primary!.key),
-                          activity: _primary!,
-                          theme: _theme,
-                          // The emphasized curve (not raw controller value) so
-                          // the content cross-fade tracks the box it lives in.
-                          expandT: t,
-                          total: _stack.length,
-                          index: _shownIndex.clamp(0, _stack.length - 1),
-                          onControl: _sendControl,
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned.fill(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: _topInset),
+                      child: ClipRect(
+                        // Lay the content out at its full width and let this
+                        // ClipRect crop it while the pill grows in / recedes, so
+                        // the compact Row never overflows the shrinking box.
+                        child: OverflowBox(
+                          alignment: Alignment.topCenter,
+                          minWidth: contentW,
+                          maxWidth: contentW,
+                          child: AnimatedSwitcher(
+                            duration: _reduceMotion
+                                ? Duration.zero
+                                : const Duration(milliseconds: 320),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            layoutBuilder:
+                                (Widget? current, List<Widget> previous) =>
+                                    Stack(
+                                      alignment: Alignment.topCenter,
+                                      children: <Widget>[...previous, ?current],
+                                    ),
+                            transitionBuilder:
+                                (Widget child, Animation<double> a) {
+                                  final Animation<Offset> slide = Tween<Offset>(
+                                    begin: Offset(0.35 * _cycleDir, 0),
+                                    end: Offset.zero,
+                                  ).animate(a);
+                                  return FadeTransition(
+                                    opacity: a,
+                                    child: SlideTransition(
+                                      position: slide,
+                                      child: ScaleTransition(
+                                        scale: Tween<double>(
+                                          begin: 0.92,
+                                          end: 1,
+                                        ).animate(a),
+                                        child: child,
+                                      ),
+                                    ),
+                                  );
+                                },
+                            child: _ActivityContent(
+                              key: ValueKey<String>(_primary!.key),
+                              activity: _primary!,
+                              theme: _theme,
+                              // The emphasized curve (not raw controller value) so
+                              // the content cross-fade tracks the box it lives in.
+                              expandT: t,
+                              total: _stack.length,
+                              index: _shownIndex.clamp(0, _stack.length - 1),
+                              onControl: _sendControl,
+                              onOpenUrl: _launchUrl,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             )
           : emptyExpanded
-              ? Stack(
-                  children: <Widget>[
-                    ears,
-                    _IdleEmptyContent(
-                      theme: _theme,
-                      topInset: _topInset,
-                      opacity: emptyT,
-                    ),
-                  ],
-                )
-              : const SizedBox.shrink(),
+          ? _IdleEmptyContent(
+              theme: _theme,
+              topInset: _topInset,
+              opacity: emptyT,
+            )
+          : const SizedBox.shrink(),
     );
   }
 }
@@ -627,7 +1084,10 @@ TextStyle _nunito({
     fontFeatures: tabular
         ? const <ui.FontFeature>[ui.FontFeature.tabularFigures()]
         : null,
-  );
+    // Nunito's intrinsic line box is tall (~1.35em); with our tight height:1.1
+    // even leading centres each glyph in its box so text never rides high and
+    // gets clipped by the fixed-height island containers.
+  ).copyWith(leadingDistribution: TextLeadingDistribution.even);
 }
 
 IconData _iconFor(NotchActivityType type) {
@@ -638,7 +1098,7 @@ IconData _iconFor(NotchActivityType type) {
     NotchActivityType.call => Icons.call_rounded,
     NotchActivityType.navigation => Icons.navigation_rounded,
     NotchActivityType.download => Icons.download_rounded,
-    NotchActivityType.assistant => Icons.mic_rounded,
+    NotchActivityType.assistant => Icons.auto_awesome_rounded,
     NotchActivityType.generic => Icons.pets_rounded,
   };
 }
@@ -662,9 +1122,7 @@ IconData _maneuverIcon(String title) {
       t.contains('arriving')) {
     return Icons.place_rounded;
   }
-  if (t.contains('continue') ||
-      t.contains('straight') ||
-      t.contains('head ')) {
+  if (t.contains('continue') || t.contains('straight') || t.contains('head ')) {
     return Icons.straight_rounded;
   }
   return Icons.navigation_rounded;
@@ -698,6 +1156,7 @@ class _ActivityContent extends StatelessWidget {
     required this.total,
     required this.index,
     required this.onControl,
+    required this.onOpenUrl,
   });
 
   final NotchActivity activity;
@@ -706,6 +1165,7 @@ class _ActivityContent extends StatelessWidget {
   final int total;
   final int index;
   final void Function(String action) onControl;
+  final void Function(String url) onOpenUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -735,6 +1195,7 @@ class _ActivityContent extends StatelessWidget {
                 total: total,
                 index: index,
                 onControl: onControl,
+                onOpenUrl: onOpenUrl,
               ),
             ),
           ),
@@ -758,81 +1219,90 @@ class _Compact extends StatelessWidget {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      child: Row(
-        children: <Widget>[
-          _Artwork(activity: activity, theme: theme, size: 24),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  activity.title.isEmpty ? 'Neko' : activity.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: _nunito(
-                    color: theme.foreground,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (activity.type == NotchActivityType.timer &&
-                    activity.endsAtMs != null)
-                  _Countdown(
-                    endsAtMs: activity.endsAtMs!,
-                    style: _nunito(
-                      color: theme.subdued,
-                      fontSize: 10.5,
-                      tabular: true,
-                    ),
-                  )
-                else if (activity.subtitle.isNotEmpty)
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        child: Row(
+          children: <Widget>[
+            _Artwork(activity: activity, theme: theme, size: 24),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
                   Text(
-                    activity.subtitle,
+                    activity.title.isEmpty ? 'Neko' : activity.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: _nunito(color: theme.subdued, fontSize: 10.5),
+                    style: _nunito(
+                      color: theme.foreground,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          if (activity.type == NotchActivityType.music ||
-              activity.type == NotchActivityType.assistant)
-            _EqualizerBars(color: theme.accent, active: activity.isPlaying)
-          else if (activity.type == NotchActivityType.timer &&
-              activity.endsAtMs != null &&
-              activity.durationMs != null)
-            _TimerRing(activity: activity, theme: theme)
-          else if (activity.type == NotchActivityType.timer &&
-              activity.endsAtMs != null)
-            // A mirrored system timer has no known total; the countdown text
-            // ticks, so show a static glyph rather than a frozen-full ring.
-            Icon(Icons.timer_rounded, color: theme.accent, size: 18)
-          else if (activity.type == NotchActivityType.navigation)
-            Icon(_maneuverIcon(activity.title), color: theme.accent, size: 18)
-          else if (activity.progress != null)
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                value: activity.progress!.clamp(0.0, 1.0),
-                strokeWidth: 3,
-                backgroundColor: theme.foreground.withValues(alpha: 0.22),
-                valueColor: AlwaysStoppedAnimation<Color>(theme.accent),
+                  if (activity.type == NotchActivityType.timer &&
+                      activity.endsAtMs != null)
+                    _Countdown(
+                      endsAtMs: activity.endsAtMs!,
+                      // The ticking countdown is the most glanceable thing on the
+                      // pill — make it the strongest element (accent + bold),
+                      // tying it to the accent-coloured ring, not dim meta text.
+                      style: _nunito(
+                        color: theme.accent,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12.5,
+                        tabular: true,
+                      ),
+                    )
+                  else if (activity.subtitle.isNotEmpty)
+                    Text(
+                      activity.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _nunito(color: theme.subdued, fontSize: 10.5),
+                    ),
+                ],
               ),
-            )
-          else
-            Container(
-              width: 9,
-              height: 9,
-              decoration: BoxDecoration(color: theme.accent, shape: BoxShape.circle),
             ),
-        ],
-      ),
+            const SizedBox(width: 10),
+            if (activity.type == NotchActivityType.music ||
+                activity.type == NotchActivityType.assistant)
+              _EqualizerBars(color: theme.accent, active: activity.isPlaying)
+            else if (activity.type == NotchActivityType.timer &&
+                activity.endsAtMs != null &&
+                activity.durationMs != null)
+              _TimerRing(activity: activity, theme: theme)
+            else if (activity.type == NotchActivityType.timer &&
+                activity.endsAtMs != null)
+              // A mirrored system timer has no known total; the countdown text
+              // ticks, so show a static glyph rather than a frozen-full ring.
+              Icon(Icons.timer_rounded, color: theme.accent, size: 18)
+            else if (activity.type == NotchActivityType.navigation)
+              Icon(_maneuverIcon(activity.title), color: theme.accent, size: 18)
+            else if (activity.progress != null)
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  value: activity.progress!.clamp(0.0, 1.0),
+                  strokeWidth: 3,
+                  backgroundColor: theme.foreground.withValues(alpha: 0.22),
+                  valueColor: AlwaysStoppedAnimation<Color>(theme.accent),
+                ),
+              )
+            else if (activity.type == NotchActivityType.call)
+              _PulsingDot(color: theme.accent)
+            else
+              Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  color: theme.accent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -845,6 +1315,7 @@ class _Expanded extends StatelessWidget {
     required this.total,
     required this.index,
     required this.onControl,
+    required this.onOpenUrl,
   });
 
   final NotchActivity activity;
@@ -852,137 +1323,305 @@ class _Expanded extends StatelessWidget {
   final int total;
   final int index;
   final void Function(String action) onControl;
+  final void Function(String url) onOpenUrl;
 
   @override
   Widget build(BuildContext context) {
     final bool isMusic = activity.type == NotchActivityType.music;
-    final bool isAssistant = activity.type == NotchActivityType.assistant;
+    // The Hey Neko assistant gets its own animated card (cat animation + text +
+    // web results) rather than the generic artwork/title/subtitle layout.
+    if (activity.type == NotchActivityType.assistant) {
+      return _AssistantCard(
+        activity: activity,
+        theme: theme,
+        onOpenUrl: onOpenUrl,
+      );
+    }
     final bool isTimer =
         activity.type == NotchActivityType.timer && activity.endsAtMs != null;
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       child: Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              _Artwork(activity: activity, theme: theme, size: 40),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    if (activity.appName != null && activity.appName!.isNotEmpty)
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                _Artwork(activity: activity, theme: theme, size: 40),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (activity.appName != null &&
+                          activity.appName!.isNotEmpty)
+                        Text(
+                          activity.appName!.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _nunito(
+                            color: theme.subdued,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
                       Text(
-                        activity.appName!.toUpperCase(),
+                        activity.title.isEmpty ? 'Neko' : activity.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: _nunito(
-                          color: theme.subdued,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                    Text(
-                      activity.title.isEmpty ? 'Neko' : activity.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: _nunito(
-                        color: theme.foreground,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        height: 1.2,
-                      ),
-                    ),
-                    if (isTimer)
-                      _Countdown(
-                        endsAtMs: activity.endsAtMs!,
-                        style: _nunito(
                           color: theme.foreground,
-                          fontSize: 20,
+                          fontSize: 15,
                           fontWeight: FontWeight.w700,
                           height: 1.2,
-                          tabular: true,
-                        ),
-                      )
-                    else if (activity.subtitle.isNotEmpty)
-                      Text(
-                        activity.subtitle,
-                        maxLines: isAssistant ? 2 : 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _nunito(
-                          color: theme.subdued,
-                          fontSize: 12,
-                          height: 1.25,
                         ),
                       ),
-                  ],
+                      if (isTimer)
+                        _Countdown(
+                          endsAtMs: activity.endsAtMs!,
+                          style: _nunito(
+                            color: theme.foreground,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                            tabular: true,
+                          ),
+                        )
+                      else if (activity.subtitle.isNotEmpty)
+                        Text(
+                          activity.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _nunito(
+                            color: theme.subdued,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              if (isMusic || isAssistant)
-                _EqualizerBars(color: theme.accent, active: activity.isPlaying),
-            ],
-          ),
-          if (isTimer && activity.durationMs != null) ...<Widget>[
-            const SizedBox(height: 9),
-            _TimerBar(activity: activity, theme: theme),
-          ] else if (activity.progress != null) ...<Widget>[
-            const SizedBox(height: 9),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: activity.progress!.clamp(0.0, 1.0),
-                minHeight: 4,
-                backgroundColor: theme.foreground.withValues(alpha: 0.22),
-                valueColor: AlwaysStoppedAnimation<Color>(theme.accent),
-              ),
+                if (isMusic)
+                  _EqualizerBars(
+                    color: theme.accent,
+                    active: activity.isPlaying,
+                  ),
+              ],
             ),
+            if (isTimer && activity.durationMs != null) ...<Widget>[
+              const SizedBox(height: 9),
+              _TimerBar(activity: activity, theme: theme),
+            ] else if (activity.progress != null) ...<Widget>[
+              const SizedBox(height: 9),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: activity.progress!.clamp(0.0, 1.0),
+                  minHeight: 4,
+                  backgroundColor: theme.foreground.withValues(alpha: 0.22),
+                  valueColor: AlwaysStoppedAnimation<Color>(theme.accent),
+                ),
+              ),
+            ],
+            if (isMusic) ...<Widget>[
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  _ControlButton(
+                    icon: Icons.skip_previous_rounded,
+                    color: theme.foreground,
+                    size: 24,
+                    onTap: () => onControl('previous'),
+                  ),
+                  const SizedBox(width: 12),
+                  _ControlButton(
+                    icon: activity.isPlaying
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
+                    color: theme.foreground,
+                    size: 30,
+                    onTap: () =>
+                        onControl(activity.isPlaying ? 'pause' : 'play'),
+                  ),
+                  const SizedBox(width: 12),
+                  _ControlButton(
+                    icon: Icons.skip_next_rounded,
+                    color: theme.foreground,
+                    size: 24,
+                    onTap: () => onControl('next'),
+                  ),
+                ],
+              ),
+            ] else if (total > 1) ...<Widget>[
+              const SizedBox(height: 8),
+              Center(
+                child: _PageDots(
+                  total: total,
+                  index: index,
+                  color: theme.foreground,
+                ),
+              ),
+            ],
           ],
-          if (isMusic) ...<Widget>[
-            const SizedBox(height: 6),
+        ),
+      ),
+    );
+  }
+}
+
+/// Maps a Hey Neko phase to its Lottie cat animation. The island is always
+/// dark, so the "noir" output cat uses its white-mode variant (matching the Hey
+/// Neko page). Lottie renders on the Flutter canvas (pure Dart), so it works in
+/// the overlay engine with no plugin.
+String _assistantCatFor(String? phase) {
+  return switch (phase) {
+    'listening' => 'assets/animations/Neko.ai.json',
+    'searching' || 'results' => 'assets/animations/Cat_in_Box.json',
+    'error' => 'assets/animations/404 Sleep Cat.json',
+    // thinking / speaking / anything else → the Cat-Noir output cat.
+    _ => 'assets/animations/noir cat whitemode.json',
+  };
+}
+
+/// The AI-notch card: a phase-driven cat animation beside the live transcript /
+/// reply, plus a tappable list of web results once Neko has fetched some.
+class _AssistantCard extends StatelessWidget {
+  const _AssistantCard({
+    required this.activity,
+    required this.theme,
+    required this.onOpenUrl,
+  });
+
+  final NotchActivity activity;
+  final NotchTheme theme;
+  final void Function(String url) onOpenUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<NotchResult> results = activity.results;
+    final bool listening = activity.phase == 'listening';
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                _ControlButton(
-                  icon: Icons.skip_previous_rounded,
-                  color: theme.foreground,
-                  size: 24,
-                  onTap: () => onControl('previous'),
+                // RepaintBoundary so each Lottie frame doesn't repaint the whole
+                // island.
+                RepaintBoundary(
+                  child: Lottie.asset(
+                    _assistantCatFor(activity.phase),
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.contain,
+                    repeat: true,
+                  ),
                 ),
-                const SizedBox(width: 20),
-                _ControlButton(
-                  icon: activity.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: theme.foreground,
-                  size: 30,
-                  onTap: () => onControl(activity.isPlaying ? 'pause' : 'play'),
-                ),
-                const SizedBox(width: 20),
-                _ControlButton(
-                  icon: Icons.skip_next_rounded,
-                  color: theme.foreground,
-                  size: 24,
-                  onTap: () => onControl('next'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        activity.title.isEmpty ? 'Hey Neko' : activity.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _nunito(
+                          color: theme.accent,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      if (activity.subtitle.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 3),
+                        Text(
+                          activity.subtitle,
+                          maxLines: results.isEmpty ? 3 : 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _nunito(
+                            color: listening ? theme.foreground : theme.subdued,
+                            fontSize: 12.5,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ],
             ),
-          ] else if (total > 1) ...<Widget>[
-            const SizedBox(height: 8),
-            Center(child: _PageDots(total: total, index: index, color: theme.foreground)),
+            if (results.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 6),
+              for (final NotchResult r in results.take(3))
+                _AssistantResultRow(
+                  result: r,
+                  theme: theme,
+                  onOpenUrl: onOpenUrl,
+                ),
+            ],
           ],
-        ],
+        ),
       ),
+    );
+  }
+}
+
+/// One tappable web-result row on the AI results card.
+class _AssistantResultRow extends StatelessWidget {
+  const _AssistantResultRow({
+    required this.result,
+    required this.theme,
+    required this.onOpenUrl,
+  });
+
+  final NotchResult result;
+  final NotchTheme theme;
+  final void Function(String url) onOpenUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onOpenUrl(result.url),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: <Widget>[
+            Icon(Icons.public_rounded, size: 15, color: theme.accent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                result.title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _nunito(color: theme.foreground, fontSize: 12),
+              ),
+            ),
+            Icon(Icons.north_east_rounded, size: 13, color: theme.subdued),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _Artwork extends StatelessWidget {
-  const _Artwork({required this.activity, required this.theme, required this.size});
+  const _Artwork({
+    required this.activity,
+    required this.theme,
+    required this.size,
+  });
 
   final NotchActivity activity;
   final NotchTheme theme;
@@ -995,7 +1634,13 @@ class _Artwork extends StatelessWidget {
     if (bytes != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(r),
-        child: Image.memory(bytes, width: size, height: size, fit: BoxFit.cover, gaplessPlayback: true),
+        child: Image.memory(
+          bytes,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        ),
       );
     }
     final IconData glyph = activity.type == NotchActivityType.navigation
@@ -1004,21 +1649,29 @@ class _Artwork extends StatelessWidget {
     // Contrast the glyph against the accent chip: a dark glyph on a light accent
     // (some coat palettes are pale), white on a dark one — so it never washes
     // out whichever of the twelve themes is active.
-    final Color onAccent = theme.accent.computeLuminance() > 0.55
+    final Color onAccent = theme.accent.computeLuminance() > 0.18
         ? const Color(0xFF15151A)
         : Colors.white;
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: theme.accent, borderRadius: BorderRadius.circular(r)),
+      decoration: BoxDecoration(
+        color: theme.accent,
+        borderRadius: BorderRadius.circular(r),
+      ),
       child: Icon(glyph, color: onAccent, size: size * 0.55),
     );
   }
 }
 
 class _ControlButton extends StatefulWidget {
-  const _ControlButton({required this.icon, required this.color, required this.size, required this.onTap});
+  const _ControlButton({
+    required this.icon,
+    required this.color,
+    required this.size,
+    required this.onTap,
+  });
 
   final IconData icon;
   final Color color;
@@ -1036,16 +1689,19 @@ class _ControlButtonState extends State<_ControlButton> {
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => setState(() => _scale = 0.8),
+      onTapDown: (_) => setState(() => _scale = 0.9),
       onTapUp: (_) => setState(() => _scale = 1),
       onTapCancel: () => setState(() => _scale = 1),
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: _scale,
-        duration: const Duration(milliseconds: 110),
-        curve: Curves.easeOut,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
+        duration: NekoMotion.pressIn,
+        curve: NekoMotion.standardCurve,
+        // A full 48dp tap target (Material minimum) around the 24/30 glyph — the
+        // Icon centres itself in the box, so the glyph size is unchanged.
+        child: SizedBox(
+          width: 48,
+          height: 48,
           child: Icon(widget.icon, color: widget.color, size: widget.size),
         ),
       ),
@@ -1054,7 +1710,11 @@ class _ControlButtonState extends State<_ControlButton> {
 }
 
 class _PageDots extends StatelessWidget {
-  const _PageDots({required this.total, required this.index, required this.color});
+  const _PageDots({
+    required this.total,
+    required this.index,
+    required this.color,
+  });
 
   final int total;
   final int index;
@@ -1066,6 +1726,7 @@ class _PageDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     final double width = total * _dot + (total - 1) * _gap;
     return SizedBox(
       width: width,
@@ -1087,8 +1748,8 @@ class _PageDots extends StatelessWidget {
               ),
             ),
           AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
+            duration: reduceMotion ? Duration.zero : NekoMotion.standard,
+            curve: NekoMotion.enter,
             left: index * (_dot + _gap) - (_active - _dot) / 2,
             top: 0,
             child: Container(
@@ -1101,6 +1762,69 @@ class _PageDots extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A gently pulsing dot — the compact indicator for an incoming call. Gives a
+/// call urgency without dead answer/decline buttons (the notch has no telephony
+/// path). Reduce-motion aware: holds a static dot when animations are off.
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot({required this.color});
+
+  final Color color;
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 850),
+  );
+  bool _reduceMotion = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (_reduceMotion) {
+      _c.stop();
+      _c.value = 0;
+    } else if (!_c.isAnimating) {
+      _c.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 14,
+      height: 14,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (BuildContext context, _) {
+          final double size = 8 + 3 * _c.value;
+          return Center(
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.55 + 0.45 * _c.value),
+                shape: BoxShape.circle,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1214,52 +1938,6 @@ class _EqualizerPainter extends CustomPainter {
       old.t != t || old.color != color || old.active != active;
 }
 
-/// Two little ears perked around the punch-hole camera — drawn in the island's
-/// status-bar zone so the cutout itself reads as Neko's face.
-class _CatEarsPainter extends CustomPainter {
-  const _CatEarsPainter({required this.color, required this.perk});
-
-  final Color color;
-
-  /// 0..1 — how far the ears have perked up (grows with the island).
-  final double perk;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.height < 8) return;
-    final Paint fill = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-
-    // Two upright triangular ears — the app's own cat-ear language
-    // (`cat_eared_icon.dart`) — flanking the punch-hole so the cutout reads as
-    // Neko's face. A clear gap in the middle leaves the camera untouched.
-    final double cx = size.width / 2;
-    final double baseY = size.height;
-    final double earH = (size.height * 0.7 * perk).clamp(0.0, 17.0);
-    const double earW = 15;
-    const double halfGap = 11; // clearance for the camera on each side
-
-    for (int side = 0; side < 2; side++) {
-      final double dir = side == 0 ? -1 : 1;
-      final double innerX = cx + dir * halfGap;
-      final double outerX = cx + dir * (halfGap + earW);
-      final double apexX = cx + dir * (halfGap + earW * 0.5);
-      final Path ear = Path()
-        ..moveTo(innerX, baseY)
-        ..lineTo(apexX, baseY - earH)
-        ..lineTo(outerX, baseY)
-        ..close();
-      canvas.drawPath(ear, fill);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CatEarsPainter old) =>
-      old.color != color || old.perk != perk;
-}
-
 /// A self-ticking countdown label driven by the activity's absolute end time —
 /// no per-second pushes from the app engine needed.
 class _Countdown extends StatefulWidget {
@@ -1316,7 +1994,9 @@ class _CountdownState extends State<_Countdown> {
     final int m = left.inMinutes % 60;
     final int s = left.inSeconds % 60;
     String two(int v) => v.toString().padLeft(2, '0');
-    final String text = h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
+    final String text = h > 0
+        ? '$h:${two(m)}:${two(s)}'
+        : '${two(m)}:${two(s)}';
     return Text(text, maxLines: 1, style: widget.style);
   }
 }
@@ -1417,7 +2097,8 @@ double _remainingFraction(NotchActivity activity) {
 
 /// Tiles the paw artwork faintly and drifts it seamlessly (only while expanded).
 class _NotchPawPainter extends CustomPainter {
-  _NotchPawPainter(this.image, this.tint, this.progress) : super(repaint: progress);
+  _NotchPawPainter(this.image, this.tint, this.progress)
+    : super(repaint: progress);
 
   final ui.Image image;
   final Color tint;
@@ -1430,8 +2111,16 @@ class _NotchPawPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
       ..filterQuality = FilterQuality.medium
-      ..colorFilter = ColorFilter.mode(tint.withValues(alpha: 0.10), BlendMode.srcIn);
-    final Rect src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
+      ..colorFilter = ColorFilter.mode(
+        tint.withValues(alpha: 0.10),
+        BlendMode.srcIn,
+      );
+    final Rect src = Rect.fromLTWH(
+      0,
+      0,
+      image.width.toDouble(),
+      image.height.toDouble(),
+    );
     final double shift = progress.value * 2 * _tile;
     final int cols = (size.width / _tile).ceil() + 2;
     final int rows = (size.height / _tile).ceil() + 2;
@@ -1449,5 +2138,6 @@ class _NotchPawPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _NotchPawPainter old) => old.image != image || old.tint != tint;
+  bool shouldRepaint(covariant _NotchPawPainter old) =>
+      old.image != image || old.tint != tint;
 }

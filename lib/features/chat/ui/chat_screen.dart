@@ -58,8 +58,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       if (!_scroll.hasClients) return;
       _scroll.animateTo(
         _scroll.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOut,
+        duration: NekoMotion.entry,
+        curve: NekoMotion.standardCurve,
       );
     });
   }
@@ -98,7 +98,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _addPhoto(ImageSource source) async {
     setState(() => _uploading = true);
-    final String? path = await ref.read(imagePickerServiceProvider).pick(source);
+    final String? path = await ref
+        .read(imagePickerServiceProvider)
+        .pick(source);
     if (!mounted) return;
     setState(() {
       _uploading = false;
@@ -203,10 +205,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     itemCount: state.messages.length,
                     itemBuilder: (context, index) {
                       final ChatMessage m = state.messages[index];
-                      return ChatMessageBubble(message: m)
+                      final Widget bubble = ChatMessageBubble(message: m);
+                      // Only the newest bubble gets the entrance — otherwise
+                      // flutter_animate replays it every time an old bubble
+                      // scrolls back into view (and churns a controller per row).
+                      final bool isLast = index == state.messages.length - 1;
+                      if (!isLast || MediaQuery.disableAnimationsOf(context)) {
+                        return bubble;
+                      }
+                      return bubble
                           .animate()
                           .fadeIn(duration: NekoMotion.quick)
-                          .slideY(begin: 0.12, end: 0, curve: Curves.easeOut);
+                          .slideY(begin: 0.12, end: 0, curve: NekoMotion.enter);
                     },
                   ),
           ),

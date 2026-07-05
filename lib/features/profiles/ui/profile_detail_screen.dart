@@ -192,7 +192,7 @@ class _CatProfileBody extends StatelessWidget {
             // stats aren't fading on top of the page's own fade-in.
             .animate(delay: 220.ms, interval: 70.ms)
             .fadeIn(duration: 250.ms)
-            .slideY(begin: 0.2, end: 0, curve: Curves.easeOutCubic),
+            .slideY(begin: 0.2, end: 0, curve: NekoMotion.enter),
       ],
     );
   }
@@ -475,7 +475,7 @@ class _PresetChip extends StatelessWidget {
       onTap: onTap,
       semanticLabel: 'Start $label feeding timer',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.selectedFill,
           borderRadius: BorderRadius.circular(100),

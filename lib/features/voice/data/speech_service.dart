@@ -57,6 +57,11 @@ class SpeechService {
     required void Function(String words) onWords,
     required void Function(String words) onFinal,
     void Function(double level)? onLevel,
+    // The wake loop passes a longer pause so it holds the mic through silence
+    // rather than stopping and restarting every few seconds (which flickers the
+    // mic indicator and churns audio focus).
+    Duration pauseFor = const Duration(seconds: 3),
+    Duration listenFor = const Duration(seconds: 30),
   }) async {
     await _speech.listen(
       onResult: (SpeechRecognitionResult r) {
@@ -68,8 +73,8 @@ class SpeechService {
         partialResults: true,
         cancelOnError: true,
         listenMode: ListenMode.dictation,
-        pauseFor: const Duration(seconds: 3),
-        listenFor: const Duration(seconds: 30),
+        pauseFor: pauseFor,
+        listenFor: listenFor,
       ),
     );
   }
@@ -93,6 +98,4 @@ class SpeechService {
   }
 }
 
-final speechServiceProvider = Provider<SpeechService>(
-  (ref) => SpeechService(),
-);
+final speechServiceProvider = Provider<SpeechService>((ref) => SpeechService());

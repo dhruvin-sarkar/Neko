@@ -48,7 +48,10 @@ const String _systemPrompt =
     'bullet characters, or emojis in your replies. When you need to list '
     'steps, write them as a short numbered list using plain text (for example '
     '"1." on its own line). For anything that needs a veterinarian, recommend '
-    'consulting one rather than giving a diagnosis.';
+    'consulting one rather than giving a diagnosis. '
+    'You cannot browse the web or open links, so never say that you can\'t '
+    'search or browse — if asked to find, search for, or recommend options, '
+    'just give your best answer directly from your own knowledge.';
 
 /// The cat-safety-scan instruction, appended when [ChatService.streamReply] is
 /// called with `safety: true` (an attached photo of a plant / food / household
@@ -98,9 +101,10 @@ class HackClubChatService implements ChatService {
   }) async* {
     final String apiKey = _apiKey;
     if (apiKey.isEmpty || apiKey == _placeholderKey) {
+      // The env-var detail is for the developer (logs), never the user.
+      AppLogger.warning('HACKCLUB_API_KEY missing or placeholder in .env');
       throw const ChatException(
-        'Add your Hack Club AI key to the .env file '
-        '(HACKCLUB_API_KEY) to chat with Neko.',
+        'Meow — I can’t reach my brain right now. Give me a moment and try again.',
       );
     }
 

@@ -273,7 +273,7 @@ class _PreviewItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final ChatAttachment? a = attachment;
     return Padding(
-      padding: const EdgeInsets.only(right: 10, top: 6),
+      padding: const EdgeInsets.only(right: 12, top: 8),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -299,28 +299,36 @@ class _PreviewItem extends StatelessWidget {
           ),
           if (!uploading && onRemove != null)
             Positioned(
-              top: -8,
-              right: -8,
+              top: -18,
+              right: -18,
               child: Semantics(
                 button: true,
                 label: 'Remove attachment',
                 child: GestureDetector(
                   onTap: onRemove,
                   behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    padding: const EdgeInsets.all(5),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkBanner,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.snowWhite,
-                        width: 1.5,
+                  // A 40dp tap target around the small visual circle — a bare X
+                  // was a ~24dp target, under the Material minimum.
+                  child: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: AppColors.darkBanner,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.snowWhite,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                    child: const Icon(
-                      Icons.close,
-                      size: 14,
-                      color: Colors.white,
                     ),
                   ),
                 ),

@@ -2,8 +2,12 @@ package com.example.neko
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.FlutterEngineCache
@@ -55,17 +59,90 @@ object NotchBridge {
             try {
                 MethodChannel(engine.dartExecutor.binaryMessenger, OVERLAY_MEDIA_TAG)
                     .setMethodCallHandler { call, result ->
-                        if (call.method == "control") {
-                            NekoNotificationListenerService.instance
-                                ?.control(call.argument<String>("action") ?: "")
-                            result.success(true)
-                        } else {
-                            result.notImplemented()
+                        when (call.method) {
+                            "control" -> {
+                                NekoNotificationListenerService.instance
+                                    ?.control(call.argument<String>("action") ?: "")
+                                result.success(true)
+                            }
+                            "haptic" -> {
+                                vibrate(context, call.argument<String>("type") ?: "light")
+                                result.success(true)
+                            }
+                            "launchApp" -> {
+                                launchApp(context, call.argument<String>("package"))
+                                result.success(true)
+                            }
+                            "launchUrl" -> {
+                                launchUrl(context, call.argument<String>("url"))
+                                result.success(true)
+                            }
+                            else -> result.notImplemented()
                         }
                     }
                 controlBoundEngine = engine
             } catch (_: Exception) {
             }
+        }
+    }
+
+    /// A short native haptic, driven from the overlay (Flutter's HapticFeedback
+    /// is a no-op in the overlay engine). Best-effort — silently ignored if the
+    /// device has no vibrator or the user has haptics off system-wide.
+    private fun vibrate(context: Context, type: String) {
+        try {
+            val ms = when (type) {
+                "success" -> 28L
+                "selection" -> 12L
+                else -> 10L
+            }
+            val amp = when (type) {
+                "success" -> 140
+                "selection" -> 80
+                else -> 55
+            }
+            val ctx = context.applicationContext
+            when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                    val vm = ctx.getSystemService(Context.VIBRATOR_MANAGER_SERVICE)
+                        as VibratorManager
+                    vm.defaultVibrator.vibrate(VibrationEffect.createOneShot(ms, amp))
+                }
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> {
+                    val v = ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                    v.vibrate(VibrationEffect.createOneShot(ms, amp))
+                }
+                else -> {
+                    @Suppress("DEPRECATION")
+                    (ctx.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).vibrate(ms)
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    /// Opens the source app for a notch activity (long-press). Best-effort:
+    /// null/blank package or no launcher intent just does nothing.
+    private fun launchApp(context: Context, pkg: String?) {
+        if (pkg.isNullOrBlank()) return
+        try {
+            val ctx = context.applicationContext
+            val intent = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+        } catch (_: Exception) {
+        }
+    }
+
+    /// Opens a web URL in the browser (an AI-notch result tap). Best-effort.
+    private fun launchUrl(context: Context, url: String?) {
+        if (url.isNullOrBlank()) return
+        try {
+            val ctx = context.applicationContext
+            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+        } catch (_: Exception) {
         }
     }
 
@@ -156,6 +233,7 @@ object NotchBridge {
                     .put("type", type)
                     .put("id", event["key"] ?: "")
                     .put("appName", event["package"] ?: "")
+                    .put("packageId", event["packageId"] ?: "")
                     .put("title", event["title"] ?: "")
                     .put("body", event["body"] ?: "")
                     .put("ongoing", ongoing || type != "notification")
@@ -178,6 +256,7 @@ object NotchBridge {
                     .put("type", "music")
                     .put("songTitle", event["title"] ?: "")
                     .put("artistName", event["artist"] ?: "")
+                    .put("packageId", event["packageId"] ?: "")
                     .put("isPlaying", event["playing"] == true)
                     .put("progress", progress)
                     .put("durationMs", if (durMs > 0) durMs else JSONObject.NULL)

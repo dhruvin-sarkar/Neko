@@ -174,7 +174,7 @@ class SettingsScreen extends ConsumerWidget {
                 )
                 .animate()
                 .fadeIn(duration: NekoMotion.entry)
-                .slideY(begin: 0.1, end: 0, curve: Curves.easeOutCubic),
+                .slideY(begin: 0.1, end: 0, curve: NekoMotion.enter),
       ),
     );
   }
@@ -269,8 +269,8 @@ class _ThemeSwatch extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+          duration: NekoMotion.quick,
+          curve: NekoMotion.standardCurve,
           width: 56,
           height: 56,
           decoration: BoxDecoration(
@@ -395,7 +395,16 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
     setState(() => _busy = true);
     unawaited(ref.read(feedbackServiceProvider).onSelect());
     await ref.read(notchControllerProvider.notifier).setEnabled(value);
-    if (mounted) setState(() => _busy = false);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    // Turning it on silently fails if the overlay permission is denied — tell the
+    // user instead of just snapping the switch back to off.
+    if (value && !ref.read(notchControllerProvider).enabled) {
+      NekoSnackBar.show(
+        context,
+        'Neko needs the “Display over other apps” permission to sit in your notch.',
+      );
+    }
   }
 
   @override
@@ -431,7 +440,7 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
                 Text(
                   enabled
                       ? 'Live activities, music & notifications up top'
-                      : 'Off',
+                      : 'Off — flip it on for music & alerts up top',
                   style: AppTextStyles.caption,
                 ),
               ],
@@ -570,7 +579,7 @@ class _AboutCard extends ConsumerWidget {
   }
 }
 
-/// Sound preferences: a master mute toggle plus effects and purring volume.
+/// Sound preferences: a master mute toggle plus effects and music volume.
 class _SoundCard extends ConsumerWidget {
   const _SoundCard();
 
@@ -618,7 +627,7 @@ class _SoundCard extends ConsumerWidget {
                     Text('Sound', style: AppTextStyles.bodyLarge),
                     const SizedBox(height: 2),
                     Text(
-                      soundOn ? 'Effects & purring on' : 'Muted',
+                      soundOn ? 'Effects & music on' : 'Muted',
                       style: AppTextStyles.caption,
                     ),
                   ],
@@ -652,14 +661,6 @@ class _SoundCard extends ConsumerWidget {
             onChanged: controller.setSfxVolume,
             onChangeEnd: (_) =>
                 unawaited(AudioService.playSound(SoundId.btnTapPrimary)),
-          ),
-          _VolumeRow(
-            label: 'Purring volume',
-            icon: Icons.pets_rounded,
-            value: settings.ambientVolume,
-            max: 0.7,
-            enabled: soundOn,
-            onChanged: controller.setAmbientVolume,
           ),
           _VolumeRow(
             label: 'Music volume',

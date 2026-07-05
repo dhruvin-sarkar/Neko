@@ -158,7 +158,7 @@ class _SearchBar extends StatelessWidget {
           width: focused ? 2 : 1,
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
@@ -393,7 +393,7 @@ class _BreedCard extends StatelessWidget {
           curve: Curves.easeOutBack,
           child: AnimatedContainer(
             duration: NekoMotion.fast,
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: selected ? AppColors.primaryLight : AppColors.surfaceCard,
               borderRadius: BorderRadius.circular(20),
@@ -489,7 +489,7 @@ class _CustomBreedCard extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.primaryLight,
             borderRadius: BorderRadius.circular(20),

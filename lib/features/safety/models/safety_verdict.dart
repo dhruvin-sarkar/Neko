@@ -51,7 +51,10 @@ class SafetyVerdict {
     // Drop the "LABEL:" from the first line, keep the rest of the reply.
     lines[0] = firstLine.substring(match.end).trim();
     final String detail = lines.join('\n').trim();
-    return SafetyVerdict(level: level, detail: detail.isEmpty ? trimmed : detail);
+    return SafetyVerdict(
+      level: level,
+      detail: detail.isEmpty ? trimmed : detail,
+    );
   }
 
   String get headline => switch (level) {

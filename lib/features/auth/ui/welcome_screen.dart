@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../core/neko_motion.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/widgets/neko_mascot.dart';
 import '../../../core/widgets/neko_button.dart';
@@ -75,7 +76,7 @@ class _WelcomeMark extends StatelessWidget {
           begin: 0.6,
           end: 1.0,
           duration: 600.ms,
-          curve: Curves.elasticOut,
+          curve: NekoMotion.pop,
         ),
         const SizedBox(height: 32),
         Text('Meet Neko.', style: AppTextStyles.displayLarge)

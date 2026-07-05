@@ -23,10 +23,20 @@ class _NotchOverlayApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      color: Color(0x00000000),
-      home: NotchPill(),
+      color: const Color(0x00000000),
+      // The island is glanceable system chrome, so clamp the OS font scale to a
+      // narrow band: a large accessibility text size must not blow out and clip
+      // the fixed-height pill, while a small one still shrinks a touch. Like
+      // Apple's Dynamic Island, which stays a controlled size regardless.
+      builder: (BuildContext context, Widget? child) =>
+          MediaQuery.withClampedTextScaling(
+            minScaleFactor: 0.9,
+            maxScaleFactor: 1.1,
+            child: child ?? const SizedBox.shrink(),
+          ),
+      home: const NotchPill(),
     );
   }
 }

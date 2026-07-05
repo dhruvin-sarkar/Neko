@@ -12,6 +12,9 @@
     <!-- Hey Neko voice + workout sensors. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <!-- Notch haptics: a light tick on expand / tap / cycle and a buzz when a
+         countdown finishes, driven natively from the overlay via NotchBridge. -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Cat safety scan: point the camera at a plant/food/item to check if it's
          safe for the cat. Photos are analysed and discarded, never persisted. -->
     <uses-permission android:name="android.permission.CAMERA"/>

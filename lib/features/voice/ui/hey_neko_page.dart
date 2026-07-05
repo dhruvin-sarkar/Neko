@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes.dart';
@@ -146,7 +147,6 @@ class _IslandPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool busy = state.isBusy;
     final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     final bool showResults =
         state.phase == HeyNekoPhase.results && state.results.isNotEmpty;
@@ -156,39 +156,13 @@ class _IslandPanel extends StatelessWidget {
       clipBehavior: Clip.none,
       alignment: Alignment.topCenter,
       children: [
-        // Ears breaking the top edge of the panel — the notch's cat silhouette.
-        Positioned(
-          top: -18,
-          child: IgnorePointer(
-            child: SizedBox(
-              width: 120,
-              height: 26,
-              child: CustomPaint(
-                painter: _PanelEarsPainter(
-                  color: state.phase == HeyNekoPhase.error
-                      ? theme.foreground.withValues(alpha: 0.18)
-                      : theme.accent.withValues(alpha: 0.85),
-                ),
-              ),
-            ),
-          ),
-        ),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
           decoration: BoxDecoration(
             color: theme.background,
-            borderRadius: BorderRadius.circular(34),
-            border: Border.all(color: theme.foreground.withValues(alpha: 0.06)),
-            boxShadow: [
-              // The Apple-style soft accent lift that separates the pill from
-              // whatever is behind it.
-              BoxShadow(
-                color: theme.accent.withValues(alpha: busy ? 0.28 : 0.14),
-                blurRadius: 44,
-                spreadRadius: 1,
-              ),
-            ],
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: theme.foreground.withValues(alpha: 0.08)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -216,6 +190,11 @@ class _IslandPanel extends StatelessWidget {
                   ),
                   child: showResults
                       ? _ResultsList(theme: theme, results: state.results)
+                      : state.phase == HeyNekoPhase.searching
+                      // The results fetch is a real network round-trip, so its
+                      // waiting moment gets a skeleton list (the app's shimmer),
+                      // not a cat — then swaps to the real results when they land.
+                      ? _ResultsSkeleton(theme: theme)
                       : SingleChildScrollView(
                           child: Text(
                             _body(state),
@@ -246,9 +225,7 @@ class _IslandPanel extends StatelessWidget {
                   switchOutCurve: Curves.easeIn,
                   transitionBuilder: (child, anim) => SlideTransition(
                     position: Tween<Offset>(
-                      begin: reduceMotion
-                          ? Offset.zero
-                          : const Offset(0, 0.6),
+                      begin: reduceMotion ? Offset.zero : const Offset(0, 0.6),
                       end: Offset.zero,
                     ).animate(anim),
                     child: FadeTransition(opacity: anim, child: child),
@@ -287,9 +264,10 @@ class _IslandPanel extends StatelessWidget {
     HeyNekoPhase.speaking => state.reply,
     HeyNekoPhase.thinking => state.transcript,
     HeyNekoPhase.searching => state.transcript,
-    HeyNekoPhase.listening => state.transcript.isEmpty
-        ? 'Say something — feeding, grooming, health, anything cat.'
-        : state.transcript,
+    HeyNekoPhase.listening =>
+      state.transcript.isEmpty
+          ? 'Say something — feeding, grooming, health, anything cat.'
+          : state.transcript,
     HeyNekoPhase.results => '',
     // Keep the answer on screen during the brief auto-close beat rather than
     // flashing an empty "All done" card.
@@ -298,6 +276,43 @@ class _IslandPanel extends StatelessWidget {
 
   bool _bodyMuted(HeyNekoState state) =>
       state.phase == HeyNekoPhase.listening && state.transcript.isEmpty;
+}
+
+/// Skeleton placeholder cards shown while the web search is in flight, so the
+/// results moment reads as "a list is loading" rather than "a cat is thinking".
+/// Reuses the app's [Shimmer], tuned dark to sit calmly on the AI panel and
+/// shaped like the real result cards so the swap doesn't jump.
+class _ResultsSkeleton extends StatelessWidget {
+  const _ResultsSkeleton({required this.theme});
+
+  final NotchTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Shimmer.fromColors(
+        baseColor: theme.foreground.withValues(alpha: 0.06),
+        highlightColor: theme.foreground.withValues(alpha: 0.16),
+        period: const Duration(milliseconds: 1400),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (int i = 0; i < 3; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Container(
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// The tappable web results shown for a "results" voice query. Each opens in the
@@ -385,47 +400,6 @@ class _ResultsList extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Two cat ears poking up over the top edge of the island panel.
-class _PanelEarsPainter extends CustomPainter {
-  const _PanelEarsPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint fill = Paint()
-      ..color = color
-      ..isAntiAlias = true;
-    final double cx = size.width / 2;
-    final double baseY = size.height;
-    const double earW = 30;
-    final double earH = size.height;
-    for (int side = 0; side < 2; side++) {
-      final double dir = side == 0 ? -1 : 1;
-      final double baseCx = cx + dir * 34;
-      final Path ear = Path()
-        ..moveTo(baseCx - earW / 2, baseY)
-        ..quadraticBezierTo(
-          baseCx - earW * 0.2 + dir * 3,
-          baseY - earH * 0.8,
-          baseCx + dir * 4,
-          baseY - earH,
-        )
-        ..quadraticBezierTo(
-          baseCx + earW * 0.3 + dir * 3,
-          baseY - earH * 0.55,
-          baseCx + earW / 2,
-          baseY,
-        )
-        ..close();
-      canvas.drawPath(ear, fill);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _PanelEarsPainter old) => old.color != color;
 }
 
 class _Actions extends StatelessWidget {

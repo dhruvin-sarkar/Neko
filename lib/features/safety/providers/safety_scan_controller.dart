@@ -86,23 +86,25 @@ class SafetyScanController extends Notifier<SafetyScanState> {
     }
     state = const SafetyScanState(phase: SafetyScanPhase.capturing);
 
-    final String? path = await ref.read(imagePickerServiceProvider).pick(source);
+    final String? path = await ref
+        .read(imagePickerServiceProvider)
+        .pick(source);
     if (_disposed) return;
     if (path == null) {
       // Cancelled or denied — image_picker already surfaced any permission UI.
       state = state.copyWith(
         phase: SafetyScanPhase.error,
-        message: 'No photo captured. Point the camera at the item and try '
+        message:
+            'No photo captured. Point the camera at the item and try '
             'again — or check camera access in Settings.',
       );
       return;
     }
 
-    state = SafetyScanState(
-      phase: SafetyScanPhase.analyzing,
-      photoPath: path,
+    state = SafetyScanState(phase: SafetyScanPhase.analyzing, photoPath: path);
+    unawaited(
+      _pushActivity(title: 'Safety check', subtitle: 'Neko’s looking…'),
     );
-    unawaited(_pushActivity(title: 'Safety check', subtitle: 'Neko’s looking…'));
 
     final List<CatProfile> cats =
         ref.read(catProfilesProvider).valueOrNull ?? const <CatProfile>[];
@@ -141,10 +143,7 @@ class SafetyScanController extends Notifier<SafetyScanState> {
             final String msg = error is ChatException
                 ? error.message
                 : 'Sorry — the safety check failed. Please try again.';
-            state = state.copyWith(
-              phase: SafetyScanPhase.error,
-              message: msg,
-            );
+            state = state.copyWith(phase: SafetyScanPhase.error, message: msg);
           },
         );
   }
@@ -152,10 +151,7 @@ class SafetyScanController extends Notifier<SafetyScanState> {
   void _finish(String reply) {
     if (_disposed) return;
     final SafetyVerdict verdict = SafetyVerdict.parse(reply);
-    state = state.copyWith(
-      phase: SafetyScanPhase.result,
-      verdict: verdict,
-    );
+    state = state.copyWith(phase: SafetyScanPhase.result, verdict: verdict);
     unawaited(
       _pushActivity(
         title: 'Safety: ${verdict.headline}',

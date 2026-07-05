@@ -12,10 +12,19 @@ abstract final class NotchMetrics {
   static const int idleWidth = 80;
   static const int activeWidth = 212;
 
-  /// The island widens as it expands (Dynamic-Island style): the expanded
-  /// window is wider than the compact pill and the visual width animates
-  /// inside it.
-  static const int expandedWidth = 316;
+  /// The design expanded width; the visual island animates across it.
+  static const int _kExpandedWidth = 316;
+
+  /// Expanded width, adapted to the device: capped to the screen minus a
+  /// comfortable margin so the island never touches the edges on a narrow phone
+  /// (or in landscape), while staying the design width on normal/large screens.
+  static int get expandedWidth {
+    final double sw = _screenWidthDp;
+    // Implausibly small ⇒ we couldn't read the real screen; don't cap.
+    if (sw < 280) return _kExpandedWidth;
+    final int cap = (sw - 28).floor();
+    return _kExpandedWidth < cap ? _kExpandedWidth : cap;
+  }
 
   static const int idleContent = 5;
   static const int compactContent = 42;
@@ -24,11 +33,33 @@ abstract final class NotchMetrics {
   static double get devicePixelRatio =>
       ui.PlatformDispatcher.instance.implicitView?.devicePixelRatio ?? 3.0;
 
+  /// The device's screen width in logical pixels, taken from the physical
+  /// [ui.Display] (NOT the overlay's own resized window — reading the window
+  /// would feed its width back into the width calc). Returns a large sentinel
+  /// when it can't be determined, so callers simply don't cap.
+  static double get _screenWidthDp {
+    try {
+      final Iterable<ui.Display> displays =
+          ui.PlatformDispatcher.instance.displays;
+      if (displays.isNotEmpty) {
+        final ui.Display d = displays.first;
+        final double dpr = d.devicePixelRatio <= 0 ? 1.0 : d.devicePixelRatio;
+        final double w = d.size.width / dpr;
+        if (w > 100) return w;
+      }
+    } on Object {
+      // Fall through to the "unknown" sentinel.
+    }
+    return 4096;
+  }
+
   static int toPx(int dp) => (dp * devicePixelRatio).round();
 
   static double get statusBarInset {
     final ui.FlutterView? view = ui.PlatformDispatcher.instance.implicitView;
-    final double dp = view != null ? view.padding.top / view.devicePixelRatio : 28;
+    final double dp = view != null
+        ? view.padding.top / view.devicePixelRatio
+        : 28;
     return dp < 20 ? 28 : dp;
   }
 }
@@ -77,9 +108,10 @@ class NotchOverlayService {
 
   Future<void> mediaControl(String action) async {
     try {
-      await _method.invokeMethod<void>(NotchChannels.mediaControl, <String, dynamic>{
-        'action': action,
-      });
+      await _method.invokeMethod<void>(
+        NotchChannels.mediaControl,
+        <String, dynamic>{'action': action},
+      );
     } on PlatformException {
       // ignore
     }

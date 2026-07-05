@@ -106,6 +106,16 @@ class NekoNotificationListenerService : NotificationListenerService() {
 
         val ongoing = (n.flags and Notification.FLAG_ONGOING_EVENT) != 0
 
+        // Calls: only surface an ANSWERED call. A ringing incoming call posts a
+        // full-screen-intent / heads-up notification that Android itself makes
+        // loud and prominent (there's no CallKit-style suppression on Android),
+        // so our own notch card there would be redundant. Ringing is not ongoing;
+        // the moment the call is answered the notification flips to ongoing and
+        // the notch becomes the glanceable "still on a call" indicator.
+        // (Caveat: relies on the app using the modern call-notification pattern —
+        // correct for the native dialer; verify third-party VoIP apps on-device.)
+        if (n.category == Notification.CATEGORY_CALL && !ongoing) return
+
         // A count-down chronometer (the Clock app's timer, and most timer apps)
         // exposes its end time through the notification's `when`. Detecting it
         // lets a running timer show as a real Dynamic-Island countdown instead
@@ -113,14 +123,16 @@ class NekoNotificationListenerService : NotificationListenerService() {
         val showChrono = extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false)
         val countDown = extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false)
         val timerEndsAt = n.`when`
-        val isClockApp = sbn.packageName in CLOCK_PACKAGES
-        // Two ways to recognise a running timer: the standard count-down
-        // chronometer flags, OR a Clock app's ongoing notification whose `when`
-        // is in the future (some Clock apps drive the countdown via custom
-        // RemoteViews and never set the chronometer extras, which is why the
-        // timer previously showed as a plain notification).
+        // Any ongoing Clock notification (timer / stopwatch / alarm) is a live
+        // activity we want to surface, not a plain bell notification.
+        val isClockActivity = sbn.packageName in CLOCK_PACKAGES && ongoing
+        // A count-down carries its end time in `when`: the standard chronometer
+        // flags, or a Clock activity whose `when` is in the future (some Clock
+        // apps drive the countdown via custom RemoteViews and never set the
+        // chronometer extras — that's why the timer showed as a plain
+        // notification before). Only then do we get a live ticking countdown.
         val isCountdown = (showChrono && countDown && timerEndsAt > 0L) ||
-            (isClockApp && ongoing && timerEndsAt > System.currentTimeMillis())
+            (isClockActivity && timerEndsAt > System.currentTimeMillis())
 
         // Navigation apps (Maps) post custom RemoteViews notifications that
         // often omit EXTRA_TITLE, so fall back through the other text fields and
@@ -143,7 +155,9 @@ class NekoNotificationListenerService : NotificationListenerService() {
         // your visit", Waze promos) as normal, auto-dismissing notifications
         // instead of a stuck turn-by-turn card.
         val category = when {
-            isCountdown -> "timer"
+            // Countdown timer, or any other ongoing clock activity (stopwatch /
+            // alarm / paused timer) — all shown with the timer treatment.
+            isCountdown || isClockActivity -> "timer"
             n.category == "navigation" -> "navigation"
             ongoing && sbn.packageName in NAV_PACKAGES -> "navigation"
             else -> n.category ?: ""
@@ -166,6 +180,7 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 "kind" to "notification",
                 "key" to sbn.key,
                 "package" to appLabel(sbn.packageName),
+                "packageId" to sbn.packageName,
                 "title" to title,
                 "body" to body,
                 "category" to category,
@@ -293,7 +308,15 @@ class NekoNotificationListenerService : NotificationListenerService() {
         val immediate = bitmap
             ?: if (artUri != null && artUri == lastArtUri) lastArtBitmap else null
 
-        sendMedia(title, artist, playing, position, duration, immediate)
+        sendMedia(
+            title,
+            artist,
+            controller.packageName,
+            playing,
+            position,
+            duration,
+            immediate,
+        )
 
         // Only fetch a URI we haven't tried yet (lastArtUri is set on success and
         // failure), so a dead/404 thumbnail isn't re-downloaded on every tick.
@@ -303,7 +326,15 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 lastArtBitmap = loaded
                 // Drop a late download for a track we've already skipped past.
                 if (loaded != null && currentTrackKey == trackKey) {
-                    sendMedia(title, artist, playing, position, duration, loaded)
+                    sendMedia(
+                        title,
+                        artist,
+                        controller.packageName,
+                        playing,
+                        position,
+                        duration,
+                        loaded,
+                    )
                 }
             }
         }
@@ -312,6 +343,7 @@ class NekoNotificationListenerService : NotificationListenerService() {
     private fun sendMedia(
         title: String,
         artist: String,
+        packageId: String,
         playing: Boolean,
         position: Long,
         duration: Long,
@@ -323,6 +355,7 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 "kind" to "media",
                 "title" to title,
                 "artist" to artist,
+                "packageId" to packageId,
                 "playing" to playing,
                 "position" to position,
                 "duration" to duration,

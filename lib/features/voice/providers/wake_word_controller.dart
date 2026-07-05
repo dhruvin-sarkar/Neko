@@ -39,15 +39,15 @@ class WakeWordState {
 final wakeWordControllerProvider =
     NotifierProvider<WakeWordController, WakeWordState>(WakeWordController.new);
 
-/// Optional always-listening "Hey Neko" wake word (continuous on-device STT).
+/// Optional "Hey Neko" wake word — a continuous on-device `speech_to_text` loop.
 ///
-/// When enabled, it keeps a recognition session running while the app is in the
-/// foreground, scanning the transcript for "neko". On a hit it bumps
-/// [WakeWordState.triggerCount] (the app root opens the Hey Neko page) and
-/// pauses itself so the page's command session owns the mic; the page resumes it
-/// on close. This is the pragmatic, no-extra-dependency wake word — it only
-/// listens while the app is foregrounded, and it costs battery, so it's off by
-/// default and clearly labelled in Settings.
+/// Android's recogniser is **foreground-only**: it can't record once the app is
+/// swiped away, and there's no way around that without a dedicated wake engine
+/// (Picovoice/Vosk) in a mic foreground service. So this listens while the app
+/// is open, scanning the transcript for "neko"; on a hit it bumps
+/// [WakeWordState.triggerCount] (the app root opens the Hey Neko page) and hands
+/// the mic to that page's command session, taking it back when the page closes.
+/// It costs battery, so it's off by default and clearly labelled in Settings.
 class WakeWordController extends Notifier<WakeWordState> {
   static const String _prefKey = 'hey_neko_wake_enabled';
 
@@ -56,10 +56,12 @@ class WakeWordController extends Notifier<WakeWordState> {
   static const List<String> _cues = <String>[
     'hey neko',
     'hey nico',
+    'hey niko',
     'neko',
     'neco',
     'nico',
     'niko',
+    'necko',
   ];
 
   AppLifecycleListener? _lifecycle;
@@ -125,7 +127,14 @@ class WakeWordController extends Notifier<WakeWordState> {
     if (!ready || !state.enabled || _paused || !_foreground) return;
     if (_speech.isListening) return;
     state = state.copyWith(listening: true);
-    await _speech.listen(onWords: _scan, onFinal: (_) {});
+    // Hold the mic open through long silences (the max the recogniser allows)
+    // so the wake word isn't a rapid on/off cycle that flickers the mic dot.
+    await _speech.listen(
+      onWords: _scan,
+      onFinal: (_) {},
+      pauseFor: const Duration(seconds: 30),
+      listenFor: const Duration(seconds: 60),
+    );
   }
 
   Future<void> _stopLoop() async {

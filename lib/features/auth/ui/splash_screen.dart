@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
+import '../../../core/neko_motion.dart';
 import '../../../core/widgets/neko_loader.dart';
 
 /// First screen on launch. The wordmark springs in with an elastic overshoot.
@@ -38,7 +39,7 @@ class SplashScreen extends StatelessWidget {
                         begin: 0.7,
                         end: 1.0,
                         duration: 500.ms,
-                        curve: Curves.elasticOut,
+                        curve: NekoMotion.pop,
                       )
                       .fadeIn(duration: 300.ms),
             const SizedBox(height: 28),

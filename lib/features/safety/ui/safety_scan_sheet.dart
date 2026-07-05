@@ -96,8 +96,7 @@ class _ScanHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String title = switch (state.phase) {
-      SafetyScanPhase.result =>
-        state.verdict?.headline ?? 'Safety check',
+      SafetyScanPhase.result => state.verdict?.headline ?? 'Safety check',
       SafetyScanPhase.error => 'Safety check',
       _ => 'Cat safety scan',
     };

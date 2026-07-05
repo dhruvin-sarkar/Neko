@@ -146,7 +146,7 @@ List<Widget> _catSlivers(
                       begin: 0.3,
                       end: 0,
                       duration: NekoMotion.entry,
-                      curve: Curves.easeOutCubic,
+                      curve: NekoMotion.enter,
                     );
           return Padding(
             key: ValueKey<String>(cat.id),

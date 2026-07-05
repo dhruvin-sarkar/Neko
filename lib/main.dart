@@ -68,6 +68,14 @@ void main() {
       // theme change), so dark themes get light icons and light ones dark icons.
       await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
+      // Portrait-only: every screen (onboarding, home, the AI panel) and the
+      // notch pill are designed for portrait; a landscape rotation would break
+      // those fixed layouts and float the notch off the top cutout.
+      await SystemChrome.setPreferredOrientations(const <DeviceOrientation>[
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+
       final SharedPreferences prefs = await SharedPreferences.getInstance();
 
       // On-device media store (profile pictures + documents) and the SFX

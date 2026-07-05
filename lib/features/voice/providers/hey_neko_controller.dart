@@ -152,13 +152,18 @@ class HeyNekoController extends Notifier<HeyNekoState> {
       state = state.copyWith(
         phase: HeyNekoPhase.error,
         micDenied: true,
-        message: 'Neko can’t hear you — microphone access is off. '
+        message:
+            'Neko can’t hear you — microphone access is off. '
             'You can type your question instead.',
       );
       return;
     }
 
-    await _pushActivity(title: 'Listening…', subtitle: 'Say something to Neko');
+    await _pushActivity(
+      title: 'Listening…',
+      subtitle: 'Say something to Neko',
+      phase: 'listening',
+    );
 
     try {
       // No onLevel: the dark AI-notch page has no mic-reactive visual, and
@@ -203,7 +208,13 @@ class HeyNekoController extends Notifier<HeyNekoState> {
     _heard = words;
     state = state.copyWith(transcript: words);
     if (words.trim().isNotEmpty) {
-      unawaited(_updateActivity(title: 'Listening…', subtitle: words));
+      unawaited(
+        _updateActivity(
+          title: 'Listening…',
+          subtitle: words,
+          phase: 'listening',
+        ),
+      );
     }
   }
 
@@ -248,19 +259,43 @@ class HeyNekoController extends Notifier<HeyNekoState> {
     // scan; results ("best/top/which…") → web search; else a plain answer.
     switch (_route(prompt)) {
       case _VoiceIntent.camera:
-        state = state.copyWith(phase: HeyNekoPhase.thinking, transcript: prompt);
-        unawaited(_updateActivity(title: 'Neko’s looking…', subtitle: prompt));
+        state = state.copyWith(
+          phase: HeyNekoPhase.thinking,
+          transcript: prompt,
+        );
+        unawaited(
+          _updateActivity(
+            title: 'Neko’s looking…',
+            subtitle: prompt,
+            phase: 'thinking',
+          ),
+        );
         unawaited(_scan(prompt));
       case _VoiceIntent.results:
         state = state.copyWith(
           phase: HeyNekoPhase.searching,
           transcript: prompt,
         );
-        unawaited(_updateActivity(title: 'Neko’s searching…', subtitle: prompt));
+        unawaited(
+          _updateActivity(
+            title: 'Neko’s searching…',
+            subtitle: prompt,
+            phase: 'searching',
+          ),
+        );
         unawaited(_search(prompt));
       case _VoiceIntent.plain:
-        state = state.copyWith(phase: HeyNekoPhase.thinking, transcript: prompt);
-        unawaited(_updateActivity(title: 'Neko’s thinking…', subtitle: prompt));
+        state = state.copyWith(
+          phase: HeyNekoPhase.thinking,
+          transcript: prompt,
+        );
+        unawaited(
+          _updateActivity(
+            title: 'Neko’s thinking…',
+            subtitle: prompt,
+            phase: 'thinking',
+          ),
+        );
         _think(prompt);
     }
   }
@@ -299,32 +334,59 @@ class HeyNekoController extends Notifier<HeyNekoState> {
     return _VoiceIntent.plain;
   }
 
-  /// The results branch: a real web search via [SearchService]. On any
-  /// empty/failed result it falls back to a plain spoken answer rather than an
-  /// empty panel, so the feature degrades cleanly when search is unavailable.
+  /// The results branch: a real web search via [SearchService] when a key is
+  /// configured, otherwise (or on empty results) a single one-tap Google card
+  /// that opens live results in the browser — so a "results" query always ends
+  /// with a real path to the web, never a dead end.
   Future<void> _search(String prompt) async {
-    final List<SearchResult> results = await ref
-        .read(searchServiceProvider)
-        .search(prompt);
+    final SearchService searchSvc = ref.read(searchServiceProvider);
+    final List<SearchResult> results = searchSvc.hasKey
+        ? await searchSvc.search(prompt)
+        : const <SearchResult>[];
     if (_disposed || state.phase != HeyNekoPhase.searching) return;
-    if (results.isEmpty) {
-      state = state.copyWith(phase: HeyNekoPhase.thinking);
-      _think(prompt);
+
+    if (results.isNotEmpty) {
+      state = state.copyWith(phase: HeyNekoPhase.results, results: results);
+      await _updateActivity(
+        title: 'Neko found ${results.length}',
+        subtitle: results.first.title,
+        phase: 'results',
+        results: _notchResults(results),
+      );
+      ref
+          .read(chatControllerProvider.notifier)
+          .appendVoiceTurn(
+            _prompt,
+            'Here are a few options I found:\n'
+            '${results.map((SearchResult r) => '• ${r.title}').join('\n')}',
+          );
+      unawaited(_tts.speak('Here are a few options I found.'));
       return;
     }
-    state = state.copyWith(phase: HeyNekoPhase.results, results: results);
+
+    // No API results (or no key): a single tappable card that runs the query on
+    // Google in the browser.
+    final SearchResult web = SearchResult(
+      title: 'Search the web for “$prompt”',
+      description: 'Opens Google results in your browser',
+      url: searchSvc.webSearchUrl(prompt),
+    );
+    state = state.copyWith(
+      phase: HeyNekoPhase.results,
+      results: <SearchResult>[web],
+    );
     await _updateActivity(
-      title: 'Neko found ${results.length}',
-      subtitle: results.first.title,
+      title: 'Neko can look that up',
+      subtitle: prompt,
+      phase: 'results',
+      results: _notchResults(<SearchResult>[web]),
     );
     ref
         .read(chatControllerProvider.notifier)
-        .appendVoiceTurn(
-          _prompt,
-          'Here are a few options I found:\n'
-          '${results.map((SearchResult r) => '• ${r.title}').join('\n')}',
-        );
-    unawaited(_tts.speak('Here are a few options I found.'));
+        .appendVoiceTurn(_prompt, 'Tap the card to search the web for that.');
+    unawaited(
+      _tts.speak('I can look that up — tap the card to see web results.'),
+    );
   }
 
   /// The camera branch: snap a photo and run it through the exact same
@@ -437,7 +499,11 @@ class HeyNekoController extends Notifier<HeyNekoState> {
       return;
     }
     state = state.copyWith(phase: HeyNekoPhase.speaking, reply: reply);
-    await _updateActivity(title: 'Neko says', subtitle: reply);
+    await _updateActivity(
+      title: 'Neko says',
+      subtitle: reply,
+      phase: 'speaking',
+    );
     // Record the exchange so it shows in the chat transcript and history.
     ref.read(chatControllerProvider.notifier).appendVoiceTurn(_prompt, reply);
     await _tts.speak(reply);
@@ -449,12 +515,19 @@ class HeyNekoController extends Notifier<HeyNekoState> {
 
   // ── Notch mirror ────────────────────────────────────────────────────────────
 
-  NotchActivity _activity({required String title, required String subtitle}) {
+  NotchActivity _activity({
+    required String title,
+    required String subtitle,
+    required String phase,
+    List<NotchResult> results = const <NotchResult>[],
+  }) {
     return NotchActivity(
       type: NotchActivityType.assistant,
       id: _activityId,
       title: title,
       subtitle: subtitle,
+      phase: phase,
+      results: results,
       isPlaying: true,
       ongoing: true,
     );
@@ -463,20 +536,38 @@ class HeyNekoController extends Notifier<HeyNekoState> {
   Future<void> _pushActivity({
     required String title,
     required String subtitle,
+    required String phase,
   }) {
     return ref
         .read(notchControllerProvider.notifier)
-        .showActivity(_activity(title: title, subtitle: subtitle));
+        .showActivity(
+          _activity(title: title, subtitle: subtitle, phase: phase),
+        );
   }
 
   Future<void> _updateActivity({
     required String title,
     required String subtitle,
+    required String phase,
+    List<NotchResult> results = const <NotchResult>[],
   }) {
     return ref
         .read(notchControllerProvider.notifier)
-        .updateActivity(_activity(title: title, subtitle: subtitle));
+        .updateActivity(
+          _activity(
+            title: title,
+            subtitle: subtitle,
+            phase: phase,
+            results: results,
+          ),
+        );
   }
+
+  /// Maps [SearchResult]s to the compact [NotchResult]s the island renders.
+  List<NotchResult> _notchResults(List<SearchResult> results) => results
+      .take(4)
+      .map((SearchResult r) => NotchResult(title: r.title, url: r.url))
+      .toList();
 
   Future<void> _removeActivity() {
     return ref

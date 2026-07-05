@@ -78,13 +78,22 @@ class ChatController extends Notifier<ChatState> {
       isGenerating: true,
     );
 
-    // A "best/top/which…" question with no photo tries a real web search first
-    // and shows a tappable list; it falls back to a conversational answer if the
-    // search is empty or unavailable — the same routing the voice flow uses.
-    if (attachments.isEmpty && isSearchQuery(trimmed)) {
-      final List<SearchResult> results = await ref
-          .read(searchServiceProvider)
-          .search(trimmed);
+    // A "best/top/which…" question with no photo is a "results" query. If a
+    // search API key is configured we try a real web search for a tappable
+    // in-app list; either way we always attach a one-tap Google search (opens in
+    // the browser) so there's a real path to live results even with no key.
+    final bool wantsWeb = attachments.isEmpty && isSearchQuery(trimmed);
+    final SearchService searchSvc = ref.read(searchServiceProvider);
+    final SearchResult? webResult = wantsWeb
+        ? SearchResult(
+            title: 'Search the web for “$trimmed”',
+            description: 'Tap to dig through the full web results',
+            url: searchSvc.webSearchUrl(trimmed),
+          )
+        : null;
+
+    if (wantsWeb && searchSvc.hasKey) {
+      final List<SearchResult> results = await searchSvc.search(trimmed);
       // Bail if the turn was stopped / a new chat started during the search.
       if (!state.isGenerating) return;
       if (results.isNotEmpty) {
@@ -93,7 +102,7 @@ class ChatController extends Notifier<ChatState> {
         _saveCurrent();
         return;
       }
-      // else fall through to a normal streamed reply
+      // else fall through to a normal reply + the browser-search card below
     }
 
     // Give the model this owner's cat profile(s) so replies are personalised.
@@ -119,6 +128,7 @@ class ChatController extends Notifier<ChatState> {
               text.isEmpty ? '…' : text,
               streaming: false,
             );
+            if (webResult != null) _attachWebResult(assistantId, webResult);
             state = state.copyWith(isGenerating: false);
             _sub = null;
             _saveCurrent();
@@ -127,7 +137,15 @@ class ChatController extends Notifier<ChatState> {
             final String message = error is ChatException
                 ? error.message
                 : 'Sorry — something went wrong. Please try again.';
-            _setAssistant(assistantId, message, streaming: false, isError: true);
+            _setAssistant(
+              assistantId,
+              message,
+              streaming: false,
+              isError: true,
+            );
+            // Even on failure, a results-style query still gets its one-tap web
+            // search — a useful recovery instead of a dead end.
+            if (webResult != null) _attachWebResult(assistantId, webResult);
             state = state.copyWith(isGenerating: false);
             _sub = null;
             // Persist the partial turn too, so a mid-stream network error
@@ -177,6 +195,18 @@ class ChatController extends Notifier<ChatState> {
     );
   }
 
+  /// Appends a one-tap "search the web" card under an assistant reply for a
+  /// results-style query, so live web results are one tap away even with no
+  /// search API key configured.
+  void _attachWebResult(String id, SearchResult result) {
+    state = state.copyWith(
+      messages: [
+        for (final ChatMessage m in state.messages)
+          if (m.id == id) m.copyWith(results: <SearchResult>[result]) else m,
+      ],
+    );
+  }
+
   void _setAssistant(
     String id,
     String content, {
@@ -187,7 +217,11 @@ class ChatController extends Notifier<ChatState> {
       messages: [
         for (final ChatMessage m in state.messages)
           if (m.id == id)
-            m.copyWith(content: content, isStreaming: streaming, isError: isError)
+            m.copyWith(
+              content: content,
+              isStreaming: streaming,
+              isError: isError,
+            )
           else
             m,
       ],

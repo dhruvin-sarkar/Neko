@@ -94,44 +94,15 @@ class AudioService {
   /// UI taps/toggles, the success meow for positive moments — so every
   /// interaction is audible. Drop more clips in and point their IDs here.
   static const Map<SoundId, String> _assets = <SoundId, String>{
-    // Cat vocals.
-    SoundId.catMeowGreet: 'sounds/sfx_cat_meow_greet.wav',
-    SoundId.catMeowSuccess: 'sounds/sfx_cat_meow_success.mp3',
-    SoundId.catTrill: 'sounds/sfx_cat_trill.mp3',
-    SoundId.catChirp: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.catPurrLoop: 'sounds/sfx_cat_purr_loop.mp3',
-    SoundId.catMeowNotif: 'sounds/sfx_cat_meow_notif.mp3',
-    SoundId.notchPing: 'sounds/sfx_cat_meow_notif.mp3',
-    // Continuous background music.
+    // The cat-vocal + UI SFX clips have been removed from the project; only the
+    // background-music loop ships today. Every other [SoundId] simply has no
+    // clip, so [playSound] for it is a graceful no-op. To re-enable a sound,
+    // drop its file under `assets/sounds/` and add its entry back here.
     SoundId.cottagecoreLoop: 'sounds/freesound_community-cottagecore-17463.mp3',
-    // Taps, navigation and sheet/notch UI — reuse the short cat chirp.
-    SoundId.btnTapPrimary: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.btnTapSoft: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.selectOption: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.progressTick: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.cameraShutter: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.swipeForward: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.swipeBack: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.sheetOpen: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.sheetClose: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.notchExpand: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.notchCollapse: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.navTap: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.toggle: 'sounds/sfx_cat_chirp.mp3',
-    SoundId.wrong: 'sounds/sfx_cat_chirp.mp3',
-    // Positive feedback — reuse the success meow.
-    SoundId.correct: 'sounds/sfx_cat_meow_success.mp3',
-    SoundId.celebrate: 'sounds/sfx_cat_meow_success.mp3',
-    SoundId.loginSuccess: 'sounds/sfx_cat_meow_success.mp3',
-    SoundId.uploadDone: 'sounds/sfx_cat_meow_success.mp3',
-    SoundId.saveConfirm: 'sounds/sfx_cat_meow_success.mp3',
   };
 
-  /// Safety net for the `.wav` clip: if a device can't decode the wav, fall back
-  /// to an mp3 so the sound still plays.
-  static const Map<SoundId, String> _fallbackAssets = <SoundId, String>{
-    SoundId.catMeowGreet: 'sounds/sfx_cat_meow_success.mp3',
-  };
+  /// Per-clip decode fallbacks (none needed while only the music loop ships).
+  static const Map<SoundId, String> _fallbackAssets = <SoundId, String>{};
 
   /// The two clips that loop rather than firing as one-shots.
   static bool _isLoop(SoundId id) =>

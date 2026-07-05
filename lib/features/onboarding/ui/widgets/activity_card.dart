@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/neko_motion.dart';
 import '../../models/activity_option.dart';
 import 'selection_check.dart';
 
@@ -29,8 +30,8 @@ class ActivityCard extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
+          duration: NekoMotion.fast,
+          curve: NekoMotion.standardCurve,
           height: 88,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(

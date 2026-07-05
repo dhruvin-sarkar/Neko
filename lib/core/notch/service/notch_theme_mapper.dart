@@ -22,8 +22,16 @@ abstract final class NotchThemeMapper {
     final bool dark = palette.isDark;
 
     // Dark themes: the elevated surface already blends with the cutout.
-    // Light themes: a deep, primary-tinted ink — themed but unmistakably dark.
-    Color background = dark ? palette.surfaceElevated : palette.primaryDark;
+    // Light themes: every palette's primaryDark is a saturated HUE (brick,
+    // mustard, espresso, indigo) that would read as coloured glass beside the
+    // black camera — so drop it to near-ink UNCONDITIONALLY, keeping only a
+    // faint coat tint. (The old `> 0.16` gate never fired: every primaryDark is
+    // already below it, so the island rendered as a fully-saturated dark hue.)
+    Color background = dark
+        ? palette.surfaceElevated
+        : (Color.lerp(palette.primaryDark, _inkBase, 0.72) ?? _inkBase);
+    // Safety net for any dark palette whose elevated surface is too light to
+    // pass for a cutout.
     if (background.computeLuminance() > 0.16) {
       background = Color.lerp(background, _inkBase, 0.78) ?? _inkBase;
     }

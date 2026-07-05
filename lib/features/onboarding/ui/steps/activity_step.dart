@@ -50,7 +50,7 @@ class ActivityStep extends ConsumerWidget {
                 begin: 0.3,
                 end: 0,
                 duration: NekoMotion.entry,
-                curve: Curves.easeOutCubic,
+                curve: NekoMotion.enter,
               ),
         ],
       ],

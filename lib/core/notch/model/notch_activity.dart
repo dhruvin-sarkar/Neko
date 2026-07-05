@@ -1,5 +1,21 @@
 import 'package:flutter/foundation.dart';
 
+/// One tappable web result shown on the AI notch's results card.
+@immutable
+class NotchResult {
+  const NotchResult({required this.title, required this.url});
+
+  final String title;
+  final String url;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{'t': title, 'u': url};
+
+  factory NotchResult.fromJson(Map<String, dynamic> json) => NotchResult(
+    title: (json['t'] ?? '').toString(),
+    url: (json['u'] ?? '').toString(),
+  );
+}
+
 /// live activity!
 enum NotchActivityType {
   music,
@@ -29,12 +45,15 @@ class NotchActivity {
     required this.title,
     this.subtitle = '',
     this.appName,
+    this.packageId,
     this.progress,
     this.isPlaying = false,
     this.durationMs,
     this.endsAtMs,
     this.source,
     this.albumArt,
+    this.phase,
+    this.results = const <NotchResult>[],
     bool? ongoing,
   }) : _ongoing = ongoing;
 
@@ -46,6 +65,11 @@ class NotchActivity {
   final String subtitle;
 
   final String? appName;
+
+  /// The source app's package id (e.g. `com.whatsapp`) — used by long-press
+  /// tap-to-open. Null for app-originated activities (Hey Neko, feeding timer).
+  final String? packageId;
+
   final double? progress;
 
   final bool isPlaying;
@@ -61,8 +85,15 @@ class NotchActivity {
 
   final String? albumArt;
 
-  final bool? _ongoing;
+  /// For the `assistant` (Hey Neko) type: the AI phase driving which cat
+  /// animation the island plays — 'listening' | 'thinking' | 'searching' |
+  /// 'results' | 'speaking' | 'error'. Null for every other activity type.
+  final String? phase;
 
+  /// Web results to show on the AI results card (empty otherwise).
+  final List<NotchResult> results;
+
+  final bool? _ongoing;
 
   String get key => id.isNotEmpty ? id : type.name;
 
@@ -78,12 +109,15 @@ class NotchActivity {
     String? title,
     String? subtitle,
     String? appName,
+    String? packageId,
     double? progress,
     bool? isPlaying,
     int? durationMs,
     int? endsAtMs,
     String? source,
     String? albumArt,
+    String? phase,
+    List<NotchResult>? results,
     bool? ongoing,
   }) {
     return NotchActivity(
@@ -92,12 +126,15 @@ class NotchActivity {
       title: title ?? this.title,
       subtitle: subtitle ?? this.subtitle,
       appName: appName ?? this.appName,
+      packageId: packageId ?? this.packageId,
       progress: progress ?? this.progress,
       isPlaying: isPlaying ?? this.isPlaying,
       durationMs: durationMs ?? this.durationMs,
       endsAtMs: endsAtMs ?? this.endsAtMs,
       source: source ?? this.source,
       albumArt: albumArt ?? this.albumArt,
+      phase: phase ?? this.phase,
+      results: results ?? this.results,
       ongoing: ongoing ?? _ongoing,
     );
   }
@@ -109,12 +146,15 @@ class NotchActivity {
       title: other.title.isNotEmpty ? other.title : title,
       subtitle: other.subtitle.isNotEmpty ? other.subtitle : subtitle,
       appName: other.appName ?? appName,
+      packageId: other.packageId ?? packageId,
       progress: other.progress ?? progress,
       isPlaying: other.isPlaying,
       durationMs: other.durationMs ?? durationMs,
       endsAtMs: other.endsAtMs ?? endsAtMs,
       source: other.source ?? source,
       albumArt: other.albumArt ?? albumArt,
+      phase: other.phase ?? phase,
+      results: other.results.isNotEmpty ? other.results : results,
       ongoing: other._ongoing ?? _ongoing,
     );
   }
@@ -124,20 +164,21 @@ class NotchActivity {
       json['type'] as String?,
     );
 
-    final String title =
-        (json['title'] ?? json['songTitle'] ?? '').toString();
+    final String title = (json['title'] ?? json['songTitle'] ?? '').toString();
     final String subtitle =
         (json['subtitle'] ?? json['artistName'] ?? json['body'] ?? '')
             .toString();
     final Object? rawProgress = json['progress'];
     final Object? rawDuration = json['durationMs'] ?? json['duration'];
     final Object? rawEndsAt = json['endsAtMs'];
+    final String? pkg = (json['packageId'] as Object?)?.toString();
     return NotchActivity(
       type: type,
       id: (json['id'] ?? '').toString(),
       title: title,
       subtitle: subtitle,
       appName: (json['appName'] as Object?)?.toString(),
+      packageId: (pkg == null || pkg.isEmpty) ? null : pkg,
       progress: rawProgress is num && rawProgress >= 0
           ? rawProgress.toDouble()
           : null,
@@ -146,6 +187,13 @@ class NotchActivity {
       endsAtMs: rawEndsAt is num ? rawEndsAt.toInt() : null,
       source: (json['source'] as Object?)?.toString(),
       albumArt: (json['albumArt'] as Object?)?.toString(),
+      phase: (json['phase'] as Object?)?.toString(),
+      results: json['results'] is List
+          ? (json['results'] as List)
+                .whereType<Map>()
+                .map((Map m) => NotchResult.fromJson(m.cast<String, dynamic>()))
+                .toList()
+          : const <NotchResult>[],
       ongoing: json['ongoing'] is bool ? json['ongoing'] as bool : null,
     );
   }
@@ -157,6 +205,7 @@ class NotchActivity {
       'title': title,
       'subtitle': subtitle,
       if (appName != null) 'appName': appName,
+      if (packageId != null && packageId!.isNotEmpty) 'packageId': packageId,
       if (progress != null) 'progress': progress,
       'isPlaying': isPlaying,
       'ongoing': isOngoing,
@@ -164,6 +213,9 @@ class NotchActivity {
       if (endsAtMs != null) 'endsAtMs': endsAtMs,
       if (source != null) 'source': source,
       if (albumArt != null && albumArt!.isNotEmpty) 'albumArt': albumArt,
+      if (phase != null) 'phase': phase,
+      if (results.isNotEmpty)
+        'results': results.map((NotchResult r) => r.toJson()).toList(),
       if (type == NotchActivityType.music) ...<String, dynamic>{
         'songTitle': title,
         'artistName': subtitle,

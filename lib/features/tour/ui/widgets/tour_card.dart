@@ -154,7 +154,7 @@ class _CardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       decoration: BoxDecoration(
         color: AppColors.snowWhite,
         borderRadius: BorderRadius.circular(24),
@@ -252,7 +252,7 @@ class _NextButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Text(
             label.toUpperCase(),
             style: AppTextStyles.buttonLabel.copyWith(

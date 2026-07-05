@@ -2,7 +2,6 @@ abstract final class NotchChannels {
   const NotchChannels._();
   static const String method = 'neko/notch';
 
-  
   static const String events = 'neko/notch_events';
 
   static const String boot = 'neko/notch_boot';

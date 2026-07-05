@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../core/neko_motion.dart';
-import 'cat_eared_icon.dart';
 
 /// The pill's natural (max) width; it shrinks to fit unusually narrow screens.
 const double _kPillMaxWidth = 232;
@@ -156,23 +155,49 @@ class _NavItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: reduceMotion ? Duration.zero : NekoMotion.quick,
-          curve: NekoMotion.standardCurve,
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.primary : Colors.transparent,
-            shape: BoxShape.circle,
-          ),
-          child: CatEaredIcon(
-            icon: selected ? selectedIcon : unselectedIcon,
-            isSelected: selected,
-            color: selected ? AppColors.textOnPrimary : AppColors.navInactive,
-            // Coral ears poke above the circle onto the white pill, so they
-            // read (the on-primary colour used before was white-on-white).
-            earColor: AppColors.primary,
-            size: 26,
+        child: SizedBox(
+          width: 52,
+          height: 52,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // The selection marker IS a paw (replacing the old coral circle):
+              // a highlight sized just a little larger than the destination
+              // glyphs (not filling the whole tap target), springing up when the
+              // tab is chosen so it reads as a cohesive part of the pill.
+              AnimatedScale(
+                scale: selected ? 1.0 : 0.0,
+                duration: reduceMotion ? Duration.zero : NekoMotion.quick,
+                curve: reduceMotion ? Curves.linear : NekoMotion.pop,
+                // pets_rounded is bottom-heavy (toe-beans up top, big pad
+                // below), so a geometrically-centred paw reads a touch low next
+                // to the evenly-weighted outline glyphs — lift it a couple of
+                // pixels so its optical centre sits level with them.
+                child: Transform.translate(
+                  offset: const Offset(0, -2.5),
+                  child: Icon(
+                    Icons.pets_rounded,
+                    size: 38,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              // The destination glyph: white and sitting on the paw's central
+              // pad when selected (matching the paw's lift), a muted outline
+              // icon otherwise.
+              Align(
+                alignment: selected
+                    ? const Alignment(0, 0.13)
+                    : Alignment.center,
+                child: Icon(
+                  selected ? selectedIcon : unselectedIcon,
+                  size: selected ? 15 : 24,
+                  color: selected
+                      ? AppColors.textOnPrimary
+                      : AppColors.navInactive,
+                ),
+              ),
+            ],
           ),
         ),
       ),

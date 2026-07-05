@@ -68,6 +68,37 @@ class SearchService {
   String get _baseUrl =>
       dotenv.get('SEARCH_BASE_URL', fallback: 'https://search.hackclub.com');
 
+  /// Whether a usable API key is configured. When false we skip the API call
+  /// entirely and go straight to the browser fallback.
+  bool get hasKey {
+    final String k = _key;
+    return k.isNotEmpty && k != _placeholderKey;
+  }
+
+  /// A normal browser URL that runs [query] on Google. This is the always-free,
+  /// no-key path: any results-style query can open real web results in one tap,
+  /// even when no search API is configured (or Hack Club's is down). The app
+  /// can't scrape Google's HTML — but launching the browser to it works fine.
+  String webSearchUrl(String query) =>
+      'https://www.google.com/search?q=${Uri.encodeQueryComponent(query.trim())}';
+
+  /// Brave's native API authenticates with an `X-Subscription-Token` header;
+  /// Hack Club's pass-through uses `Authorization: Bearer` (like the AI proxy).
+  /// Auto-select by host so the same code works with either — point
+  /// `SEARCH_BASE_URL` at `https://api.search.brave.com` with a real Brave key
+  /// to bypass Hack Club's proxy entirely.
+  bool get _isBraveDirect => _baseUrl.contains('brave');
+
+  Map<String, String> _authHeaders(String key) => _isBraveDirect
+      ? <String, String>{
+          'X-Subscription-Token': key,
+          'Accept': 'application/json',
+        }
+      : <String, String>{
+          'Authorization': 'Bearer $key',
+          'Accept': 'application/json',
+        };
+
   Future<List<SearchResult>> search(String query, {int count = 4}) async {
     final String key = _key;
     final String q = query.trim();
@@ -76,17 +107,11 @@ class SearchService {
     }
 
     try {
-      final Uri uri = Uri.parse('$_baseUrl/res/v1/web/search').replace(
-        queryParameters: <String, String>{'q': q, 'count': '$count'},
-      );
+      final Uri uri = Uri.parse(
+        '$_baseUrl/res/v1/web/search',
+      ).replace(queryParameters: <String, String>{'q': q, 'count': '$count'});
       final http.Response resp = await _client
-          .get(
-            uri,
-            headers: <String, String>{
-              'Authorization': 'Bearer $key',
-              'Accept': 'application/json',
-            },
-          )
+          .get(uri, headers: _authHeaders(key))
           .timeout(const Duration(seconds: 8));
 
       if (resp.statusCode < 200 || resp.statusCode >= 300) {

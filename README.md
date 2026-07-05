@@ -7,8 +7,7 @@
 - [x] Notifications
 
 to-do:
-- [ ] Fix notch sizing to make it look nice to the eye
+- [] Fix notch sizing to make it look nice to the eye
 - [ ] Maps integration
 - [ ] Timer
 - [ ] Catify it to a certain extent
-      

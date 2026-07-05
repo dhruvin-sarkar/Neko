@@ -104,7 +104,7 @@ abstract final class AppTheme {
     filled: true,
     fillColor: AppColors.surfaceCard,
     hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
       borderSide: BorderSide(color: AppColors.border),

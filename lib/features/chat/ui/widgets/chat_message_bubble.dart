@@ -55,7 +55,7 @@ class ChatMessageBubble extends StatelessWidget {
                 // The sleepy 404 cat softens a network/API failure into
                 // something on-brand instead of a bare error line.
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: SizedBox(
                     height: 84,
                     child: Lottie.asset(
@@ -130,7 +130,7 @@ class _ResultsList extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 10,
+                    vertical: 8,
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,

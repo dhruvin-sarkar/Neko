@@ -24,7 +24,7 @@ class SuggestedPrompts extends StatelessWidget {
       children: [
         for (final (String title, String question) in _prompts)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: 12),
             child: _PromptCard(
               title: title,
               question: question,

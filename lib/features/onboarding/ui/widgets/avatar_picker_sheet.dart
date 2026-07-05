@@ -78,9 +78,7 @@ class AvatarPickerSheet extends ConsumerWidget {
                       index: index,
                       selected: selected == id,
                       onTap: () {
-                        unawaited(
-                          ref.read(feedbackServiceProvider).onSelect(),
-                        );
+                        unawaited(ref.read(feedbackServiceProvider).onSelect());
                         ref
                             .read(onboardingNotifierProvider.notifier)
                             .setAvatarPreset(id);

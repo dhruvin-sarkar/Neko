@@ -148,7 +148,7 @@ class _TypeChip extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: selected ? AppColors.selectedFill : AppColors.surfaceCard,
             borderRadius: BorderRadius.circular(100),
