@@ -99,10 +99,13 @@ Future<void> runNotchBoot() async {
       await prefs.remove(NotchPrefs.pending);
     }
   } on Object {
+    // Boot restore is best-effort; a failure just means no overlay until the
+    // app is next opened.
   } finally {
     try {
       await bootChannel.invokeMethod<void>(NotchChannels.stopBoot);
     } on Object {
+      // The boot service times itself out if the stop signal doesn't land.
     }
   }
 }

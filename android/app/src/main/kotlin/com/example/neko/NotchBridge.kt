@@ -144,7 +144,9 @@ object NotchBridge {
                 val category = (event["category"] as? String) ?: ""
                 val ongoing = event["ongoing"] == true
                 val progress = (event["progress"] as? Number)?.toDouble() ?: -1.0
+                val endsAtMs = (event["endsAtMs"] as? Number)?.toLong() ?: 0L
                 val type = when {
+                    category == "timer" -> "timer"
                     category == "call" -> "call"
                     category == "navigation" -> "navigation"
                     progress >= 0.0 && ongoing -> "download"
@@ -158,6 +160,7 @@ object NotchBridge {
                     .put("body", event["body"] ?: "")
                     .put("ongoing", ongoing || type != "notification")
                 if (progress >= 0.0) activity.put("progress", progress)
+                if (type == "timer" && endsAtMs > 0L) activity.put("endsAtMs", endsAtMs)
                 JSONObject().put("cmd", "push").put("activity", activity).toString()
             }
             "media" -> {

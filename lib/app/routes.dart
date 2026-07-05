@@ -11,6 +11,9 @@ abstract final class Routes {
   static const String settings = '/settings';
   static const String chat = '/chat';
 
+  /// The dedicated full-screen Hey Neko voice experience.
+  static const String heyNeko = '/hey-neko';
+
   /// Path pattern for the cat detail route (used when registering the route).
   static const String profilePattern = '/profile/:catId';
 

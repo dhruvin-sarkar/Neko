@@ -15,6 +15,7 @@ import '../features/profiles/ui/edit_cat_screen.dart';
 import '../features/profiles/ui/home_screen.dart';
 import '../features/profiles/ui/profile_detail_screen.dart';
 import '../features/settings/ui/settings_screen.dart';
+import '../features/voice/ui/hey_neko_page.dart';
 import '../shared/motion/page_transitions.dart';
 import 'main_shell.dart';
 import 'routes.dart';
@@ -70,6 +71,13 @@ GoRouter goRouter(Ref ref) {
           coverIn: 0.30,
           coverOut: 0.62,
           child: const OnboardingScreen(),
+        ),
+      ),
+      GoRoute(
+        path: Routes.heyNeko,
+        pageBuilder: (context, state) => PageTransitions.fadeThrough(
+          key: state.pageKey,
+          child: const HeyNekoPage(),
         ),
       ),
       GoRoute(

@@ -51,6 +51,7 @@ android/key.properties
 # Internal planning docs — not part of the shipped repo
 neko-docs/
 CLAUDE.md
+DECISIONS.md
 
 # Gradle / Android build artifacts
 android/build/

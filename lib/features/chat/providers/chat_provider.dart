@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/services/search_service.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../../profiles/providers/profile_provider.dart';
 import '../data/chat_service.dart';
@@ -77,6 +78,24 @@ class ChatController extends Notifier<ChatState> {
       isGenerating: true,
     );
 
+    // A "best/top/which…" question with no photo tries a real web search first
+    // and shows a tappable list; it falls back to a conversational answer if the
+    // search is empty or unavailable — the same routing the voice flow uses.
+    if (attachments.isEmpty && isSearchQuery(trimmed)) {
+      final List<SearchResult> results = await ref
+          .read(searchServiceProvider)
+          .search(trimmed);
+      // Bail if the turn was stopped / a new chat started during the search.
+      if (!state.isGenerating) return;
+      if (results.isNotEmpty) {
+        _setAssistantResults(assistantId, results);
+        state = state.copyWith(isGenerating: false);
+        _saveCurrent();
+        return;
+      }
+      // else fall through to a normal streamed reply
+    }
+
     // Give the model this owner's cat profile(s) so replies are personalised.
     final List<CatProfile> cats =
         ref.read(catProfilesProvider).valueOrNull ?? const <CatProfile>[];
@@ -108,7 +127,7 @@ class ChatController extends Notifier<ChatState> {
             final String message = error is ChatException
                 ? error.message
                 : 'Sorry — something went wrong. Please try again.';
-            _setAssistant(assistantId, message, streaming: false);
+            _setAssistant(assistantId, message, streaming: false, isError: true);
             state = state.copyWith(isGenerating: false);
             _sub = null;
             // Persist the partial turn too, so a mid-stream network error
@@ -118,12 +137,57 @@ class ChatController extends Notifier<ChatState> {
         );
   }
 
-  void _setAssistant(String id, String content, {required bool streaming}) {
+  /// Records a completed Hey Neko voice exchange into the active conversation,
+  /// so a spoken question and its answer show up in the transcript and are saved
+  /// to history exactly like a typed turn. Skipped while a text reply is
+  /// streaming, so voice never interleaves with an in-flight message.
+  void appendVoiceTurn(String prompt, String reply) {
+    if (state.isGenerating) return;
+    final String question = prompt.trim();
+    final String answer = reply.trim();
+    if (question.isEmpty && answer.isEmpty) return;
+    final ChatMessage user = ChatMessage(
+      id: _nextId(),
+      role: ChatRole.user,
+      content: question,
+    );
+    final ChatMessage assistant = ChatMessage(
+      id: _nextId(),
+      role: ChatRole.assistant,
+      content: answer,
+    );
+    state = state.copyWith(messages: [...state.messages, user, assistant]);
+    _saveCurrent();
+  }
+
+  /// Fills the assistant placeholder with web results: a short summary line
+  /// (which is what persists to history) plus the tappable list.
+  void _setAssistantResults(String id, List<SearchResult> results) {
+    final String summary =
+        'Here are a few options I found:\n'
+        '${results.map((SearchResult r) => '• ${r.title}').join('\n')}';
     state = state.copyWith(
       messages: [
         for (final ChatMessage m in state.messages)
           if (m.id == id)
-            m.copyWith(content: content, isStreaming: streaming)
+            m.copyWith(content: summary, isStreaming: false, results: results)
+          else
+            m,
+      ],
+    );
+  }
+
+  void _setAssistant(
+    String id,
+    String content, {
+    required bool streaming,
+    bool isError = false,
+  }) {
+    state = state.copyWith(
+      messages: [
+        for (final ChatMessage m in state.messages)
+          if (m.id == id)
+            m.copyWith(content: content, isStreaming: streaming, isError: isError)
           else
             m,
       ],

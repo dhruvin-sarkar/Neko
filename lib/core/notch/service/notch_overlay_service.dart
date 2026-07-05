@@ -12,9 +12,14 @@ abstract final class NotchMetrics {
   static const int idleWidth = 80;
   static const int activeWidth = 212;
 
+  /// The island widens as it expands (Dynamic-Island style): the expanded
+  /// window is wider than the compact pill and the visual width animates
+  /// inside it.
+  static const int expandedWidth = 316;
+
   static const int idleContent = 5;
-  static const int compactContent = 40;
-  static const int expandedContent = 124;
+  static const int compactContent = 42;
+  static const int expandedContent = 136;
 
   static double get devicePixelRatio =>
       ui.PlatformDispatcher.instance.implicitView?.devicePixelRatio ?? 3.0;
@@ -58,6 +63,7 @@ class NotchOverlayService {
         NotchChannels.openNotificationAccessSettings,
       );
     } on PlatformException {
+      // Best-effort: the settings screen simply doesn't open.
     }
   }
 
@@ -65,6 +71,7 @@ class NotchOverlayService {
     try {
       await _method.invokeMethod<void>(NotchChannels.resync);
     } on PlatformException {
+      // Best-effort: the next native event repopulates the island anyway.
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +9,12 @@ import '../../../app/routes.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../core/neko_motion.dart';
+import '../../../core/notch/controller/notch_controller.dart';
+import '../../../core/notch/model/notch_activity.dart';
 import '../../../features/tour/providers/tour_keys.dart';
+import '../../../shared/services/feedback_service.dart';
+import '../../../shared/widgets/neko_snackbar.dart';
+import '../../../shared/widgets/pressable.dart';
 import '../../documents/ui/widgets/documents_section.dart';
 import 'widgets/profile_detail_shimmer.dart';
 import '../../onboarding/models/cat_profile.dart';
@@ -173,6 +180,8 @@ class _CatProfileBody extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              _FeedingTimerCard(cat: cat),
               const SizedBox(height: 32),
               KeyedSubtree(
                 key: tourKeys.profileDocuments,
@@ -286,6 +295,193 @@ class _StatCard extends StatelessWidget {
             style: AppTextStyles.bodyLarge,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A feeding countdown for this cat, mirrored live on the Neko notch. One tap
+/// on a preset starts it; while running the card shows the same countdown the
+/// island is showing, plus a cancel.
+class _FeedingTimerCard extends ConsumerStatefulWidget {
+  const _FeedingTimerCard({required this.cat});
+
+  final CatProfile cat;
+
+  @override
+  ConsumerState<_FeedingTimerCard> createState() => _FeedingTimerCardState();
+}
+
+class _FeedingTimerCardState extends ConsumerState<_FeedingTimerCard> {
+  Timer? _ticker;
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  void _syncTicker(bool running) {
+    if (running && _ticker == null) {
+      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } else if (!running && _ticker != null) {
+      _ticker?.cancel();
+      _ticker = null;
+    }
+  }
+
+  Future<void> _start(Duration duration) async {
+    unawaited(ref.read(feedbackServiceProvider).onSelect());
+    await ref
+        .read(notchControllerProvider.notifier)
+        .startTimer(label: 'Feed ${widget.cat.name}', duration: duration);
+    if (!mounted) return;
+    if (!ref.read(notchControllerProvider).enabled) {
+      NekoSnackBar.show(
+        context,
+        'Turn on the Neko notch in Settings to see this countdown up top.',
+      );
+    }
+  }
+
+  Future<void> _cancel() async {
+    unawaited(ref.read(feedbackServiceProvider).onTap());
+    await ref.read(notchControllerProvider.notifier).cancelTimer();
+  }
+
+  String _remainingLabel(NotchActivity timer) {
+    final int endsAt = timer.endsAtMs ?? 0;
+    final int leftMs = endsAt - DateTime.now().millisecondsSinceEpoch;
+    final Duration left = Duration(milliseconds: leftMs < 0 ? 0 : leftMs);
+    final int h = left.inHours;
+    final int m = left.inMinutes % 60;
+    final int s = left.inSeconds % 60;
+    String two(int v) => v.toString().padLeft(2, '0');
+    return h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final NotchActivity? timer = ref.watch(
+      notchControllerProvider.select((s) => s.activeTimer),
+    );
+    final bool running = timer != null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncTicker(running);
+    });
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.selectedFill,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.restaurant_rounded, color: AppColors.primary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Feeding timer', style: AppTextStyles.bodyLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      running
+                          ? 'Counting down on the notch'
+                          : 'Remind me to feed ${widget.cat.name}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption,
+                    ),
+                  ],
+                ),
+              ),
+              if (running)
+                Text(
+                  _remainingLabel(timer),
+                  style: AppTextStyles.headlineLarge.copyWith(
+                    color: AppColors.primary,
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (running)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _cancel,
+                child: Text(
+                  'Cancel timer',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _PresetChip(
+                  label: '15 min',
+                  onTap: () => _start(const Duration(minutes: 15)),
+                ),
+                _PresetChip(
+                  label: '30 min',
+                  onTap: () => _start(const Duration(minutes: 30)),
+                ),
+                _PresetChip(
+                  label: '1 hour',
+                  onTap: () => _start(const Duration(hours: 1)),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      semanticLabel: 'Start $label feeding timer',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        decoration: BoxDecoration(
+          color: AppColors.selectedFill,
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Text(label, style: AppTextStyles.bodyMedium),
       ),
     );
   }

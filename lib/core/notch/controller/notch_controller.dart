@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../features/onboarding/data/onboarding_persistence.dart';
+import '../../services/audio_service.dart';
 import '../../utils/logger.dart';
 import '../model/notch_activity.dart';
 import '../model/notch_command.dart';
@@ -20,18 +21,32 @@ class NotchState {
   const NotchState({
     required this.enabled,
     required this.hasNotificationAccess,
+    this.activeTimer,
   });
 
   final bool enabled;
   final bool hasNotificationAccess;
 
-  const NotchState.initial() : enabled = false, hasNotificationAccess = false;
+  /// The running feeding countdown, if any — lets in-app UI (the profile
+  /// card) mirror what the island is showing.
+  final NotchActivity? activeTimer;
 
-  NotchState copyWith({bool? enabled, bool? hasNotificationAccess}) {
+  const NotchState.initial()
+    : enabled = false,
+      hasNotificationAccess = false,
+      activeTimer = null;
+
+  NotchState copyWith({
+    bool? enabled,
+    bool? hasNotificationAccess,
+    NotchActivity? activeTimer,
+    bool clearTimer = false,
+  }) {
     return NotchState(
       enabled: enabled ?? this.enabled,
       hasNotificationAccess:
           hasNotificationAccess ?? this.hasNotificationAccess,
+      activeTimer: clearTimer ? null : (activeTimer ?? this.activeTimer),
     );
   }
 }
@@ -45,11 +60,19 @@ final notchControllerProvider = NotifierProvider<NotchController, NotchState>(
 class NotchController extends Notifier<NotchState> {
   final NotchOverlayService _service = const NotchOverlayService();
 
+  /// The id of the app's own feeding countdown. System/Clock timers are also
+  /// `timer`-typed but carry their notification key as id, so feeding-timer
+  /// bookkeeping (activeTimer, the end-of-timer meow, cancel) keys off this id
+  /// and never touches a mirrored system timer.
+  static const String _feedingTimerId = 'feeding_timer';
+
   final Map<String, NotchActivity> _ongoing = <String, NotchActivity>{};
 
   StreamSubscription<dynamic>? _eventsSub;
 
   StreamSubscription<dynamic>? _overlaySub;
+
+  Timer? _timerEnd;
 
   String? _lastSyncedThemeId;
 
@@ -71,6 +94,7 @@ class NotchController extends Notifier<NotchState> {
     ref.onDispose(() {
       _eventsSub?.cancel();
       _overlaySub?.cancel();
+      _timerEnd?.cancel();
     });
 
     if (enabled) {
@@ -172,11 +196,67 @@ class NotchController extends Notifier<NotchState> {
       const NotchActivity(
         type: NotchActivityType.generic,
         id: 'welcome',
-        title: 'Neko notch is on',
-        subtitle: 'Play music or get a call to see it live',
+        title: 'Neko’s got your notch 🐾',
+        subtitle: 'Music, calls, timers and Hey Neko live up here now',
         ongoing: false,
       ),
     );
+  }
+
+  // ── Feeding timer ──────────────────────────────────────────────────────────
+
+  /// Starts (or restarts) the feeding countdown on the island. One at a time —
+  /// starting a new one replaces the old.
+  Future<void> startTimer({
+    required String label,
+    required Duration duration,
+  }) async {
+    final DateTime endsAt = DateTime.now().add(duration);
+    final NotchActivity activity = NotchActivity(
+      type: NotchActivityType.timer,
+      id: _feedingTimerId,
+      title: label,
+      durationMs: duration.inMilliseconds,
+      endsAtMs: endsAt.millisecondsSinceEpoch,
+      ongoing: true,
+    );
+    state = state.copyWith(activeTimer: activity);
+    _armTimerEnd(activity);
+    await showActivity(activity);
+  }
+
+  /// Cancels a running feeding countdown everywhere.
+  Future<void> cancelTimer() async {
+    _timerEnd?.cancel();
+    _timerEnd = null;
+    state = state.copyWith(clearTimer: true);
+    // Remove by id, not by type — a mirrored system Clock timer is also
+    // `timer`-typed and must be left alone.
+    await removeActivity(id: _feedingTimerId);
+  }
+
+  /// Schedules the app-engine side of a countdown finishing: a celebratory
+  /// meow (the island trills for itself) and cleanup. The overlay self-removes
+  /// its copy too, so this also just keeps `_ongoing`/restore state honest.
+  void _armTimerEnd(NotchActivity activity) {
+    _timerEnd?.cancel();
+    final Duration left = DateTime.fromMillisecondsSinceEpoch(
+      activity.endsAtMs ?? 0,
+    ).difference(DateTime.now());
+    _timerEnd = Timer(left.isNegative ? Duration.zero : left, () {
+      _timerEnd = null;
+      state = state.copyWith(clearTimer: true);
+      // The overlay engine owns the visible completion: it holds 00:00 for a
+      // beat, plays the celebratory trill, and removes its own pill. Emitting a
+      // remove here would cut that grace short and a second sound would play.
+      // So we only clear local bookkeeping — and when the notch is off (there's
+      // no island to trill) we give an in-app meow so the countdown still lands.
+      _ongoing.remove(activity.key);
+      unawaited(_persistRestore());
+      if (!state.enabled) {
+        unawaited(AudioService.playSound(SoundId.catMeowSuccess));
+      }
+    });
   }
   //clear
   Future<void> clear() async {
@@ -229,10 +309,12 @@ class NotchController extends Notifier<NotchState> {
     final bool ongoingFlag = event['ongoing'] == true;
     final double? prog = (event['progress'] as num?)?.toDouble();
     final bool hasProgress = prog != null && prog >= 0;
+    final int endsAtMs = (event['endsAtMs'] as num?)?.toInt() ?? 0;
 
     final NotchActivityType type = switch (category) {
       'call' => NotchActivityType.call,
       'navigation' => NotchActivityType.navigation,
+      'timer' => NotchActivityType.timer,
       _ when hasProgress && ongoingFlag => NotchActivityType.download,
       _ => NotchActivityType.notification,
     };
@@ -245,6 +327,9 @@ class NotchController extends Notifier<NotchState> {
       subtitle: (event['body'] ?? '').toString(),
       appName: (event['package'] ?? '').toString(),
       progress: hasProgress ? prog : null,
+      endsAtMs: type == NotchActivityType.timer && endsAtMs > 0
+          ? endsAtMs
+          : null,
       source: 'system',
       ongoing: ongoing,
     );
@@ -315,17 +400,39 @@ class NotchController extends Notifier<NotchState> {
       final String? restore = _prefs.getString(NotchPrefs.restore);
       if (restore != null && restore.isNotEmpty) {
         final Object? decoded = jsonDecode(restore);
+        bool dropped = false;
         if (decoded is List) {
           for (final Object? item in decoded) {
             if (item is Map) {
               final NotchActivity a = NotchActivity.fromJson(
                 item.cast<String, dynamic>(),
               );
+              // A countdown that ran out while we were away is gone, not
+              // restored-then-instantly-removed.
+              final bool expired =
+                  a.type == NotchActivityType.timer &&
+                  a.endsAtMs != null &&
+                  a.endsAtMs! <=
+                      DateTime.now().millisecondsSinceEpoch;
+              if (expired) {
+                dropped = true;
+                continue;
+              }
               _ongoing[a.key] = a;
+              if (a.id == _feedingTimerId) {
+                // Re-adopt only the app's own feeding countdown so the in-app
+                // card and the end-of-timer meow keep working after a restart;
+                // a mirrored system timer is not ours to own.
+                state = state.copyWith(activeTimer: a);
+                _armTimerEnd(a);
+              }
               await _emit(PushActivityCommand(a));
             }
           }
         }
+        // Keep the persisted payload honest so the boot receiver doesn't
+        // relaunch the overlay for something that no longer exists.
+        if (dropped) await _persistRestore();
       }
     } on Object catch (e, st) {
       AppLogger.warning('Failed to restore notch on start', e, st);

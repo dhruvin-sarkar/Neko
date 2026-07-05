@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/settings/providers/theme_controller.dart';
-import '../core/Notch/controller/notch_controller.dart';
+import '../core/notch/controller/notch_controller.dart';
 import '../core/widgets/keyboard_cat.dart';
+import '../features/voice/providers/wake_word_controller.dart';
 import '../shared/widgets/paw_background.dart';
+import 'routes.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -30,6 +32,16 @@ class NekoApp extends ConsumerWidget {
           // The notch now lives in a system overlay window (its own engine);
           // keep its palette in sync when the coat theme changes.
           ref.read(notchControllerProvider.notifier).syncTheme();
+          // "Hey Neko" wake word: when the continuous listener hears it, open the
+          // dedicated AI-notch page. Watching also keeps the wake loop alive.
+          ref.listen<int>(
+            wakeWordControllerProvider.select((s) => s.triggerCount),
+            (int? prev, int next) {
+              if (prev != null && next != prev) {
+                ref.read(goRouterProvider).push(Routes.heyNeko);
+              }
+            },
+          );
           return PawBackground(
             child: KeyboardCat(child: child ?? const SizedBox.shrink()),
           );

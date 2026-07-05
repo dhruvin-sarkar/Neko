@@ -27,6 +27,7 @@ class ChatInput extends StatefulWidget {
     required this.onRemoveAttachment,
     required this.onSend,
     required this.onStop,
+    required this.onMic,
   });
 
   final TextEditingController controller;
@@ -38,6 +39,9 @@ class ChatInput extends StatefulWidget {
   final ValueChanged<ChatAttachment> onRemoveAttachment;
   final VoidCallback onSend;
   final VoidCallback onStop;
+
+  /// Opens Hey Neko (tap-to-talk voice).
+  final VoidCallback onMic;
 
   @override
   State<ChatInput> createState() => _ChatInputState();
@@ -100,6 +104,13 @@ class _ChatInputState extends State<ChatInput> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
+              IconButton(
+                icon: const Icon(Icons.mic_none_rounded, size: 23),
+                color: AppColors.primary,
+                onPressed: attachDisabled ? null : widget.onMic,
+                visualDensity: VisualDensity.compact,
+                tooltip: 'Talk to Neko',
+              ),
               IconButton(
                 icon: const Icon(Icons.add_photo_alternate_outlined, size: 22),
                 color: AppColors.graphite,

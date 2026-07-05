@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+
+import '../../../app/routes.dart';
 
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
@@ -15,11 +18,15 @@ import '../../settings/providers/theme_controller.dart';
 import '../models/chat_attachment.dart';
 import '../models/chat_conversation.dart';
 import '../models/chat_message.dart';
+import '../../safety/ui/safety_scan_sheet.dart';
 import '../providers/chat_history_provider.dart';
 import '../providers/chat_provider.dart';
 import 'widgets/chat_input.dart';
 import 'widgets/chat_message_bubble.dart';
 import 'widgets/suggested_prompts.dart';
+
+/// The three ways to attach from the composer's attach menu.
+enum _AttachChoice { gallery, camera, safety }
 
 /// One-on-one conversation with the Neko AI assistant. A scrolling transcript
 /// of bubbles with the composer pinned to the bottom; an empty state offers
@@ -67,12 +74,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _scrollToBottom();
   }
 
-  Future<void> _pickAttachment() async {
+  Future<void> _openAttachMenu() async {
     unawaited(ref.read(feedbackServiceProvider).onTap());
+    _focus.unfocus();
+    final _AttachChoice? choice = await showModalBottomSheet<_AttachChoice>(
+      context: context,
+      backgroundColor: AppColors.snowWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _AttachSheet(),
+    );
+    if (choice == null || !mounted) return;
+    switch (choice) {
+      case _AttachChoice.gallery:
+        await _addPhoto(ImageSource.gallery);
+      case _AttachChoice.camera:
+        await _addPhoto(ImageSource.camera);
+      case _AttachChoice.safety:
+        _openSafetyScan();
+    }
+  }
+
+  Future<void> _addPhoto(ImageSource source) async {
     setState(() => _uploading = true);
-    final String? path = await ref
-        .read(imagePickerServiceProvider)
-        .pick(ImageSource.gallery);
+    final String? path = await ref.read(imagePickerServiceProvider).pick(source);
     if (!mounted) return;
     setState(() {
       _uploading = false;
@@ -84,6 +110,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ];
       }
     });
+  }
+
+  void _openSafetyScan() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.snowWhite,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => const SafetyScanSheet(),
+    );
+  }
+
+  void _startVoice() {
+    unawaited(ref.read(feedbackServiceProvider).onTap());
+    _focus.unfocus();
+    // Open the dedicated AI-notch page (the voice session starts there).
+    context.push(Routes.heyNeko);
   }
 
   void _selectPrompt(String prompt) {
@@ -173,12 +218,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               attachments: _pending,
               isGenerating: state.isGenerating,
               isUploading: _uploading,
-              onPickAttachment: _pickAttachment,
+              onPickAttachment: _openAttachMenu,
               onRemoveAttachment: (a) => setState(
                 () => _pending = _pending.where((e) => e != a).toList(),
               ),
               onSend: _send,
               onStop: () => ref.read(chatControllerProvider.notifier).stop(),
+              onMic: _startVoice,
             ),
           ),
         ],
@@ -390,6 +436,94 @@ class _HistoryTile extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The attach menu: pick a photo, take one, or run a cat safety scan.
+class _AttachSheet extends StatelessWidget {
+  const _AttachSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.cloudGray,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _AttachTile(
+            icon: Icons.photo_library_outlined,
+            label: 'Photo library',
+            subtitle: 'Attach a saved photo',
+            onTap: () => Navigator.of(context).pop(_AttachChoice.gallery),
+          ),
+          _AttachTile(
+            icon: Icons.photo_camera_outlined,
+            label: 'Take a photo',
+            subtitle: 'Snap something to attach',
+            onTap: () => Navigator.of(context).pop(_AttachChoice.camera),
+          ),
+          _AttachTile(
+            icon: Icons.health_and_safety_outlined,
+            label: 'Cat safety scan',
+            subtitle: 'Is this plant or food safe for your cat?',
+            highlight: true,
+            onTap: () => Navigator.of(context).pop(_AttachChoice.safety),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttachTile extends StatelessWidget {
+  const _AttachTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+    this.highlight = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color tint = highlight ? AppColors.primary : AppColors.graphite;
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        width: 44,
+        height: 44,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: highlight ? AppColors.selectedFill : AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon, color: tint),
+      ),
+      title: Text(label, style: AppTextStyles.bodyLarge),
+      subtitle: Text(
+        subtitle,
+        style: AppTextStyles.caption,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

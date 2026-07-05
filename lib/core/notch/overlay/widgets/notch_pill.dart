@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show ByteData, MethodChannel, rootBundle;
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../model/notch_activity.dart';
 import '../../model/notch_command.dart';
 import '../../notch_channels.dart';
 import '../../service/notch_overlay_service.dart';
+import '../notch_sfx.dart';
 
 /// The Dynamic pill that lives in the overlay engine.
 
@@ -24,12 +27,17 @@ class NotchPill extends StatefulWidget {
 const Cubic _expandCurve = Cubic(0.22, 1.0, 0.36, 1.0);
 const Duration _expandDuration = Duration(milliseconds: 460);
 
+/// Transparent margin (dp) around the active pill, giving the accent lift-glow
+/// room to render outside the pill body without being clipped by the window.
+const int _glowPad = 18;
+
 enum _Win { idle, compact, expanded }
 
 class _NotchPillState extends State<NotchPill>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final List<NotchActivity> _stack = <NotchActivity>[];
   final Map<String, Timer> _dismissTimers = <String, Timer>{};
+  final Map<String, Timer> _timerEnders = <String, Timer>{};
   StreamSubscription<dynamic>? _sub;
 
   /// 0 = compact, 1 = expanded. Drives both height and content cross-fade.
@@ -46,6 +54,7 @@ class _NotchPillState extends State<NotchPill>
   NotchTheme _theme = NotchTheme.fallback;
   double _topInset = 28;
   bool _expanded = false;
+  bool _reduceMotion = false;
   bool _idleEmpty = false;
   Timer? _idleEmptyTimer;
   int _shownIndex = 0;
@@ -97,6 +106,9 @@ class _NotchPillState extends State<NotchPill>
     for (final Timer t in _dismissTimers.values) {
       t.cancel();
     }
+    for (final Timer t in _timerEnders.values) {
+      t.cancel();
+    }
     _pawImage?.dispose();
     super.dispose();
   }
@@ -121,6 +133,10 @@ class _NotchPillState extends State<NotchPill>
   }
 
   void _push(NotchActivity activity) {
+    // A countdown that already ran out (e.g. restored after a long reboot)
+    // must not appear just to vanish.
+    if (_isExpiredTimer(activity)) return;
+    final bool wasQuiet = _stack.isEmpty;
     _hideIdleEmpty(animate: false);
     setState(() {
       _stack.removeWhere((NotchActivity a) => a.key == activity.key);
@@ -129,6 +145,9 @@ class _NotchPillState extends State<NotchPill>
       _cycleDir = 1;
     });
     _scheduleDismissIfTransient(activity);
+    _scheduleTimerEnd(activity);
+    // A soft chirp as the island wakes from nothing — Neko noticing.
+    if (wasQuiet) unawaited(NotchSfx.chirp(scale: 0.6));
     _applyWindow();
     _applyFlag();
   }
@@ -140,6 +159,31 @@ class _NotchPillState extends State<NotchPill>
       return;
     }
     setState(() => _stack[i] = _stack[i].mergedWith(activity));
+    _scheduleTimerEnd(_stack[i]);
+  }
+
+  bool _isExpiredTimer(NotchActivity a) =>
+      a.type == NotchActivityType.timer &&
+      a.endsAtMs != null &&
+      a.endsAtMs! <= DateTime.now().millisecondsSinceEpoch;
+
+  /// Self-removes a countdown shortly after it reaches zero, so the island
+  /// cleans up even if the app engine (which also schedules a removal) is dead.
+  void _scheduleTimerEnd(NotchActivity a) {
+    if (a.type != NotchActivityType.timer || a.endsAtMs == null) return;
+    final Duration left = DateTime.fromMillisecondsSinceEpoch(
+      a.endsAtMs!,
+    ).difference(DateTime.now());
+    _timerEnders[a.key]?.cancel();
+    _timerEnders[a.key] = Timer(
+      (left.isNegative ? Duration.zero : left) +
+          const Duration(milliseconds: 1200),
+      () {
+        _timerEnders.remove(a.key);
+        unawaited(NotchSfx.trill());
+        _remove(id: a.id);
+      },
+    );
   }
 
   void _remove({String? id, NotchActivityType? type}) {
@@ -147,7 +191,15 @@ class _NotchPillState extends State<NotchPill>
       _stack.removeWhere((NotchActivity a) {
         final bool byId = id != null && id.isNotEmpty && a.id == id;
         final bool byType = type != null && a.type == type;
-        return byId || byType;
+        final bool match = byId || byType;
+        if (match) {
+          // Cancel any pending end-of-countdown trill and auto-dismiss for this
+          // activity — otherwise a cancelled timer still announces completion
+          // (a happy trill) minutes later, and the Timer leaks until then.
+          _timerEnders.remove(a.key)?.cancel();
+          _dismissTimers.remove(a.key)?.cancel();
+        }
+        return match;
       });
       if (_stack.isEmpty) _expanded = false;
       if (_shownIndex >= _stack.length) {
@@ -192,12 +244,24 @@ class _NotchPillState extends State<NotchPill>
   }
 
 
-  void _setExpanded(bool value) {
+  Future<void> _setExpanded(bool value) async {
     if (_primary == null || _expanded == value) return;
     setState(() => _expanded = value);
     if (value) {
-      _applyWindow();
-      _expand.forward();
+      // A happy chirp as the island opens up.
+      unawaited(NotchSfx.chirp());
+      if (_reduceMotion) {
+        _expand.value = 1;
+        await _applyWindow();
+      } else {
+        // Grow the OS window BEFORE the pill draws larger, so the expanding
+        // card isn't clipped by a still-compact surface for the first frames.
+        await _applyWindow();
+        if (!mounted || !_expanded) return;
+        _expand.forward();
+      }
+    } else if (_reduceMotion) {
+      _expand.value = 0;
     } else {
       _expand.reverse();
     }
@@ -211,20 +275,24 @@ class _NotchPillState extends State<NotchPill>
     setState(() => _idleEmpty = true);
     _idleEmptyTimer?.cancel();
     _idleEmptyTimer = Timer(const Duration(seconds: 5), () => _hideIdleEmpty());
-    _applyWindow(force: true);
+    unawaited(_applyWindow(force: true));
     _applyFlag();
-    _expand.forward(from: 0);
+    if (_reduceMotion) {
+      _expand.value = 1;
+    } else {
+      _expand.forward(from: 0);
+    }
   }
 
   void _hideIdleEmpty({bool animate = true}) {
     _idleEmptyTimer?.cancel();
     if (!_idleEmpty) return;
     setState(() => _idleEmpty = false);
-    if (animate) {
+    if (animate && !_reduceMotion) {
       _expand.reverse();
     } else {
       _expand.value = 0;
-      _applyWindow(force: true);
+      unawaited(_applyWindow(force: true));
       _applyFlag();
     }
   }
@@ -290,7 +358,7 @@ class _NotchPillState extends State<NotchPill>
   int get _expandedH => NotchMetrics.expandedContent + _topInset.round();
 
 
-  void _applyWindow({bool force = false}) {
+  Future<void> _applyWindow({bool force = false}) async {
     final _Win target;
     if (_primary == null) {
       target = _idleEmpty || _expand.value > 0.001 ? _Win.compact : _Win.idle;
@@ -300,15 +368,19 @@ class _NotchPillState extends State<NotchPill>
       target = _Win.compact;
     }
 
+    // A transparent margin around the ACTIVE pill so the accent lift-glow (the
+    // Apple-style soft separation from arbitrary backdrops) has room to render
+    // outside the pill body. Idle stays flush and minimal — no glow, no pad.
+    const int glow = _glowPad;
     final (int w, int h) = switch (target) {
       _Win.idle => (NotchMetrics.idleWidth, _idleH),
-      _Win.compact => (NotchMetrics.activeWidth, _compactH),
-      _Win.expanded => (NotchMetrics.activeWidth, _expandedH),
+      _Win.compact => (NotchMetrics.activeWidth + 2 * glow, _compactH + glow),
+      _Win.expanded => (NotchMetrics.expandedWidth + 2 * glow, _expandedH + glow),
     };
     if (!force && w == _winW && h == _winH) return;
     _winW = w;
     _winH = h;
-    unawaited(FlutterOverlayWindow.resizeOverlay(w, h, false));
+    await FlutterOverlayWindow.resizeOverlay(w, h, false);
   }
 
   void _applyFlag() {
@@ -322,7 +394,9 @@ class _NotchPillState extends State<NotchPill>
   }
 
   void _updatePawDrift() {
-    if (_expanded && _primary != null) {
+    // The infinite paw drift is exactly the kind of ambient motion reduce-motion
+    // is meant to stop; hold it still when that's set.
+    if (_expanded && _primary != null && !_reduceMotion) {
       if (!_pawDrift.isAnimating) _pawDrift.repeat();
     } else if (_pawDrift.isAnimating) {
       _pawDrift.stop();
@@ -333,6 +407,7 @@ class _NotchPillState extends State<NotchPill>
   Widget build(BuildContext context) {
     final double mqTop = MediaQuery.paddingOf(context).top;
     _topInset = _theme.topInset > 0 ? _theme.topInset : (mqTop > 0 ? mqTop : 28);
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     return Material(
       type: MaterialType.transparency,
@@ -364,14 +439,42 @@ class _NotchPillState extends State<NotchPill>
     final bool emptyExpanded = !hasActivity && (_idleEmpty || _expand.value > 0.001);
     final double t = _expandCurve.transform(_expand.value.clamp(0.0, 1.0));
     final double emptyT = emptyExpanded ? t : 0.0;
+    // The island widens as it grows (Dynamic-Island style): the expanded window
+    // is already wide, the visual pill animates across it.
     final double width = hasActivity
-        ? NotchMetrics.activeWidth.toDouble()
+        ? NotchMetrics.activeWidth +
+            (NotchMetrics.expandedWidth - NotchMetrics.activeWidth) * t
         : NotchMetrics.idleWidth +
             (NotchMetrics.activeWidth - NotchMetrics.idleWidth) * emptyT;
     final double height = hasActivity
         ? (_compactH + (_expandedH - _compactH) * t)
         : _idleH + (_compactH - _idleH) * emptyT;
     final double radius = 14 + 18 * (hasActivity ? t : emptyT);
+    final bool assistantActive =
+        _primary?.type == NotchActivityType.assistant;
+
+    // Neko's ears perk up around the punch-hole whenever the island is awake —
+    // subtle against the ink, warmer while Hey Neko is live.
+    final Widget ears = Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      height: _topInset,
+      child: IgnorePointer(
+        child: RepaintBoundary(
+          child: CustomPaint(
+            painter: _CatEarsPainter(
+              // Warm to the accent while Hey Neko is live; otherwise a clearly
+              // readable light silhouette against the dark pill.
+              color: assistantActive
+                  ? _theme.accent
+                  : _theme.foreground.withValues(alpha: 0.4),
+              perk: 0.72 + 0.28 * (hasActivity ? t : emptyT),
+            ),
+          ),
+        ),
+      ),
+    );
 
     return Container(
       width: width,
@@ -380,6 +483,21 @@ class _NotchPillState extends State<NotchPill>
       decoration: BoxDecoration(
         color: _theme.background,
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
+        // Soft accent lift so the pill separates from any backdrop (Apple's
+        // Dynamic Island uses the same trick). Active states only; the window
+        // is padded to give it room. The shadow above the pill clips into the
+        // status bar, which is what we want — the glow reads below and beside.
+        boxShadow: (hasActivity || emptyExpanded)
+            ? <BoxShadow>[
+                BoxShadow(
+                  color: _theme.accent.withValues(
+                    alpha: assistantActive ? 0.42 : 0.28,
+                  ),
+                  blurRadius: 20,
+                  spreadRadius: 0.5,
+                ),
+              ]
+            : null,
       ),
       child: hasActivity
           ? Stack(
@@ -395,6 +513,7 @@ class _NotchPillState extends State<NotchPill>
                       ),
                     ),
                   ),
+                ears,
                 Positioned.fill(
                   child: Padding(
                     padding: EdgeInsets.only(top: _topInset),
@@ -428,7 +547,9 @@ class _NotchPillState extends State<NotchPill>
                           key: ValueKey<String>(_primary!.key),
                           activity: _primary!,
                           theme: _theme,
-                          expandT: _expand.value,
+                          // The emphasized curve (not raw controller value) so
+                          // the content cross-fade tracks the box it lives in.
+                          expandT: t,
                           total: _stack.length,
                           index: _shownIndex.clamp(0, _stack.length - 1),
                           onControl: _sendControl,
@@ -440,7 +561,16 @@ class _NotchPillState extends State<NotchPill>
               ],
             )
           : emptyExpanded
-              ? _IdleEmptyContent(theme: _theme, topInset: _topInset, opacity: emptyT)
+              ? Stack(
+                  children: <Widget>[
+                    ears,
+                    _IdleEmptyContent(
+                      theme: _theme,
+                      topInset: _topInset,
+                      opacity: emptyT,
+                    ),
+                  ],
+                )
               : const SizedBox.shrink(),
     );
   }
@@ -465,20 +595,39 @@ class _IdleEmptyContent extends StatelessWidget {
         padding: EdgeInsets.only(top: topInset),
         child: Center(
           child: Text(
-            'Nothing to display',
+            'Neko’s napping 😴',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: theme.subdued,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w500,
-              height: 1.1,
-            ),
+            style: _nunito(color: theme.subdued, fontSize: 12.5),
           ),
         ),
       ),
     );
   }
+}
+
+/// The notch's text style — the app's Nunito, so the pill reads as the same
+/// product as the rest of Neko rather than a bare system overlay. The main app
+/// loads Nunito on launch, so the overlay engine picks it up from the shared
+/// font cache (falling back gracefully to the system font if it isn't there).
+TextStyle _nunito({
+  required Color color,
+  required double fontSize,
+  FontWeight fontWeight = FontWeight.w500,
+  double height = 1.1,
+  double? letterSpacing,
+  bool tabular = false,
+}) {
+  return GoogleFonts.nunito(
+    color: color,
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    height: height,
+    letterSpacing: letterSpacing,
+    fontFeatures: tabular
+        ? const <ui.FontFeature>[ui.FontFeature.tabularFigures()]
+        : null,
+  );
 }
 
 IconData _iconFor(NotchActivityType type) {
@@ -489,13 +638,45 @@ IconData _iconFor(NotchActivityType type) {
     NotchActivityType.call => Icons.call_rounded,
     NotchActivityType.navigation => Icons.navigation_rounded,
     NotchActivityType.download => Icons.download_rounded,
+    NotchActivityType.assistant => Icons.mic_rounded,
     NotchActivityType.generic => Icons.pets_rounded,
   };
 }
 
+/// A next-turn glyph inferred from the navigation notification's maneuver text
+/// (Maps/Waze put "Turn left onto…", "Continue…", "Arrive" in the title), so a
+/// nav activity shows the actual direction instead of a generic arrow.
+IconData _maneuverIcon(String title) {
+  final String t = title.toLowerCase();
+  if (t.contains('u-turn') || t.contains('u turn')) {
+    return Icons.u_turn_left_rounded;
+  }
+  if (t.contains('roundabout')) return Icons.roundabout_left_rounded;
+  if (t.contains('slight left')) return Icons.turn_slight_left_rounded;
+  if (t.contains('slight right')) return Icons.turn_slight_right_rounded;
+  if (t.contains('left')) return Icons.turn_left_rounded;
+  if (t.contains('right')) return Icons.turn_right_rounded;
+  if (t.contains('merge')) return Icons.merge_rounded;
+  if (t.contains('arrive') ||
+      t.contains('destination') ||
+      t.contains('arriving')) {
+    return Icons.place_rounded;
+  }
+  if (t.contains('continue') ||
+      t.contains('straight') ||
+      t.contains('head ')) {
+    return Icons.straight_rounded;
+  }
+  return Icons.navigation_rounded;
+}
+
 Uint8List? _decodeArt(String? b64) {
   if (b64 == null || b64.isEmpty) return null;
-  if (identical(b64, _lastArtKey)) return _lastArtBytes;
+  // Compare by value, not identity: JSON decoding makes a fresh string each
+  // media update, so identity never matched and the art was re-decoded every
+  // time. Value equality lets the cache actually hold across position/state
+  // updates for the same track.
+  if (b64 == _lastArtKey) return _lastArtBytes;
   try {
     _lastArtBytes = base64Decode(b64);
     _lastArtKey = b64;
@@ -571,8 +752,13 @@ class _Compact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+    // Never-scroll wrapper: lets the content take its natural height and clip
+    // cleanly instead of throwing a sub-pixel RenderFlex overflow at odd font
+    // metrics.
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
       child: Row(
         children: <Widget>[
           _Artwork(activity: activity, theme: theme, size: 24),
@@ -587,26 +773,47 @@ class _Compact extends StatelessWidget {
                   activity.title.isEmpty ? 'Neko' : activity.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: _nunito(
                     color: theme.foreground,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    height: 1.1,
                   ),
                 ),
-                if (activity.subtitle.isNotEmpty)
+                if (activity.type == NotchActivityType.timer &&
+                    activity.endsAtMs != null)
+                  _Countdown(
+                    endsAtMs: activity.endsAtMs!,
+                    style: _nunito(
+                      color: theme.subdued,
+                      fontSize: 10.5,
+                      tabular: true,
+                    ),
+                  )
+                else if (activity.subtitle.isNotEmpty)
                   Text(
                     activity.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: theme.subdued, fontSize: 10.5, height: 1.1),
+                    style: _nunito(color: theme.subdued, fontSize: 10.5),
                   ),
               ],
             ),
           ),
           const SizedBox(width: 10),
-          if (activity.type == NotchActivityType.music)
-            _AudioWaves(color: theme.accent, active: activity.isPlaying)
+          if (activity.type == NotchActivityType.music ||
+              activity.type == NotchActivityType.assistant)
+            _EqualizerBars(color: theme.accent, active: activity.isPlaying)
+          else if (activity.type == NotchActivityType.timer &&
+              activity.endsAtMs != null &&
+              activity.durationMs != null)
+            _TimerRing(activity: activity, theme: theme)
+          else if (activity.type == NotchActivityType.timer &&
+              activity.endsAtMs != null)
+            // A mirrored system timer has no known total; the countdown text
+            // ticks, so show a static glyph rather than a frozen-full ring.
+            Icon(Icons.timer_rounded, color: theme.accent, size: 18)
+          else if (activity.type == NotchActivityType.navigation)
+            Icon(_maneuverIcon(activity.title), color: theme.accent, size: 18)
           else if (activity.progress != null)
             SizedBox(
               width: 20,
@@ -625,6 +832,7 @@ class _Compact extends StatelessWidget {
               decoration: BoxDecoration(color: theme.accent, shape: BoxShape.circle),
             ),
         ],
+      ),
       ),
     );
   }
@@ -648,7 +856,12 @@ class _Expanded extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isMusic = activity.type == NotchActivityType.music;
-    return Padding(
+    final bool isAssistant = activity.type == NotchActivityType.assistant;
+    final bool isTimer =
+        activity.type == NotchActivityType.timer && activity.endsAtMs != null;
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -668,7 +881,7 @@ class _Expanded extends StatelessWidget {
                         activity.appName!.toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: _nunito(
                           color: theme.subdued,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -679,26 +892,46 @@ class _Expanded extends StatelessWidget {
                       activity.title.isEmpty ? 'Neko' : activity.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: _nunito(
                         color: theme.foreground,
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
+                        height: 1.2,
                       ),
                     ),
-                    if (activity.subtitle.isNotEmpty)
+                    if (isTimer)
+                      _Countdown(
+                        endsAtMs: activity.endsAtMs!,
+                        style: _nunito(
+                          color: theme.foreground,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                          tabular: true,
+                        ),
+                      )
+                    else if (activity.subtitle.isNotEmpty)
                       Text(
                         activity.subtitle,
-                        maxLines: 1,
+                        maxLines: isAssistant ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: theme.subdued, fontSize: 12),
+                        style: _nunito(
+                          color: theme.subdued,
+                          fontSize: 12,
+                          height: 1.25,
+                        ),
                       ),
                   ],
                 ),
               ),
-              if (isMusic) _AudioWaves(color: theme.accent, active: activity.isPlaying),
+              if (isMusic || isAssistant)
+                _EqualizerBars(color: theme.accent, active: activity.isPlaying),
             ],
           ),
-          if (activity.progress != null) ...<Widget>[
+          if (isTimer && activity.durationMs != null) ...<Widget>[
+            const SizedBox(height: 9),
+            _TimerBar(activity: activity, theme: theme),
+          ] else if (activity.progress != null) ...<Widget>[
             const SizedBox(height: 9),
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
@@ -743,6 +976,7 @@ class _Expanded extends StatelessWidget {
           ],
         ],
       ),
+      ),
     );
   }
 }
@@ -764,12 +998,21 @@ class _Artwork extends StatelessWidget {
         child: Image.memory(bytes, width: size, height: size, fit: BoxFit.cover, gaplessPlayback: true),
       );
     }
+    final IconData glyph = activity.type == NotchActivityType.navigation
+        ? _maneuverIcon(activity.title)
+        : _iconFor(activity.type);
+    // Contrast the glyph against the accent chip: a dark glyph on a light accent
+    // (some coat palettes are pale), white on a dark one — so it never washes
+    // out whichever of the twelve themes is active.
+    final Color onAccent = theme.accent.computeLuminance() > 0.55
+        ? const Color(0xFF15151A)
+        : Colors.white;
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: theme.accent, borderRadius: BorderRadius.circular(r)),
-      child: Icon(_iconFor(activity.type), color: Colors.white, size: size * 0.55),
+      child: Icon(glyph, color: onAccent, size: size * 0.55),
     );
   }
 }
@@ -863,32 +1106,45 @@ class _PageDots extends StatelessWidget {
   }
 }
 
-class _AudioWaves extends StatefulWidget {
-  const _AudioWaves({required this.color, required this.active});
+/// A tidy three-bar audio equaliser — the Apple-Dynamic-Island-style indicator
+/// for music and Hey Neko. Bars bounce while audio is live and settle to short
+/// even bars when it isn't. Reduce-motion aware.
+class _EqualizerBars extends StatefulWidget {
+  const _EqualizerBars({required this.color, required this.active});
 
   final Color color;
   final bool active;
 
   @override
-  State<_AudioWaves> createState() => _AudioWavesState();
+  State<_EqualizerBars> createState() => _EqualizerBarsState();
 }
 
-class _AudioWavesState extends State<_AudioWaves> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 850));
+class _EqualizerBarsState extends State<_EqualizerBars>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 700),
+  );
+  bool _reduceMotion = false;
 
   @override
-  void initState() {
-    super.initState();
-    if (widget.active) _c.repeat(reverse: true);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    _sync();
   }
 
   @override
-  void didUpdateWidget(_AudioWaves old) {
+  void didUpdateWidget(_EqualizerBars old) {
     super.didUpdateWidget(old);
-    if (widget.active && !_c.isAnimating) {
-      _c.repeat(reverse: true);
-    } else if (!widget.active && _c.isAnimating) {
+    _sync();
+  }
+
+  void _sync() {
+    final bool play = widget.active && !_reduceMotion;
+    if (play && !_c.isAnimating) {
+      _c.repeat();
+    } else if (!play && _c.isAnimating) {
       _c.stop();
     }
   }
@@ -902,28 +1158,261 @@ class _AudioWavesState extends State<_AudioWaves> with SingleTickerProviderState
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 26,
-      height: 24,
+      width: 20,
+      height: 20,
       child: AnimatedBuilder(
         animation: _c,
-        builder: (BuildContext context, _) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: List<Widget>.generate(4, (int i) {
-              final double phase = (_c.value + i * 0.22) % 1.0;
-              final double t = widget.active ? 0.35 + 0.65 * (1 - (phase - 0.5).abs() * 2) : 0.4;
-              return Container(
-                width: 3.5,
-                height: 22 * t,
-                decoration: BoxDecoration(color: widget.color, borderRadius: BorderRadius.circular(2)),
-              );
-            }),
-          );
-        },
+        builder: (BuildContext context, _) => CustomPaint(
+          painter: _EqualizerPainter(
+            color: widget.color,
+            t: _c.value,
+            active: widget.active && !_reduceMotion,
+          ),
+        ),
       ),
     );
   }
+}
+
+class _EqualizerPainter extends CustomPainter {
+  const _EqualizerPainter({
+    required this.color,
+    required this.t,
+    required this.active,
+  });
+
+  final Color color;
+  final double t;
+  final bool active;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const int bars = 3;
+    const double barW = 3.4;
+    final double gap = (size.width - bars * barW) / (bars - 1);
+    final Paint paint = Paint()
+      ..color = color
+      ..isAntiAlias = true;
+    for (int i = 0; i < bars; i++) {
+      final double phase = t * 2 * math.pi + i * 1.9;
+      final double amp = active ? (0.5 + 0.5 * math.sin(phase)).abs() : 0.3;
+      final double h = size.height * (0.26 + 0.64 * amp);
+      final double x = i * (barW + gap);
+      final double top = (size.height - h) / 2;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, top, barW, h),
+          const Radius.circular(1.7),
+        ),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EqualizerPainter old) =>
+      old.t != t || old.color != color || old.active != active;
+}
+
+/// Two little ears perked around the punch-hole camera — drawn in the island's
+/// status-bar zone so the cutout itself reads as Neko's face.
+class _CatEarsPainter extends CustomPainter {
+  const _CatEarsPainter({required this.color, required this.perk});
+
+  final Color color;
+
+  /// 0..1 — how far the ears have perked up (grows with the island).
+  final double perk;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.height < 8) return;
+    final Paint fill = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+
+    // Two upright triangular ears — the app's own cat-ear language
+    // (`cat_eared_icon.dart`) — flanking the punch-hole so the cutout reads as
+    // Neko's face. A clear gap in the middle leaves the camera untouched.
+    final double cx = size.width / 2;
+    final double baseY = size.height;
+    final double earH = (size.height * 0.7 * perk).clamp(0.0, 17.0);
+    const double earW = 15;
+    const double halfGap = 11; // clearance for the camera on each side
+
+    for (int side = 0; side < 2; side++) {
+      final double dir = side == 0 ? -1 : 1;
+      final double innerX = cx + dir * halfGap;
+      final double outerX = cx + dir * (halfGap + earW);
+      final double apexX = cx + dir * (halfGap + earW * 0.5);
+      final Path ear = Path()
+        ..moveTo(innerX, baseY)
+        ..lineTo(apexX, baseY - earH)
+        ..lineTo(outerX, baseY)
+        ..close();
+      canvas.drawPath(ear, fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CatEarsPainter old) =>
+      old.color != color || old.perk != perk;
+}
+
+/// A self-ticking countdown label driven by the activity's absolute end time —
+/// no per-second pushes from the app engine needed.
+class _Countdown extends StatefulWidget {
+  const _Countdown({required this.endsAtMs, required this.style});
+
+  final int endsAtMs;
+  final TextStyle style;
+
+  @override
+  State<_Countdown> createState() => _CountdownState();
+}
+
+class _CountdownState extends State<_Countdown> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _arm();
+  }
+
+  @override
+  void didUpdateWidget(_Countdown old) {
+    super.didUpdateWidget(old);
+    if (old.endsAtMs != widget.endsAtMs) _arm();
+  }
+
+  void _arm() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+      if (_remaining() <= Duration.zero) _ticker?.cancel();
+    });
+  }
+
+  Duration _remaining() {
+    final Duration left = DateTime.fromMillisecondsSinceEpoch(
+      widget.endsAtMs,
+    ).difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Duration left = _remaining();
+    final int h = left.inHours;
+    final int m = left.inMinutes % 60;
+    final int s = left.inSeconds % 60;
+    String two(int v) => v.toString().padLeft(2, '0');
+    final String text = h > 0 ? '$h:${two(m)}:${two(s)}' : '${two(m)}:${two(s)}';
+    return Text(text, maxLines: 1, style: widget.style);
+  }
+}
+
+/// Self-ticking draining ring for a countdown in the compact pill.
+class _TimerRing extends StatefulWidget {
+  const _TimerRing({required this.activity, required this.theme});
+
+  final NotchActivity activity;
+  final NotchTheme theme;
+
+  @override
+  State<_TimerRing> createState() => _TimerRingState();
+}
+
+class _TimerRingState extends State<_TimerRing> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: CircularProgressIndicator(
+        value: _remainingFraction(widget.activity),
+        strokeWidth: 3,
+        backgroundColor: widget.theme.foreground.withValues(alpha: 0.22),
+        valueColor: AlwaysStoppedAnimation<Color>(widget.theme.accent),
+      ),
+    );
+  }
+}
+
+/// Self-ticking draining bar for a countdown in the expanded card.
+class _TimerBar extends StatefulWidget {
+  const _TimerBar({required this.activity, required this.theme});
+
+  final NotchActivity activity;
+  final NotchTheme theme;
+
+  @override
+  State<_TimerBar> createState() => _TimerBarState();
+}
+
+class _TimerBarState extends State<_TimerBar> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: LinearProgressIndicator(
+        value: _remainingFraction(widget.activity),
+        minHeight: 4,
+        backgroundColor: widget.theme.foreground.withValues(alpha: 0.22),
+        valueColor: AlwaysStoppedAnimation<Color>(widget.theme.accent),
+      ),
+    );
+  }
+}
+
+/// Fraction of a countdown still left (1 → just started, 0 → done).
+double _remainingFraction(NotchActivity activity) {
+  final int? endsAt = activity.endsAtMs;
+  final int? total = activity.durationMs;
+  if (endsAt == null || total == null || total <= 0) return 1;
+  final int left = endsAt - DateTime.now().millisecondsSinceEpoch;
+  return (left / total).clamp(0.0, 1.0);
 }
 
 /// Tiles the paw artwork faintly and drifts it seamlessly (only while expanded).

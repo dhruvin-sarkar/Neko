@@ -2,9 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
+import '../../../../core/utils/logger.dart';
+import '../../../../shared/services/search_service.dart';
 import '../../models/chat_attachment.dart';
 import '../../models/chat_message.dart';
 
@@ -18,10 +22,11 @@ class ChatMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isUser = message.isUser;
+    final bool isError = message.isError && !isUser;
     final Color bubbleColor = isUser ? AppColors.primary : AppColors.snowWhite;
     final Color textColor = isUser
         ? AppColors.textOnPrimary
-        : AppColors.textPrimary;
+        : (isError ? AppColors.textSecondary : AppColors.textPrimary);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -46,6 +51,21 @@ class ChatMessageBubble extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isError)
+                // The sleepy 404 cat softens a network/API failure into
+                // something on-brand instead of a bare error line.
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: SizedBox(
+                    height: 84,
+                    child: Lottie.asset(
+                      'assets/animations/404 Sleep Cat.json',
+                      fit: BoxFit.contain,
+                      alignment: Alignment.centerLeft,
+                      animate: !MediaQuery.disableAnimationsOf(context),
+                    ),
+                  ),
+                ),
               if (message.attachments.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -65,10 +85,94 @@ class ChatMessageBubble extends StatelessWidget {
                 )
               else if (message.isStreaming)
                 _TypingDots(color: textColor),
+              if (message.results.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _ResultsList(results: message.results),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+/// A tappable web-results list inside an assistant bubble (results-mode query).
+/// Each row opens in the browser.
+class _ResultsList extends StatelessWidget {
+  const _ResultsList({required this.results});
+
+  final List<SearchResult> results;
+
+  Future<void> _open(String url) async {
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } on Object catch (e, st) {
+      AppLogger.warning('Could not open search result', e, st);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final SearchResult r in results)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Material(
+              color: AppColors.surfaceMuted,
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                onTap: () => _open(r.url),
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              r.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (r.description.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                r.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.caption,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.open_in_new_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

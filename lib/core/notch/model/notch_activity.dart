@@ -8,6 +8,9 @@ enum NotchActivityType {
   call,
   navigation,
   download,
+
+  /// A Hey Neko voice exchange (listening → thinking → speaking).
+  assistant,
   generic;
 
   static NotchActivityType fromName(String? name) {
@@ -29,6 +32,7 @@ class NotchActivity {
     this.progress,
     this.isPlaying = false,
     this.durationMs,
+    this.endsAtMs,
     this.source,
     this.albumArt,
     bool? ongoing,
@@ -48,6 +52,10 @@ class NotchActivity {
 
   final int? durationMs;
 
+  /// Absolute wall-clock end (epoch ms) for countdown activities (timers).
+  /// Being absolute lets the overlay tick the remaining time locally — no
+  /// per-second pushes from the app — and survive restarts/reboots intact.
+  final int? endsAtMs;
 
   final String? source;
 
@@ -73,6 +81,7 @@ class NotchActivity {
     double? progress,
     bool? isPlaying,
     int? durationMs,
+    int? endsAtMs,
     String? source,
     String? albumArt,
     bool? ongoing,
@@ -86,6 +95,7 @@ class NotchActivity {
       progress: progress ?? this.progress,
       isPlaying: isPlaying ?? this.isPlaying,
       durationMs: durationMs ?? this.durationMs,
+      endsAtMs: endsAtMs ?? this.endsAtMs,
       source: source ?? this.source,
       albumArt: albumArt ?? this.albumArt,
       ongoing: ongoing ?? _ongoing,
@@ -102,6 +112,7 @@ class NotchActivity {
       progress: other.progress ?? progress,
       isPlaying: other.isPlaying,
       durationMs: other.durationMs ?? durationMs,
+      endsAtMs: other.endsAtMs ?? endsAtMs,
       source: other.source ?? source,
       albumArt: other.albumArt ?? albumArt,
       ongoing: other._ongoing ?? _ongoing,
@@ -120,6 +131,7 @@ class NotchActivity {
             .toString();
     final Object? rawProgress = json['progress'];
     final Object? rawDuration = json['durationMs'] ?? json['duration'];
+    final Object? rawEndsAt = json['endsAtMs'];
     return NotchActivity(
       type: type,
       id: (json['id'] ?? '').toString(),
@@ -131,6 +143,7 @@ class NotchActivity {
           : null,
       isPlaying: json['isPlaying'] == true || json['playing'] == true,
       durationMs: rawDuration is num ? rawDuration.toInt() : null,
+      endsAtMs: rawEndsAt is num ? rawEndsAt.toInt() : null,
       source: (json['source'] as Object?)?.toString(),
       albumArt: (json['albumArt'] as Object?)?.toString(),
       ongoing: json['ongoing'] is bool ? json['ongoing'] as bool : null,
@@ -148,6 +161,7 @@ class NotchActivity {
       'isPlaying': isPlaying,
       'ongoing': isOngoing,
       if (durationMs != null) 'durationMs': durationMs,
+      if (endsAtMs != null) 'endsAtMs': endsAtMs,
       if (source != null) 'source': source,
       if (albumArt != null && albumArt!.isNotEmpty) 'albumArt': albumArt,
       if (type == NotchActivityType.music) ...<String, dynamic>{

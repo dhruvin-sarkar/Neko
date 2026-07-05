@@ -14,7 +14,19 @@ import '../models/chat_message.dart';
 /// Contract for the AI backend: send the [history] and stream the reply token
 /// by token.
 abstract class ChatService {
-  Stream<String> streamReply(List<ChatMessage> history, {String? catContext});
+  /// Streams Neko's reply to [history].
+  ///
+  /// [spoken] appends one instruction so a Hey Neko voice reply stays short and
+  /// formatting-free. [safety] appends the cat-safety-scan instruction so an
+  /// attached photo is judged for feline safety, erring toward caution. Both are
+  /// extra conditional lines on the same prompt and the same request path — not
+  /// separate prompts or endpoints.
+  Stream<String> streamReply(
+    List<ChatMessage> history, {
+    String? catContext,
+    bool spoken = false,
+    bool safety = false,
+  });
 }
 
 /// Raised when the AI request fails; shown to the user as a friendly note.
@@ -37,6 +49,24 @@ const String _systemPrompt =
     'steps, write them as a short numbered list using plain text (for example '
     '"1." on its own line). For anything that needs a veterinarian, recommend '
     'consulting one rather than giving a diagnosis.';
+
+/// The cat-safety-scan instruction, appended when [ChatService.streamReply] is
+/// called with `safety: true` (an attached photo of a plant / food / household
+/// item). Deliberately biased toward caution: getting a "safe" wrong can kill a
+/// cat, so anything ambiguous or already-ingested is treated as a hazard.
+const String _safetyDirective =
+    'The owner has attached a photo to check whether what it shows is safe for '
+    'their cat. Identify the item as best you can. Begin your reply with '
+    'exactly one label on the first line — SAFE, CAUTION, or DANGER — followed '
+    'by a colon and a short plain-language explanation. Err firmly toward '
+    'caution: if the item is unclear, if the cat may already have eaten it, or '
+    'if it is a known feline hazard (lilies and many houseplants, onion, '
+    'garlic, chocolate, grapes, xylitol, human medications, cleaning products, '
+    'and the like), never label it SAFE — use CAUTION or DANGER. If you cannot '
+    'tell what it is, say so and label it CAUTION. For anything the cat may '
+    'have already ingested, and for every DANGER, tell the owner to contact '
+    'their veterinarian or an animal poison control service right away. Keep it '
+    'to a few clear sentences.';
 
 /// OpenAI-compatible chat service (Hack Club proxy). Streams Server-Sent
 /// Events when available, otherwise falls back to a single JSON completion.
@@ -63,6 +93,8 @@ class HackClubChatService implements ChatService {
   Stream<String> streamReply(
     List<ChatMessage> history, {
     String? catContext,
+    bool spoken = false,
+    bool safety = false,
   }) async* {
     final String apiKey = _apiKey;
     if (apiKey.isEmpty || apiKey == _placeholderKey) {
@@ -74,7 +106,7 @@ class HackClubChatService implements ChatService {
 
     // Fold the owner's cat profile(s) into the system prompt so Neko gives
     // advice specific to this cat rather than generic answers.
-    final String systemContent =
+    final String personalised =
         (catContext == null || catContext.trim().isEmpty)
         ? _systemPrompt
         : '$_systemPrompt\n\n'
@@ -82,6 +114,23 @@ class HackClubChatService implements ChatService {
               '(reference the cat by name; tailor advice to their breed, age, '
               'weight, and activity). Do not recite these details back verbatim '
               'unless asked.\n$catContext';
+
+    // Extra instructions layer onto the one prompt (not separate prompts): the
+    // voice path asks for a short spoken reply; the safety-scan path asks for a
+    // cautious feline-safety verdict on the attached photo.
+    final StringBuffer sys = StringBuffer(personalised);
+    if (spoken) {
+      sys.write(
+        '\n\nThis question was asked out loud and your answer will be read '
+        'back by text-to-speech. Keep it to one or two short spoken sentences. '
+        'Do not use lists, numbers, headings, or any formatting — just natural '
+        'speech.',
+      );
+    }
+    if (safety) {
+      sys.write('\n\n$_safetyDirective');
+    }
+    final String systemContent = sys.toString();
 
     final List<Map<String, dynamic>> messages = <Map<String, dynamic>>[
       {'role': 'system', 'content': systemContent},

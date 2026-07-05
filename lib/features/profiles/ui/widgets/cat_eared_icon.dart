@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/neko_motion.dart';
 
-/// An [Icon] that sprouts two small triangular cat ears above it when
-/// [isSelected] is true. The ears spring in (and fold away) with the app's
-/// selection-pop motion and are purely decorative (excluded from semantics).
+/// An [Icon] that pops a little paw print above it when [isSelected] is true —
+/// the app's paw motif as the bottom-nav "you are here" flourish. The paw
+/// springs in (and folds away) with the app's selection-pop motion and is
+/// purely decorative (excluded from semantics).
 ///
-/// One reusable wrapper for every nav destination — the ears simply toggle with
-/// selection, so there is exactly one way to render a nav icon, eared or not,
-/// rather than a hand-drawn ear variant per icon.
+/// One reusable wrapper for every nav destination — the paw simply toggles with
+/// selection, so there is exactly one way to render a nav icon, topped or not.
 class CatEaredIcon extends StatelessWidget {
   const CatEaredIcon({
     super.key,
@@ -25,8 +25,8 @@ class CatEaredIcon extends StatelessWidget {
   /// Colour of the glyph itself.
   final Color color;
 
-  /// Fill of the ears. In the nav pill the ears poke above the selection circle,
-  /// so the brand coral reads against the white pill behind them.
+  /// Fill of the paw. In the nav pill it pokes above the selection circle, so
+  /// the brand coral reads against the white pill behind it.
   final Color earColor;
 
   final double size;
@@ -34,8 +34,6 @@ class CatEaredIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
-    // Ears scale with the glyph, so nothing is pinned to a single density.
-    final Size earBox = Size(size * 0.9, size * 0.52);
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
@@ -43,60 +41,21 @@ class CatEaredIcon extends StatelessWidget {
         Icon(icon, size: size, color: color),
         Positioned(
           // Sit above the glyph so that, centred in the 48px selection circle,
-          // the ears poke clearly above the circle onto the white pill (their
-          // bases merge into the coral circle). Clip.none + the pill's headroom
-          // keep the spring overshoot from clipping.
-          top: -earBox.height * 0.9,
+          // the paw peeks clearly above the circle onto the white pill. Clip.none
+          // + the pill's headroom keep the spring overshoot from clipping.
+          top: -size * 0.62,
           child: ExcludeSemantics(
             child: AnimatedScale(
-              // Perk up from the head on selection; fold away otherwise.
+              // Pop up from the head on selection; fold away otherwise.
               scale: isSelected ? 1.0 : 0.0,
               alignment: Alignment.bottomCenter,
               duration: reduceMotion ? Duration.zero : NekoMotion.fast,
               curve: reduceMotion ? Curves.linear : NekoMotion.pop,
-              child: SizedBox.fromSize(
-                size: earBox,
-                child: CustomPaint(painter: _CatEarsPainter(color: earColor)),
-              ),
+              child: Icon(Icons.pets_rounded, size: size * 0.62, color: earColor),
             ),
           ),
         ),
       ],
     );
   }
-}
-
-/// Paints two upright triangular ears filling the given box.
-class _CatEarsPainter extends CustomPainter {
-  const _CatEarsPainter({required this.color});
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-    final double w = size.width;
-    final double h = size.height;
-    // Left ear.
-    final Path left = Path()
-      ..moveTo(w * 0.02, h)
-      ..lineTo(w * 0.24, 0)
-      ..lineTo(w * 0.46, h)
-      ..close();
-    // Right ear (mirror).
-    final Path right = Path()
-      ..moveTo(w * 0.54, h)
-      ..lineTo(w * 0.76, 0)
-      ..lineTo(w * 0.98, h)
-      ..close();
-    canvas
-      ..drawPath(left, paint)
-      ..drawPath(right, paint);
-  }
-
-  @override
-  bool shouldRepaint(_CatEarsPainter oldDelegate) => oldDelegate.color != color;
 }

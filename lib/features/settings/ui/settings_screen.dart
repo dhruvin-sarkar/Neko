@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../app/app_info.dart';
-import '../../../core/Notch/controller/notch_controller.dart';
+import '../../../core/notch/controller/notch_controller.dart';
 import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/neko_palette.dart';
@@ -21,6 +21,7 @@ import '../../../shared/widgets/neko_dialog.dart';
 import '../../../core/widgets/neko_button.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../voice/providers/wake_word_controller.dart';
 import '../providers/sound_settings_controller.dart';
 import '../providers/theme_controller.dart';
 
@@ -155,6 +156,8 @@ class SettingsScreen extends ConsumerWidget {
                             const _SoundCard(),
                             const SizedBox(height: 16),
                             const _NotchCard(),
+                            const SizedBox(height: 16),
+                            const _HeyNekoCard(),
                             const SizedBox(height: 16),
                             const _AboutCard(),
                           ],
@@ -429,6 +432,78 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
                   enabled
                       ? 'Live activities, music & notifications up top'
                       : 'Off',
+                  style: AppTextStyles.caption,
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: enabled,
+            activeThumbColor: AppColors.primary,
+            onChanged: _busy ? null : _toggle,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Toggles the optional always-listening "Hey Neko" wake word. Off by default —
+/// it holds the mic while the app is open, so the copy is honest about that.
+class _HeyNekoCard extends ConsumerStatefulWidget {
+  const _HeyNekoCard();
+
+  @override
+  ConsumerState<_HeyNekoCard> createState() => _HeyNekoCardState();
+}
+
+class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
+  bool _busy = false;
+
+  Future<void> _toggle(bool value) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    unawaited(ref.read(feedbackServiceProvider).onSelect());
+    await ref.read(wakeWordControllerProvider.notifier).setEnabled(value);
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(themeControllerProvider);
+    final bool enabled = ref.watch(
+      wakeWordControllerProvider.select((s) => s.enabled),
+    );
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.selectedFill,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.hearing_rounded, color: AppColors.primary),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Hey Neko voice', style: AppTextStyles.bodyLarge),
+                const SizedBox(height: 2),
+                Text(
+                  enabled
+                      ? 'Listening for “Hey Neko” while the app is open'
+                      : 'Off — tap the mic in chat to talk',
                   style: AppTextStyles.caption,
                 ),
               ],

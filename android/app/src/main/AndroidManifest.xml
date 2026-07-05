@@ -9,9 +9,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <!-- Relaunch the overlay after device reboot (see NEKO_NOTCH boot note). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-    <!-- Hey Neko voice + workout sensors (wired in a later pass). -->
+    <!-- Hey Neko voice + workout sensors. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
+    <!-- Cat safety scan: point the camera at a plant/food/item to check if it's
+         safe for the cat. Photos are analysed and discarded, never persisted. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="Neko"
         android:name="${applicationName}"
