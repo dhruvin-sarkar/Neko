@@ -724,7 +724,11 @@ class _NotchPillState extends State<NotchPill>
   /// A receded activity sits a little taller than the empty idle sliver so it's
   /// a real tap/drag target to bring the activity back (and its accent underline
   /// is easier to see).
-  int get _minimizedH => NotchMetrics.idleContent + 10 + _topInset.round();
+  // The minimized pill IS its own tap window (flutter_overlay_window sizes the
+  // OS surface to it). idleContent + 10 left only ~43dp — right at the edge of
+  // reliable touch for reactivation. +24 gives a ~57dp window that clears the
+  // 48dp target comfortably; the pill only grows a little and stays unobtrusive.
+  int get _minimizedH => NotchMetrics.idleContent + 24 + _topInset.round();
   int get _compactH => NotchMetrics.compactContent + _topInset.round();
 
   /// The animated shown compact width (content-hugging). Rests at [_toCompactW].
