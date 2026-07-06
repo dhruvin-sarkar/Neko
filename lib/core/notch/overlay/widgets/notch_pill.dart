@@ -1748,14 +1748,31 @@ class _AssistantCard extends StatelessWidget {
             Row(
               children: <Widget>[
                 // RepaintBoundary so each Lottie frame doesn't repaint the whole
-                // island.
+                // island. The cat cross-fades between phases (listening →
+                // searching → answering) instead of snapping in one frame.
                 RepaintBoundary(
-                  child: Lottie.asset(
-                    _assistantCatFor(activity.phase),
-                    width: 52,
-                    height: 52,
-                    fit: BoxFit.contain,
-                    repeat: true,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: ScaleTransition(
+                        scale: Tween<double>(begin: 0.92, end: 1).animate(
+                          CurvedAnimation(
+                            parent: anim,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                        child: child,
+                      ),
+                    ),
+                    child: Lottie.asset(
+                      _assistantCatFor(activity.phase),
+                      key: ValueKey<String>(_assistantCatFor(activity.phase)),
+                      width: 52,
+                      height: 52,
+                      fit: BoxFit.contain,
+                      repeat: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),

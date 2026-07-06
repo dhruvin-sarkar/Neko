@@ -166,10 +166,30 @@ class _IslandPanel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _title(state.phase),
-                style: AppTextStyles.headlineLarge.copyWith(
-                  color: theme.foreground,
+              // Cross-fade the title between phases so the largest text on the
+              // page doesn't hard-snap while everything beneath it eases.
+              AnimatedSwitcher(
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 200),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.2),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: Text(
+                  _title(state.phase),
+                  key: ValueKey<HeyNekoPhase>(state.phase),
+                  style: AppTextStyles.headlineLarge.copyWith(
+                    color: theme.foreground,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -253,7 +273,8 @@ class _IslandPanel extends StatelessWidget {
     HeyNekoPhase.searching => 'Searching the web…',
     HeyNekoPhase.speaking => 'Neko says',
     HeyNekoPhase.results => 'A few options',
-    HeyNekoPhase.error => 'Hey Neko',
+    // State-descriptive like every other phase (not the bare product name).
+    HeyNekoPhase.error => 'Neko missed that',
   };
 
   String _body(HeyNekoState state) => switch (state.phase) {

@@ -68,8 +68,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           error is AppException ? error.message : 'Something went wrong.',
           error: true,
         );
-      } else if (next is AsyncData && (previous?.isLoading ?? false)) {
-        // Registration succeeded; the router will redirect into onboarding.
+      } else if (next is AsyncData &&
+          (previous?.isLoading ?? false) &&
+          ref.read(authRepositoryProvider).currentUser != null) {
+        // A real session exists — not a cancelled Google picker (which also
+        // resolves to AsyncData but leaves no user). Only then celebrate.
         unawaited(ref.read(feedbackServiceProvider).onSuccess());
       }
     });
@@ -79,7 +82,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        leading: BackButton(
+        // IconButton (not BackButton) so a null onPressed actually greys out
+        // and disables while registering — BackButton falls back to maybePop.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          color: AppColors.textPrimary,
+          tooltip: 'Back',
           onPressed: isLoading ? null : () => context.go(Routes.welcome),
         ),
       ),
@@ -174,7 +182,7 @@ class _RegisterHeader extends StatelessWidget {
         Text('Create your account', style: AppTextStyles.displayLarge),
         const SizedBox(height: 8),
         Text(
-          "Let's get you and your cat set up.",
+          'Let’s get you and your cat set up.',
           style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textSecondary,
           ),
