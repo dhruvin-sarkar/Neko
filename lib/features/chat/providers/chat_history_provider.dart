@@ -41,10 +41,18 @@ class ChatHistoryController extends Notifier<List<ChatConversation>> {
   List<ChatConversation> build() {
     // Watching the auth state re-runs this build on every account switch, so
     // the visible history always belongs to the signed-in user.
+    final String? previousUid = _uid;
     _uid = ref.watch(
       authStateChangesProvider.select((value) => value.valueOrNull?.uid),
     );
     final SharedPreferences prefs = ref.watch(sharedPreferencesProvider);
+
+    // Belt-and-braces on sign-out: if a reply completed in the tick between
+    // AuthController's key wipe and this rebuild, it re-created the previous
+    // account's key. Re-remove it here so a signed-out transcript can't linger.
+    if (previousUid != null && _uid == null) {
+      unawaited(prefs.remove(_historyKeyFor(previousUid)));
+    }
 
     // One-time hygiene: drop the shared key older builds used.
     if (prefs.containsKey(_legacyHistoryKey)) {
