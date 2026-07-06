@@ -9,6 +9,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../core/neko_motion.dart';
 import '../../../../core/services/audio_service.dart';
+import '../../../../shared/widgets/pressable.dart';
 import '../../data/breed_catalog.dart';
 import '../../providers/onboarding_provider.dart';
 import '../widgets/step_headline.dart';
@@ -382,91 +383,87 @@ class _BreedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
+      onTap: onTap,
       selected: selected,
-      label: breed.name,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedScale(
-          scale: selected ? 1.03 : 1.0,
-          duration: NekoMotion.quick,
-          curve: Curves.easeOutBack,
-          child: AnimatedContainer(
-            duration: NekoMotion.fast,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: selected ? AppColors.primaryLight : AppColors.surfaceCard,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: selected ? AppColors.primary : AppColors.border,
-                width: selected ? 2 : 1,
+      semanticLabel: breed.name,
+      child: AnimatedScale(
+        scale: selected ? 1.03 : 1.0,
+        duration: NekoMotion.quick,
+        curve: Curves.easeOutBack,
+        child: AnimatedContainer(
+          duration: NekoMotion.fast,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primaryLight : AppColors.surfaceCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? AppColors.primary : AppColors.border,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Positioned(
+                top: -2,
+                right: -2,
+                child: Icon(
+                  Icons.pets_rounded,
+                  size: 26,
+                  color: AppColors.primary.withValues(
+                    alpha: selected ? 0.0 : 0.20,
+                  ),
+                ),
               ),
-            ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Icon(
-                    Icons.pets_rounded,
-                    size: 26,
-                    color: AppColors.primary.withValues(
-                      alpha: selected ? 0.0 : 0.20,
+              Align(
+                alignment: Alignment.bottomLeft,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      breed.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: selected
+                            ? AppColors.primaryDark
+                            : AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                    if (_tag.isNotEmpty) ...[
+                      const SizedBox(height: 2),
                       Text(
-                        breed.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: selected
-                              ? AppColors.primaryDark
-                              : AppColors.textPrimary,
+                        _tag,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textDisabled,
                         ),
                       ),
-                      if (_tag.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          _tag,
-                          style: AppTextStyles.caption.copyWith(
-                            color: AppColors.textDisabled,
-                          ),
-                        ),
-                      ],
                     ],
-                  ),
+                  ],
                 ),
-                if (selected)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.check_rounded,
-                        size: 14,
-                        color: AppColors.textOnPrimary,
-                      ),
+              ),
+              if (selected)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 14,
+                      color: AppColors.textOnPrimary,
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ),

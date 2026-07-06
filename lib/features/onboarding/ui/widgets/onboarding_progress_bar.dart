@@ -12,22 +12,26 @@ class OnboardingProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(100),
-      child: Container(
-        height: 8,
-        color: AppColors.cloudGray,
-        child: AnimatedFractionallySizedBox(
-          duration: MediaQuery.disableAnimationsOf(context)
-              ? Duration.zero
-              : NekoMotion.standard,
-          curve: NekoMotion.standardCurve,
-          alignment: Alignment.centerLeft,
-          widthFactor: fraction.clamp(0.0, 1.0),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: const BorderRadius.all(Radius.circular(100)),
+    return Semantics(
+      label: 'Setup progress',
+      value: '${(fraction.clamp(0.0, 1.0) * 100).round()}%',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(100),
+        child: Container(
+          height: 8,
+          color: AppColors.cloudGray,
+          child: AnimatedFractionallySizedBox(
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : NekoMotion.standard,
+            curve: NekoMotion.standardCurve,
+            alignment: Alignment.centerLeft,
+            widthFactor: fraction.clamp(0.0, 1.0),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: const BorderRadius.all(Radius.circular(100)),
+              ),
             ),
           ),
         ),

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../app/theme/app_colors.dart';
+import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/neko_palette.dart';
 import '../../../../core/neko_motion.dart';
 import '../../../../features/settings/providers/theme_controller.dart';
@@ -37,7 +39,14 @@ class CoatColorStep extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         StepHeadline('What does $display look like?'),
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
+        Text(
+          'Their coat becomes the app’s whole look — try a few.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 24),
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.only(bottom: 8),
@@ -67,7 +76,10 @@ class CoatColorStep extends ConsumerWidget {
                         unawaited(feedback.onSelect());
                         NekoSnackBar.show(
                           context,
-                          '${option.label} theme applied ✓',
+                          '${option.label} theme applied',
+                          // Float clear of the Continue chiclet: judges tap
+                          // several coats in a row to watch the re-theme.
+                          bottomMargin: 88,
                         );
                       } else {
                         unawaited(feedback.onSelect());

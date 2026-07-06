@@ -36,11 +36,11 @@ class _NameStepState extends ConsumerState<NameStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const StepHeadline("What's your cat called?"),
+        const StepHeadline('What’s your cat called?'),
         const SizedBox(height: 24),
         NekoTextField(
           controller: _controller,
-          hint: 'Mochi, Luna, Whiskers...',
+          hint: 'Mochi, Luna, Whiskers…',
           autofocus: true,
           textInputAction: TextInputAction.done,
           maxLength: 50,

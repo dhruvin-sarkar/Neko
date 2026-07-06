@@ -8,7 +8,7 @@ extension BreedCategoryLabel on BreedCategory {
     BreedCategory.longHair => 'Long Hair',
     BreedCategory.hairless => 'Hairless',
     BreedCategory.wild => 'Wild Type',
-    BreedCategory.unknown => 'Unknown',
+    BreedCategory.unknown => 'Mixed / Unknown',
   };
 }
 

@@ -83,7 +83,11 @@ class PhotoStep extends ConsumerWidget {
         const SizedBox(height: 8),
         Center(
           child: NekoButton.ghost(
-            label: hasAvatar ? 'Choose a different avatar' : 'Maybe later',
+            // Names what it does — it opens the avatar picker, it doesn't skip
+            // the step (Continue does, since the step is optional).
+            label: hasAvatar
+                ? 'Choose a different avatar'
+                : 'Or pick a cute avatar',
             onPressed: () {
               unawaited(ref.read(feedbackServiceProvider).onTap());
               AvatarPickerSheet.show(context);
@@ -93,7 +97,7 @@ class PhotoStep extends ConsumerWidget {
         if (hasAvatar)
           Center(
             child: NekoButton.ghost(
-              label: 'Remove',
+              label: photoPath != null ? 'Remove photo' : 'Remove avatar',
               onPressed: () => ref
                   .read(onboardingNotifierProvider.notifier)
                   .setPhotoPath(null),
