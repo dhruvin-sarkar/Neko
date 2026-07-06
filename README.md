@@ -1,4 +1,4 @@
-- [ ] Akshat is working on the closing notch shuting down thing
+- [x] Akshat is working on the closing notch shuting down thing
 - [ ] after that we will delegate different folders to clean up the code
 - [ ] Getting voice recognition working
 - [ ] Try and maybe get the notch at a better state with the ai notch 
@@ -9,3 +9,8 @@
 - [ ] final touches on the docs video and app
 - [ ] making sure we tick all the boxes and not miss anything
 - [ ] Final play testing and bug fixing
+- [ ] keep notch turned off by default
+- [ ] Edit guided tour with new features like the notch and the neko voice thing
+- [ ] moving the paw in the nav pill up a little
+- [ ] Move the cat typing to somehwere else so it doesnt block send button
+- [ ] Microphone on bg working hey neko stuff
