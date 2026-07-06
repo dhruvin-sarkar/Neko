@@ -207,7 +207,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ? _EmptyState(onSelect: _selectPrompt)
                 : ListView.builder(
                     controller: _scroll,
-                    padding: EdgeInsets.fromLTRB(
+                    padding: const EdgeInsets.fromLTRB(
                       12,
                       8,
                       12,

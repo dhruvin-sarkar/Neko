@@ -90,7 +90,7 @@ class HomeScreen extends ConsumerWidget {
                 padding: EdgeInsets.symmetric(
                   horizontal: AppResponsive.horizontalPadding(context),
                 ),
-                sliver: SliverToBoxAdapter(child: CatBannerShimmer()),
+                sliver: const SliverToBoxAdapter(child: CatBannerShimmer()),
               ),
             ],
             error: (_, _) => [
