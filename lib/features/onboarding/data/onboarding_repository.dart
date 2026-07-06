@@ -57,7 +57,10 @@ class OnboardingRepository {
         ..set(userRef, <String, dynamic>{
           'onboardingComplete': true,
         }, SetOptions(merge: true));
-      await batch.commit();
+      // A commit only resolves on backend ack — with no timeout, a network
+      // drop at "Let's go" would leave an infinite spinner with the button
+      // locked. Timing out maps into the existing retryable error path.
+      await batch.commit().timeout(const Duration(seconds: 15));
 
       // Save the chosen photo on-device (best-effort; never blocks onboarding).
       if (photoPath != null) {

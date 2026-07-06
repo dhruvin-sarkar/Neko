@@ -84,6 +84,11 @@ Future<bool> _confirmOnboardingFlag(
       final bool complete =
           (doc.data()?['onboardingComplete'] as bool?) ?? false;
       if (complete) return true;
+      // A present doc with a false flag is authoritative: the doc is created
+      // atomically at registration/sign-in and the flag only ever flips true.
+      // Answer immediately instead of burning the whole retry budget — the
+      // retries exist solely for the doc-not-yet-created race.
+      if (doc.exists) return false;
     } on Object {
       // Transient read failure — fall through and retry.
     }

@@ -197,11 +197,23 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
+    // Firebase first — `authStateChanges` emitting null is the signal the
+    // router and every per-account cleanup actually key off.
     try {
-      await _googleSignIn.signOut();
       await _auth.signOut();
     } on Object catch (e, st) {
       throw _mapUnknown(e, st);
+    }
+    // Google second, best-effort: a Play-Services hiccup must never leave the
+    // user signed in to Firebase with the UI stuck on the curtain.
+    try {
+      await _googleSignIn.signOut();
+    } on Object catch (e, st) {
+      AppLogger.warning(
+        'Google sign-out failed after Firebase sign-out; continuing',
+        e,
+        st,
+      );
     }
   }
 
