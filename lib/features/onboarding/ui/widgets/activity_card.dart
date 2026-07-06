@@ -74,10 +74,7 @@ class ActivityCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      option.label,
-                      style: AppTextStyles.bodyLarge,
-                    ),
+                    Text(option.label, style: AppTextStyles.bodyLarge),
                     const SizedBox(height: 4),
                     Text(
                       option.description,

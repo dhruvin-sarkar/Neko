@@ -105,13 +105,8 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ],
-            data: (list) => _catSlivers(
-              context,
-              list,
-              openCat,
-              addCat,
-              tourKeys,
-            ),
+            data: (list) =>
+                _catSlivers(context, list, openCat, addCat, tourKeys),
           ),
         ],
       ),
