@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/providers/firebase_providers.dart';
+import '../../chat/providers/chat_history_provider.dart';
+import '../../onboarding/data/onboarding_persistence.dart';
 import '../data/auth_repository.dart';
 
 part 'auth_provider.g.dart';
@@ -83,8 +86,17 @@ class AuthController extends _$AuthController {
   Future<void> signOut() async {
     if (state.isLoading) return;
     state = const AsyncValue<void>.loading();
+    // Snapshot everything before the awaits — this auto-dispose controller can
+    // be torn down mid-flight once sign-out starts navigating.
+    final AuthRepository repository = ref.read(authRepositoryProvider);
+    final SharedPreferences prefs = ref.read(sharedPreferencesProvider);
+    final String? uid = ref.read(firebaseAuthProvider).currentUser?.uid;
     _safeState(
-      await AsyncValue.guard(() => ref.read(authRepositoryProvider).signOut()),
+      await AsyncValue.guard(() async {
+        await repository.signOut();
+        // On-device transcripts must not outlive the account session.
+        await clearChatHistoryFor(prefs, uid);
+      }),
     );
   }
 

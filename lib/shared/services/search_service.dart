@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import '../../core/config/app_env.dart';
 import '../../core/utils/logger.dart';
 
 /// One web result for the "results" mode (voice or chat).
@@ -80,9 +80,8 @@ class SearchService {
 
   static const String _placeholderKey = 'replace_with_your_hackclub_search_key';
 
-  String get _key => dotenv.get('SEARCH_API_KEY', fallback: '');
-  String get _baseUrl =>
-      dotenv.get('SEARCH_BASE_URL', fallback: 'https://search.hackclub.com');
+  String get _key => AppEnv.searchApiKey;
+  String get _baseUrl => AppEnv.searchBaseUrl;
 
   /// Whether a usable API key is configured. When false we skip the API call
   /// entirely and go straight to the browser fallback.

@@ -38,9 +38,6 @@ dependencies:
   # Opening on-device documents in the platform's default viewer
   open_filex: ^4.5.0
 
-  # Environment secrets
-  flutter_dotenv: ^5.1.0
-
   # HTTP (AI chat completions)
   http: ^1.2.2
 
@@ -99,8 +96,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Config is injected at build time (--dart-define-from-file=.env); the .env
+  # file itself must never be listed as an asset — that ships it inside the APK.
   assets:
-    - .env
     - assets/images/
     - assets/images/avatars/
     - assets/sounds/

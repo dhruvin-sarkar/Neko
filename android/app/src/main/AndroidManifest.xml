@@ -18,10 +18,19 @@
     <!-- Cat safety scan: point the camera at a plant/food/item to check if it's
          safe for the cat. Photos are analysed and discarded, never persisted. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- allowBackup + dataExtractionRules: nothing Neko stores locally (chat
+         transcripts, cat documents, prefs) may leave the device via cloud
+         backup or device-to-device transfer.
+         usesCleartextTraffic + networkSecurityConfig: HTTPS only, validated
+         against the system trust store — no cleartext, no custom trust. -->
     <application
         android:label="Neko"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -81,11 +90,14 @@
             </intent-filter>
         </service>
 
-        <!-- Relaunch the notch overlay on device boot (permission-gated). -->
+        <!-- Relaunch the notch overlay on device boot (permission-gated).
+             exported=false: boot broadcasts come from the system, which can
+             always reach a non-exported receiver — but another app can no
+             longer spoof QUICKBOOT_POWERON to re-trigger the restore flow. -->
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />

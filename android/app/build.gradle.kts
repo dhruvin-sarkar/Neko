@@ -49,6 +49,10 @@ android {
 configurations.all {
     resolutionStrategy {
         force("com.google.firebase:firebase-messaging:23.4.1")
+        // SCA (Aikido): older plugin toolchains can drag in a 1.x kotlin-stdlib
+        // with known deserialization CVEs. Force the app-wide stdlib to the
+        // project's own Kotlin version so no vulnerable stdlib ships.
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.2.20")
     }
 }
 

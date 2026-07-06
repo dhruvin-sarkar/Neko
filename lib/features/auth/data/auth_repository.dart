@@ -300,7 +300,12 @@ class AuthRepository {
       'user-not-found' ||
       'wrong-password' ||
       'invalid-credential' => 'Email or password is incorrect.',
-      'email-already-in-use' => 'An account already exists with that email.',
+      // Deliberately does NOT confirm whether the email is registered — a
+      // sign-up flow that answers "that email exists" hands attackers a free
+      // account-enumeration oracle (Aikido finding).
+      'email-already-in-use' =>
+        "We couldn't create your account with those details. "
+            'Try signing in instead.',
       'weak-password' =>
         'Please choose a stronger password (at least 8 characters).',
       'operation-not-allowed' =>
