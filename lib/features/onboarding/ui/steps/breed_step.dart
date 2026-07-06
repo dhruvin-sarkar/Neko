@@ -149,7 +149,7 @@ class _SearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool focused = focusNode.hasFocus;
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
+      duration: NekoMotion.fast,
       height: 54,
       decoration: BoxDecoration(
         color: AppColors.inputFill,
@@ -184,7 +184,7 @@ class _SearchBar extends StatelessWidget {
           ),
           AnimatedOpacity(
             opacity: controller.text.isNotEmpty ? 1 : 0,
-            duration: const Duration(milliseconds: 150),
+            duration: NekoMotion.fast,
             child: GestureDetector(
               onTap: onClear,
               behavior: HitTestBehavior.opaque,
@@ -226,7 +226,7 @@ class _CategoryChips extends StatelessWidget {
           return GestureDetector(
             onTap: () => onSelect(c),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+              duration: NekoMotion.quick,
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(

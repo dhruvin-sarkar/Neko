@@ -169,8 +169,24 @@ class _BirthdayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // App-wide date convention ('6 Jul 2026'), matching document tiles and the
+    // profile "Added" line — not DD/MM/YYYY.
+    const List<String> months = <String>[
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     final String label =
-        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+        '${date.day} ${months[(date.month - 1).clamp(0, 11)]} ${date.year}';
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
       decoration: BoxDecoration(
