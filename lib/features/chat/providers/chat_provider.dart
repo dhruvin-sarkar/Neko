@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/services/search_service.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../../profiles/providers/profile_provider.dart';
@@ -46,6 +47,14 @@ class ChatController extends Notifier<ChatState> {
 
   @override
   ChatState build() {
+    // The active transcript belongs to one account. Watching the uid re-runs
+    // this build on every sign-in/out, so the previous user's messages are
+    // dropped before they can render — or be saved — under the next account
+    // (the history provider already rebuilds per uid; without this, the live
+    // conversation survived in memory across a sign-out and leaked).
+    ref.watch(authStateChangesProvider.select((v) => v.valueOrNull?.uid));
+    _sub?.cancel();
+    _sub = null;
     _conversationId = _nextId();
     ref.onDispose(() => _sub?.cancel());
     return const ChatState();

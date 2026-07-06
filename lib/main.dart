@@ -149,7 +149,7 @@ class _ConfigErrorApp extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.all(32),
             child: Text(
-              "Neko can't start because its configuration is missing.\n\n"
+              'Neko can’t start because its configuration is missing.\n\n'
               'Build the app with --dart-define-from-file=.env '
               '(see .env.example) and relaunch.',
               textAlign: TextAlign.center,

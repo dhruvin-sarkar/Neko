@@ -78,8 +78,9 @@ class HackClubChatService implements ChatService {
 
   final http.Client _client;
 
-  /// Placeholder shipped in `.env.example`; treated as "no key set".
-  static const String _placeholderKey = 'replace_with_your_hackclub_api_key';
+  /// Placeholder shipped in `.env.example`; treated as "no key set". Shared
+  /// with [AppEnv.aiApiKey] so the two placeholder checks can never drift.
+  static const String _placeholderKey = AppEnv.placeholderAiKey;
 
   String get _apiKey => AppEnv.aiApiKey;
 

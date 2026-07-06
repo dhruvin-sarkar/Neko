@@ -60,10 +60,18 @@ abstract final class AppEnv {
   );
   static const String _aiApiKey = String.fromEnvironment('AI_API_KEY');
 
-  /// The AI bearer token. `HACKCLUB_API_KEY` wins; `AI_API_KEY` is the
-  /// generic fallback name.
+  /// The value `.env.example` ships for HACKCLUB_API_KEY; treated the same as
+  /// "no key set" everywhere so a copied-but-unfilled line can't shadow a real
+  /// alternate key or reach the network.
+  static const String placeholderAiKey = 'replace_with_your_hackclub_api_key';
+
+  /// The AI bearer token. `HACKCLUB_API_KEY` wins when it's a real value;
+  /// `AI_API_KEY` is the documented alternate for another OpenAI-compatible
+  /// backend, so an untouched placeholder must not shadow it.
   static String get aiApiKey =>
-      _hackclubApiKey.isNotEmpty ? _hackclubApiKey : _aiApiKey;
+      (_hackclubApiKey.isNotEmpty && _hackclubApiKey != placeholderAiKey)
+      ? _hackclubApiKey
+      : _aiApiKey;
 
   static const String aiBaseUrl = String.fromEnvironment(
     'AI_BASE_URL',

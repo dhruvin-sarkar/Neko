@@ -207,12 +207,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ? _EmptyState(onSelect: _selectPrompt)
                 : ListView.builder(
                     controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(
-                      12,
-                      8,
-                      12,
-                      16,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
                     itemCount: state.messages.length,
                     itemBuilder: (context, index) {
                       final ChatMessage m = state.messages[index];
@@ -272,7 +267,12 @@ class _EmptyState extends StatelessWidget {
     );
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      padding: EdgeInsets.fromLTRB(
+        AppResponsive.horizontalPadding(context),
+        24,
+        AppResponsive.horizontalPadding(context),
+        16,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -284,7 +284,7 @@ class _EmptyState extends StatelessWidget {
             textAlign: TextAlign.center,
             style: AppTextStyles.headlineLarge,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             'Your assistant for cat care, tips, and reminders.',
             textAlign: TextAlign.center,

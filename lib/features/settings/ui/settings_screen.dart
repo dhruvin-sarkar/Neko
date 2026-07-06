@@ -8,6 +8,7 @@ import 'package:lottie/lottie.dart';
 import '../../../app/app_info.dart';
 import '../../../core/notch/controller/notch_controller.dart';
 import '../../../app/theme/app_colors.dart';
+import '../../../app/theme/app_responsive.dart';
 import '../../../app/theme/app_text_styles.dart';
 import '../../../app/theme/neko_palette.dart';
 import '../../../core/errors/app_exception.dart';
@@ -110,7 +111,8 @@ class SettingsScreen extends ConsumerWidget {
     return SafeArea(
       bottom: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        // Same responsive gutters as the sibling Home and Chat tabs.
+        padding: AppResponsive.screenPadding(context),
         child:
             Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -219,7 +221,7 @@ class _ThemeCard extends ConsumerWidget {
                 ),
                 child: Icon(Icons.palette_outlined, color: AppColors.primary),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,8 +236,8 @@ class _ThemeCard extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Wrap(
-            spacing: 14,
-            runSpacing: 14,
+            spacing: 12,
+            runSpacing: 12,
             children: [
               for (final NekoPalette p in NekoPalettes.all)
                 _ThemeSwatch(
@@ -438,7 +440,7 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
             ),
             child: Icon(Icons.crop_16_9_rounded, color: AppColors.primary),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,7 +527,7 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
             ),
             child: Icon(Icons.hearing_rounded, color: AppColors.primary),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -581,7 +583,7 @@ class _AboutCard extends ConsumerWidget {
             ),
             child: Icon(Icons.pets_rounded, color: AppColors.primary),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -644,7 +646,7 @@ class _SoundCard extends ConsumerWidget {
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

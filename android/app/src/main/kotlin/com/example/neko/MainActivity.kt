@@ -51,11 +51,20 @@ class MainActivity : FlutterActivity() {
                 // started while the app is in the foreground — which is exactly
                 // when these calls arrive (Settings toggle / app resume).
                 "startHeyNekoListener" -> {
-                    androidx.core.content.ContextCompat.startForegroundService(
-                        this,
-                        Intent(this, HeyNekoListenerService::class.java),
-                    )
-                    result.success(true)
+                    // Android 14+ crashes a microphone-typed startForeground
+                    // when the mic permission has been revoked — never start
+                    // the service without it (the Dart side also checks; this
+                    // is the last line of defence).
+                    val micGranted = checkSelfPermission(
+                        android.Manifest.permission.RECORD_AUDIO,
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (micGranted) {
+                        androidx.core.content.ContextCompat.startForegroundService(
+                            this,
+                            Intent(this, HeyNekoListenerService::class.java),
+                        )
+                    }
+                    result.success(micGranted)
                 }
                 "stopHeyNekoListener" -> {
                     stopService(Intent(this, HeyNekoListenerService::class.java))

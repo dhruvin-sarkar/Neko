@@ -413,7 +413,7 @@ class _TourRunner {
     icon: Icons.waving_hand_rounded,
     title: 'Welcome to Neko',
     body:
-        "This is your home base. We'll keep your cats and their care close at hand — here's the quick tour.",
+        'This is your home base. We’ll keep your cats and their care close at hand — here’s the quick tour.',
     align: ContentAlign.bottom,
     shape: ShapeLightFocus.RRect,
     radius: 18,
@@ -425,7 +425,7 @@ class _TourRunner {
     icon: Icons.pets_rounded,
     title: 'Your crew',
     body:
-        "Each cat has its own profile. Let's open this one and see what's inside.",
+        'Each cat has its own profile. Let’s open this one and see what’s inside.',
     align: ContentAlign.bottom,
     shape: ShapeLightFocus.RRect,
     radius: 24,
@@ -495,7 +495,7 @@ class _TourRunner {
     icon: Icons.settings_rounded,
     title: 'Settings live here',
     body:
-        "Account, themes, sounds — and two special powers. Let's peek inside.",
+        'Account, themes, sounds — and two special powers. Let’s peek inside.',
     align: ContentAlign.top,
     shape: ShapeLightFocus.Circle,
   );
@@ -519,9 +519,9 @@ class _TourRunner {
     icon: Icons.hearing_rounded,
     title: 'Hands-free Neko',
     body:
-        'With the notch on, enable this and just say “Hey Neko” — even with '
-        'the app in the background (a notification shows while the mic is '
-        'on). That’s the tour — enjoy Neko!',
+        'With the notch on, just say “Hey Neko” — it listens even in the '
+        'background, with a notification while the mic is on. That’s the '
+        'tour — enjoy Neko!',
     align: ContentAlign.bottom,
     shape: ShapeLightFocus.RRect,
     radius: 20,

@@ -34,7 +34,19 @@ class HeyNekoListenerService : Service() {
         // Never auto-restart: a restart without the app in the foreground
         // would be an illegal background mic-service start anyway. The app
         // re-starts the service itself on next resume if the toggle is on.
+        // (Deliberately NOT START_STICKY: a system-restarted sticky service
+        // would show a "listening" notification with the Flutter engine — the
+        // thing that actually listens — dead.)
         return START_NOT_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Swiping the task away kills the Flutter engine that actually holds
+        // the recogniser; without this, the notification would keep claiming
+        // an open mic with nothing behind it. The next foreground launch
+        // re-starts the service when the toggle is still on.
+        stopSelf()
+        super.onTaskRemoved(rootIntent)
     }
 
     private fun startListeningForeground() {
@@ -46,7 +58,7 @@ class HeyNekoListenerService : Service() {
                     "Hey Neko voice",
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply {
-                    description = "Shown while Neko listens for the \"Hey Neko\" wake word."
+                    description = "Shown while Neko listens for the “Hey Neko” wake word."
                 },
             )
         }

@@ -295,21 +295,21 @@ class AuthRepository {
   AppException _mapAuthError(FirebaseAuthException e, StackTrace st) {
     AppLogger.warning('Auth error: ${e.code}', e, st);
     final String message = switch (e.code) {
-      'invalid-email' => 'That email address doesn\'t look right.',
+      'invalid-email' => 'That email address doesn’t look right.',
       'user-disabled' => 'This account has been disabled.',
       'user-not-found' ||
       'wrong-password' ||
       'invalid-credential' => 'Email or password is incorrect.',
-      // Deliberately does NOT confirm whether the email is registered — a
-      // sign-up flow that answers "that email exists" hands attackers a free
-      // account-enumeration oracle (Aikido finding).
+      // Softens the enumeration oracle rather than eliminating it (the string
+      // no longer names the email as taken, though it still differs from other
+      // failure copy) — full closure is Firebase's server-side Email
+      // Enumeration Protection, tracked in SECURITY_FIXES.md (Aikido finding).
       'email-already-in-use' =>
-        "We couldn't create your account with those details. "
+        'We couldn’t create your account with those details. '
             'Try signing in instead.',
       'weak-password' =>
         'Please choose a stronger password (at least 8 characters).',
-      'operation-not-allowed' =>
-        'This sign-in method isn\'t enabled right now.',
+      'operation-not-allowed' => 'This sign-in method isn’t enabled right now.',
       'too-many-requests' =>
         'Too many attempts. Please wait a moment and try again.',
       'network-request-failed' =>
