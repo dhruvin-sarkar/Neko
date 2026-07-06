@@ -46,8 +46,18 @@ Future<void> runNotchBoot() async {
   const MethodChannel bootChannel = MethodChannel(NotchChannels.boot);
 
   try {
-    if (!await FlutterOverlayWindow.isPermissionGranted()) {
-      await bootChannel.invokeMethod<void>(NotchChannels.stopBoot);
+    // Gate BEFORE showing anything: a disabled notch must never flash an
+    // island (the old order showed the overlay first and bare-returned,
+    // leaving a zombie window no controller would ever close).
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (!NotchPrefs.getBool(prefs, NotchPrefs.enabled) ||
+        !await FlutterOverlayWindow.isPermissionGranted()) {
+      // Drop any stale queued command so it can't resurrect anything later,
+      // and close a window a previous bootstrap may have left behind.
+      await NotchPrefs.remove(prefs, NotchPrefs.pending);
+      if (await FlutterOverlayWindow.isActive()) {
+        await FlutterOverlayWindow.closeOverlay();
+      }
       return;
     }
 
@@ -68,12 +78,6 @@ Future<void> runNotchBoot() async {
     }
 
     await Future<void>.delayed(const Duration(milliseconds: 700));
-
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-
-    if (!NotchPrefs.getBool(prefs, NotchPrefs.enabled)) {
-      return;
-    }
 
     final NekoPalette palette = NekoPalettes.byId(
       prefs.getString('app_theme_palette'),
@@ -111,5 +115,14 @@ Future<void> runNotchBoot() async {
   } on Object {
     // Boot restore is best-effort; a failure just means no overlay until the
     // app is next opened.
+  } finally {
+    // The overlay (if shown) lives in flutter_overlay_window's own foreground
+    // service — this boot host has done its job on every path. Leaving it
+    // running pinned a permanent "Restoring notch…" notification in the tray.
+    try {
+      await bootChannel.invokeMethod<void>(NotchChannels.stopBoot);
+    } on Object {
+      // The service will still be stopped by the system eventually.
+    }
   }
 }

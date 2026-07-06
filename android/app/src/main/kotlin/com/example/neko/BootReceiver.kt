@@ -3,7 +3,6 @@ package com.example.neko
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
@@ -31,9 +30,10 @@ class BootReceiver : BroadcastReceiver() {
         )
 
         if (!canDrawOverlays(context)) return
-        if (!NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false) &&
-            !hasRestorableState(prefs)
-        ) {
+        // The master toggle is the sole authority: leftover restore/pending
+        // state from an earlier enabled period must not resurrect a notch the
+        // user has switched off.
+        if (!NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false)) {
             return
         }
 
@@ -43,10 +43,4 @@ class BootReceiver : BroadcastReceiver() {
 
     private fun canDrawOverlays(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
-
-    /// Mirrors NotchController: the restore payload lives under the Flutter
-    /// SharedPreferences key "flutter.notch_restore".
-    private fun hasRestorableState(prefs: SharedPreferences): Boolean {
-        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_restore", null).isNullOrEmpty()
-    }
 }

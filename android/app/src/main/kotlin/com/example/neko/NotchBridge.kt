@@ -177,19 +177,13 @@ object NotchBridge {
     private fun shouldBootstrap(context: Context): Boolean {
         return try {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            val enabled = NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false)
-            enabled || hasPersistedRestore(prefs) || hasPending(prefs)
+            // The master toggle is the sole authority — restore/pending state
+            // only matters while the notch is on. (Previously OR'd with those,
+            // which let stale state resurrect a switched-off notch.)
+            NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false)
         } catch (_: Exception) {
             false
         }
-    }
-
-    private fun hasPersistedRestore(prefs: android.content.SharedPreferences): Boolean {
-        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_restore", null).isNullOrEmpty()
-    }
-
-    private fun hasPending(prefs: android.content.SharedPreferences): Boolean {
-        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_pending", null).isNullOrEmpty()
     }
 
     /// Pushes a NotchCommand JSON string onto the overlay engine's messenger.
@@ -215,7 +209,15 @@ object NotchBridge {
     private fun persistPending(context: Context, command: String) {
         try {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            NotchPreferencesCompat.putString(prefs, "flutter.notch_pending", command)
+            // Only the "flutter."-prefixed key: it's the only one the Dart
+            // side (which flushes and then deletes the pending command) can
+            // see — shared_preferences namespaces everything under "flutter.".
+            // Also drop the raw legacy key older builds wrote, which Dart
+            // could never delete.
+            prefs.edit()
+                .putString("flutter.notch_pending", command)
+                .remove("notch_pending")
+                .commit()
         } catch (_: Exception) {
             // Prefs unavailable — the event is dropped; the next one retries.
         }

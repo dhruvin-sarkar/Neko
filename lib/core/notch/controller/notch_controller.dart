@@ -142,13 +142,25 @@ class NotchController extends Notifier<NotchState> {
         await _service.resync();
       }
 
+      // resync only re-emits NATIVE state (media, system notifications). Replay
+      // app-owned activities (a feeding timer started while the notch was off)
+      // so flipping the toggle on immediately shows them on the island.
+      for (final NotchActivity activity in _ongoing.values) {
+        if (activity.source != 'system') {
+          await _emit(PushActivityCommand(activity));
+        }
+      }
+
       unawaited(_showWelcome());
     } else {
       await NotchPrefs.setBool(_prefs, NotchPrefs.enabled, false);
       state = state.copyWith(enabled: false);
       _ongoing.clear();
       await NotchPrefs.remove(_prefs, NotchPrefs.restore);
-      await _emit(const ClearCommand());
+      // Send directly: _emit gates on state.enabled, which is already false —
+      // routed through it, this clear never reached the cached overlay engine
+      // and stale cards survived into the next enable.
+      await _service.send(const ClearCommand());
       await _service.close();
     }
   }
@@ -411,6 +423,12 @@ class NotchController extends Notifier<NotchState> {
     try {
       if (await _service.hasOverlayPermission() && !await _service.isActive()) {
         await _service.show();
+        // show() returns when the overlay SERVICE starts, not when its Dart
+        // isolate has subscribed to overlayListener. Commands sent to a handler
+        // that isn't registered yet are silently dropped — a restored feeding
+        // timer would vanish. Let the isolate boot before pushing (mirrors the
+        // boot-restore path's settle).
+        await Future<void>.delayed(const Duration(milliseconds: 700));
       }
       await syncTheme(force: true);
 
@@ -457,6 +475,14 @@ class NotchController extends Notifier<NotchState> {
   }
 
   Future<void> _persistRestore() async {
+    // Never arm boot-restore while the notch is off. The native event
+    // subscription runs regardless of the toggle, so without this a track
+    // playing with the notch disabled would write restore state and a ghost
+    // island would reappear after the next reboot.
+    if (!state.enabled) {
+      await NotchPrefs.remove(_prefs, NotchPrefs.restore);
+      return;
+    }
     final List<Map<String, dynamic>> list = _ongoing.values
         .where((NotchActivity a) => a.isRestorable)
         .map((NotchActivity a) => a.toJson())

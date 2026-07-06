@@ -47,8 +47,12 @@ class NotchBootService : Service() {
         engine = eng
     }
 
+    // NOT sticky: every legitimate start comes from an explicit trigger (boot
+    // receiver / bridge), and the Dart bootstrap now stops this service on
+    // every path — a sticky restart would only resurrect an empty host with
+    // its "Restoring notch…" notification.
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
-        START_STICKY
+        START_NOT_STICKY
 
     private fun startForegroundNotification() {
         val manager = getSystemService(NotificationManager::class.java)
