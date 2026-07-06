@@ -1,13 +1,11 @@
-# devlog-notch
-
-- [x] Notch Foundation (look-wise)
-- [x] Theme Persistence (from the app theme)
-- [x] Music extraction (album art + Name)
-- [x] Media Control
-- [x] Notifications
-
-to-do:
-- [] Fix notch sizing to make it look nice to the eye
-- [ ] Maps integration
-- [ ] Timer
-- [ ] Catify it to a certain extent
+- [ ] Akshat is working on the closing notch shuting down thing
+- [ ] after that we will delegate different folders to clean up the code
+- [ ] Getting voice recognition working
+- [ ] Try and maybe get the notch at a better state with the ai notch 
+- [ ] we are gona run scans from code rabbit sonarqube and aikido
+- [ ] final polishing on the app fixing whatever fixed
+- [ ] Documentation including watching the video
+- [ ] Demo video with cap and akshats video editing
+- [ ] final touches on the docs video and app
+- [ ] making sure we tick all the boxes and not miss anything
+- [ ] Final play testing and bug fixing
