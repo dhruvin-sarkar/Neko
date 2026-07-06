@@ -53,6 +53,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _resetPassword() {
+    // The snackbars below are this tap's only visible outcome — give it the
+    // standard tap sound+haptic so the moment isn't mute.
+    unawaited(ref.read(feedbackServiceProvider).onTap());
     if (Validators.email(_emailController.text) != null) {
       _showSnack('Enter your email above first, then tap reset.');
       return;

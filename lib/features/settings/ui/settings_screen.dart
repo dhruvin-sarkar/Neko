@@ -410,6 +410,7 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
     // Turning it on silently fails if the overlay permission is denied — tell the
     // user instead of just snapping the switch back to off.
     if (value && !ref.read(notchControllerProvider).enabled) {
+      unawaited(ref.read(feedbackServiceProvider).onError());
       NekoSnackBar.show(
         context,
         'Neko needs the “Display over other apps” permission to sit in your notch.',
@@ -491,6 +492,7 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
     // Enabling silently fails when the mic permission is declined — say so
     // instead of just snapping the switch back to off.
     if (value && !ref.read(wakeWordControllerProvider).enabled) {
+      unawaited(ref.read(feedbackServiceProvider).onError());
       NekoSnackBar.show(
         context,
         'Neko needs the microphone to hear “Hey Neko”.',

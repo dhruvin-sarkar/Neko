@@ -175,6 +175,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
     ) {
       if (next is AsyncError) {
         final Object error = next.error;
+        unawaited(ref.read(feedbackServiceProvider).onError());
         NekoSnackBar.show(
           context,
           error is AppException ? error.message : 'Something went wrong.',

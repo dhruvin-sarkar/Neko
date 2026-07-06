@@ -58,6 +58,7 @@ class DocumentsSection extends ConsumerWidget {
     try {
       final OpenResult result = await OpenFilex.open(doc.path);
       if (result.type != ResultType.done && context.mounted) {
+        unawaited(ref.read(feedbackServiceProvider).onError());
         NekoSnackBar.show(
           context,
           "We couldn't open that document.",
@@ -67,6 +68,7 @@ class DocumentsSection extends ConsumerWidget {
     } on Object catch (e, st) {
       AppLogger.warning('Could not open document', e, st);
       if (context.mounted) {
+        unawaited(ref.read(feedbackServiceProvider).onError());
         NekoSnackBar.show(
           context,
           "We couldn't open that document.",
@@ -120,6 +122,7 @@ class DocumentsSection extends ConsumerWidget {
     ) {
       if (next is AsyncError) {
         final Object error = next.error;
+        unawaited(ref.read(feedbackServiceProvider).onError());
         NekoSnackBar.show(
           context,
           error is AppException ? error.message : 'Something went wrong.',
