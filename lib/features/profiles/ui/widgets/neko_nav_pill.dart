@@ -161,33 +161,29 @@ class _NavItem extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // The selection marker IS a paw (replacing the old coral circle):
-              // a highlight sized just a little larger than the destination
-              // glyphs (not filling the whole tap target), springing up when the
-              // tab is chosen so it reads as a cohesive part of the pill.
+              // The selection marker is a cat-head silhouette — a circle with
+              // two ears breaking its top rim (the shape _kEarHeadroom was
+              // always reserved for). A highlight sized just a little larger
+              // than the destination glyphs (not filling the whole tap
+              // target), springing up when the tab is chosen so it reads as a
+              // cohesive part of the pill. Unlike the old bottom-heavy paw
+              // glyph, the head is symmetric, so no optical-centring nudges.
               AnimatedScale(
                 scale: selected ? 1.0 : 0.0,
                 duration: reduceMotion ? Duration.zero : NekoMotion.quick,
                 curve: reduceMotion ? Curves.linear : NekoMotion.pop,
-                // pets_rounded is bottom-heavy (toe-beans up top, big pad
-                // below), so a geometrically-centred paw reads a touch low next
-                // to the evenly-weighted outline glyphs — lift it a couple of
-                // pixels so its optical centre sits level with them.
-                child: Transform.translate(
-                  offset: const Offset(0, -5.5),
-                  child: Icon(
-                    Icons.pets_rounded,
-                    size: 38,
-                    color: AppColors.primary,
-                  ),
+                child: CustomPaint(
+                  size: const Size(40, 40),
+                  painter: _CatHeadPainter(color: AppColors.primary),
                 ),
               ),
-              // The destination glyph: white and sitting on the paw's central
-              // pad when selected (matching the paw's lift), a muted outline
-              // icon otherwise.
+              // The destination glyph: white and centred on the head circle
+              // when selected (the head sits a touch low in its box to leave
+              // ear room, hence the small positive y), a muted outline icon
+              // otherwise.
               Align(
                 alignment: selected
-                    ? const Alignment(0, -0.03)
+                    ? const Alignment(0, 0.11)
                     : Alignment.center,
                 child: Icon(
                   selected ? selectedIcon : unselectedIcon,
@@ -203,4 +199,79 @@ class _NavItem extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Paints the nav pill's selection marker: a cat-head silhouette — a filled
+/// circle with two softly-rounded ears breaking its top rim. Drawn as one
+/// flat fill (ears first, head over their bases) so it reads as a single
+/// chunky shape at nav-icon size, matching the chiclet system's rounded look.
+class _CatHeadPainter extends CustomPainter {
+  const _CatHeadPainter({required this.color});
+
+  final Color color;
+
+  // Geometry, as fractions of the head radius / box. The head sits slightly
+  // below centre so the ears stay inside the box (with the pop overshoot
+  // covered by the pill's _kEarHeadroom).
+  static const double _headRadiusFactor = 0.325; // of box width
+  static const double _headCenterYFactor = 0.55; // of box height
+  static const double _earAngleDeg = 235; // left ear direction (y-down coords)
+  static const double _earHalfSpanDeg = 27; // half the base arc per ear
+  static const double _earTipFactor = 1.75; // tip distance, in head radii
+  static const double _earTipRounding = 0.16; // tip softness, in head radii
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..isAntiAlias = true
+      ..style = PaintingStyle.fill;
+
+    final double r = size.width * _headRadiusFactor;
+    final Offset head = Offset(
+      size.width / 2,
+      size.height * _headCenterYFactor,
+    );
+
+    // Two ears mirrored about the vertical axis (mirror of θ is 180° − θ):
+    // 235° points up-left, 305° up-right (Flutter's y axis points down).
+    _drawEar(canvas, paint, head, r, _earAngleDeg * math.pi / 180);
+    _drawEar(canvas, paint, head, r, (540 - _earAngleDeg) * math.pi / 180);
+
+    canvas.drawCircle(head, r, paint);
+  }
+
+  /// One ear: a triangle whose base chord sits on the head circle and whose
+  /// tip is softened with a small quadratic curve.
+  void _drawEar(
+    Canvas canvas,
+    Paint paint,
+    Offset head,
+    double r,
+    double angle,
+  ) {
+    const double halfSpan = _earHalfSpanDeg * math.pi / 180;
+    final Offset baseA = head + Offset.fromDirection(angle - halfSpan, r);
+    final Offset baseB = head + Offset.fromDirection(angle + halfSpan, r);
+    final Offset tip = head + Offset.fromDirection(angle, r * _earTipFactor);
+
+    // Points just short of the tip along each edge; the quadratic between them
+    // (through the true tip) rounds the point so it matches the app's soft,
+    // rounded icon language instead of a needle.
+    final double soften = _earTipRounding * r;
+    final Offset nearA = tip + (baseA - tip) / (baseA - tip).distance * soften;
+    final Offset nearB = tip + (baseB - tip) / (baseB - tip).distance * soften;
+
+    final Path ear = Path()
+      ..moveTo(baseA.dx, baseA.dy)
+      ..lineTo(nearA.dx, nearA.dy)
+      ..quadraticBezierTo(tip.dx, tip.dy, nearB.dx, nearB.dy)
+      ..lineTo(baseB.dx, baseB.dy)
+      ..close();
+    canvas.drawPath(ear, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CatHeadPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
