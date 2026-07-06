@@ -175,7 +175,9 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    NekoButton.primary(
+                    // Secondary weight on purpose: sign-out is an exit, not
+                    // the screen's celebration CTA.
+                    NekoButton.secondary(
                       label: 'Sign out',
                       isLoading: isLoading,
                       onPressed: () => _confirmSignOut(context, ref),
@@ -219,7 +221,7 @@ class _ThemeCard extends ConsumerWidget {
                   color: AppColors.selectedFill,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.palette_outlined, color: AppColors.primary),
+                child: Icon(Icons.palette_rounded, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -457,11 +459,7 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
               ],
             ),
           ),
-          Switch(
-            value: enabled,
-            activeThumbColor: AppColors.primary,
-            onChanged: _busy ? null : _toggle,
-          ),
+          Switch(value: enabled, onChanged: _busy ? null : _toggle),
         ],
       ),
     );
@@ -519,37 +517,46 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.selectedFill,
-              borderRadius: BorderRadius.circular(12),
+          // The whole card reads disabled while the notch gate is closed —
+          // not just the caption and the greyed switch.
+          AnimatedOpacity(
+            opacity: notchOn ? 1 : 0.55,
+            duration: NekoMotion.quick,
+            child: Container(
+              width: 44,
+              height: 44,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.selectedFill,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.hearing_rounded, color: AppColors.primary),
             ),
-            child: Icon(Icons.hearing_rounded, color: AppColors.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hey Neko voice', style: AppTextStyles.bodyLarge),
-                const SizedBox(height: 2),
-                Text(
-                  !notchOn
-                      ? 'Turn on the Neko notch first'
-                      : enabled
-                      ? 'Listening for “Hey Neko” — even in the background'
-                      : 'Off — tap the mic in chat to talk',
-                  style: AppTextStyles.caption,
-                ),
-              ],
+            child: AnimatedOpacity(
+              opacity: notchOn ? 1 : 0.55,
+              duration: NekoMotion.quick,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Hey Neko voice', style: AppTextStyles.bodyLarge),
+                  const SizedBox(height: 2),
+                  Text(
+                    !notchOn
+                        ? 'Turn on the Neko notch first'
+                        : enabled
+                        ? 'Listening for “Hey Neko” — even in the background'
+                        : 'Off — tap the mic in chat to talk',
+                    style: AppTextStyles.caption,
+                  ),
+                ],
+              ),
             ),
           ),
           Switch(
             value: enabled,
-            activeThumbColor: AppColors.primary,
             onChanged: (_busy || !notchOn) ? null : _toggle,
           ),
         ],
@@ -656,7 +663,9 @@ class _SoundCard extends ConsumerWidget {
                     Text('Sound', style: AppTextStyles.bodyLarge),
                     const SizedBox(height: 2),
                     Text(
-                      soundOn ? 'Effects & music on' : 'Muted',
+                      soundOn
+                          ? 'Effects & music on'
+                          : 'Muted — no effects or music',
                       style: AppTextStyles.caption,
                     ),
                   ],
@@ -664,7 +673,6 @@ class _SoundCard extends ConsumerWidget {
               ),
               Switch(
                 value: soundOn,
-                activeThumbColor: AppColors.primary,
                 onChanged: (bool enabled) {
                   if (enabled) {
                     controller.setMuted(false);

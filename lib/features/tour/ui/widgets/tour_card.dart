@@ -69,9 +69,11 @@ class TourCard extends StatelessWidget {
       _kSideMargin,
       available - cardWidth - _kSideMargin,
     );
+    // Clamp past the rounded corner (radius 24 + caret half-width 12) so an
+    // edge-anchored target never gets a caret floating over the card's curve.
     final double caretCenter = (anchorX - cardLeft).clamp(
-      24.0,
-      cardWidth - 24.0,
+      36.0,
+      cardWidth - 36.0,
     );
 
     final Widget caret = Padding(
@@ -306,17 +308,19 @@ class _SkipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // charcoal, not silver: silver aliases the placeholder/disabled token, and
+    // a live control dressed as disabled reads as untappable.
     return TextButton(
       onPressed: onTap,
       style: TextButton.styleFrom(
-        foregroundColor: AppColors.silver,
+        foregroundColor: AppColors.charcoal,
         padding: const EdgeInsets.symmetric(horizontal: 6),
         minimumSize: const Size(0, 38),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
       child: Text(
         'Skip',
-        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.silver),
+        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.charcoal),
       ),
     );
   }
@@ -331,18 +335,20 @@ class _StepDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Compact geometry: with ten global steps the old 8/20px dots outgrew the
+    // space beside Back/Skip/Next and the FittedBox shrank them unevenly.
     return Row(
       children: List<Widget>.generate(count, (i) {
         final bool active = i == index;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 260),
           curve: Curves.easeOut,
-          margin: const EdgeInsets.only(right: 6),
-          width: active ? 20 : 8,
-          height: 8,
+          margin: const EdgeInsets.only(right: 4),
+          width: active ? 14 : 6,
+          height: 6,
           decoration: BoxDecoration(
             color: active ? AppColors.primary : AppColors.cloudGray,
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(3),
           ),
         );
       }),

@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import '../../../app/routes.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../profiles/providers/profile_provider.dart';
@@ -231,7 +230,10 @@ class _TourRunner {
     unawaited(_feedback.onTap());
     TutorialCoachMark(
       targets: targets,
-      colorShadow: AppColors.almostBlack,
+      // Fixed warm near-black: almostBlack aliases textPrimary, which is
+      // near-WHITE on the three dark palettes — a white tour scrim would wash
+      // the whole screen out. The scrim is always-dark, like the notch.
+      colorShadow: const Color(0xFF14100B),
       opacityShadow: 0.85,
       paddingFocus: 10,
       pulseEnable: false,
