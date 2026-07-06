@@ -71,7 +71,13 @@ class _ChatInputState extends State<ChatInput> {
     final bool sendDisabled =
         widget.isUploading || widget.isGenerating || !_hasContent;
 
-    final Widget composer = Container(
+    final Widget composer = AnimatedContainer(
+      // Ease the border + shadow between states instead of a hard 1px→2px cut
+      // when Neko starts replying.
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : NekoMotion.quick,
+      curve: NekoMotion.standardCurve,
       decoration: BoxDecoration(
         color: AppColors.snowWhite,
         // A calm coral border while Neko is replying (the reply streams above
@@ -131,7 +137,8 @@ class _ChatInputState extends State<ChatInput> {
                     cursorColor: AppColors.primary,
                     decoration: InputDecoration(
                       hintText: 'Message Neko…',
-                      hintStyle: AppTextStyles.bodyMedium.copyWith(
+                      // Match the typed-text size so nothing jumps on first key.
+                      hintStyle: AppTextStyles.bodyLarge.copyWith(
                         color: AppColors.textDisabled,
                       ),
                       border: InputBorder.none,

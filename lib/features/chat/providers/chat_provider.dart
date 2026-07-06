@@ -153,7 +153,7 @@ class ChatController extends Notifier<ChatState> {
           onError: (Object error) {
             final String message = error is ChatException
                 ? error.message
-                : 'Sorry — something went wrong. Please try again.';
+                : 'Mrow — something tripped me up mid-pounce. Try that again?';
             _setAssistant(
               assistantId,
               message,

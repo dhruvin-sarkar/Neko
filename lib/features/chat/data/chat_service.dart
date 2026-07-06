@@ -32,7 +32,8 @@ abstract class ChatService {
 /// Raised when the AI request fails; shown to the user as a friendly note.
 class ChatException implements Exception {
   const ChatException([
-    this.message = 'The assistant is unavailable right now.',
+    this.message =
+        'Meow — I couldn’t fetch that thought. Check your connection and try again?',
   ]);
   final String message;
 }
