@@ -196,13 +196,16 @@ class WakeWordController extends Notifier<WakeWordState> {
     }
   }
 
-  /// Suspends the wake loop while a Hey Neko session owns the mic.
-  void pause() {
+  /// Suspends the wake loop while a Hey Neko session owns the mic. Awaitable:
+  /// the session awaits this so the recogniser is fully released (and its stray
+  /// end-of-session status drained) before the session re-points the shared
+  /// mic callbacks.
+  Future<void> pause() async {
     // The session this trigger was waiting on has arrived — call off the
     // watchdog.
     _awaitingSession = false;
     _paused = true;
-    unawaited(_stopLoop());
+    await _stopLoop();
   }
 
   /// Resumes listening after a Hey Neko session ends.
@@ -311,12 +314,27 @@ class WakeWordController extends Notifier<WakeWordState> {
   bool _awaitingSession = false;
 
   Future<void> _trigger() async {
-    if (_triggering) return;
+    // Drop stray late finals: a recogniser can deliver an in-flight result
+    // across the cancel boundary. Without the _paused guard that could open a
+    // second stacked session.
+    if (_triggering || _paused) return;
     _triggering = true;
     _paused = true;
     await _speech.cancel();
     if (state.listening) state = state.copyWith(listening: false);
     unawaited(AudioService.playSound(SoundId.catChirp));
+    // Heard while backgrounded: the app root can only show the session if the
+    // window is actually in front, so bring it forward first (legal via the
+    // overlay permission's background-activity-start exemption). Otherwise the
+    // route would be pushed onto an invisible navigator and the user would
+    // find a surprise live session on next open.
+    if (!_foreground) {
+      try {
+        await _channel.invokeMethod<void>(NotchChannels.bringToFront);
+      } on Object catch (e, st) {
+        AppLogger.warning('Could not bring Neko to front for wake', e, st);
+      }
+    }
     // Bump the trigger; the app root listens and opens the Hey Neko page.
     state = state.copyWith(triggerCount: state.triggerCount + 1);
     _triggering = false;

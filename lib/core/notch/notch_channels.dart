@@ -19,6 +19,10 @@ abstract final class NotchChannels {
   static const String startHeyNekoListener = 'startHeyNekoListener';
   static const String stopHeyNekoListener = 'stopHeyNekoListener';
 
+  /// Bring MainActivity to the foreground (a background "Hey Neko" match needs
+  /// the window visible before the session opens).
+  static const String bringToFront = 'bringNekoToFront';
+
   static const String controlCommand = '__notchControl';
 
   static const String stopBoot = 'stop';

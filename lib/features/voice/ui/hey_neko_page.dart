@@ -55,13 +55,19 @@ class _HeyNekoPageState extends ConsumerState<HeyNekoPage> {
   late final WakeWordController _wake = ref.read(
     wakeWordControllerProvider.notifier,
   );
-  bool _closing = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _wake.pause();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Await the wake loop fully releasing the mic before starting the
+      // session: channel ordering guarantees the cancelled loop's stray
+      // 'done'/'notListening' status is drained before the new session
+      // re-points the shared recogniser callbacks — otherwise that stray
+      // status lands mid-session and instantly fails it with "didn't catch
+      // that" the moment tap-to-talk is opened with the wake word enabled.
+      await _wake.pause();
+      if (!mounted) return;
       _voice.start();
     });
   }
@@ -86,14 +92,6 @@ class _HeyNekoPageState extends ConsumerState<HeyNekoPage> {
   @override
   Widget build(BuildContext context) {
     ref.watch(themeControllerProvider);
-    ref.listen<HeyNekoState>(heyNekoControllerProvider, (prev, next) {
-      if (!_closing &&
-          prev?.phase == HeyNekoPhase.speaking &&
-          next.phase == HeyNekoPhase.idle) {
-        _closing = true;
-        Future<void>.delayed(const Duration(milliseconds: 700), _close);
-      }
-    });
 
     final NotchTheme t = NotchThemeMapper.fromPalette(AppColors.palette);
     final HeyNekoState state = ref.watch(heyNekoControllerProvider);
@@ -432,9 +430,12 @@ class _Actions extends StatelessWidget {
         );
       case HeyNekoPhase.thinking:
       case HeyNekoPhase.searching:
+        return NekoButton.secondary(label: 'Cancel', onPressed: onClose);
       case HeyNekoPhase.speaking:
-        return NekoButton.secondary(
-          label: state.phase == HeyNekoPhase.speaking ? 'Stop' : 'Cancel',
+        // The answer is on screen to read — this is the deliberate finish.
+        return NekoButton.primary(
+          label: 'Done',
+          icon: Icons.check_rounded,
           onPressed: onClose,
         );
       case HeyNekoPhase.results:

@@ -70,6 +70,18 @@ class MainActivity : FlutterActivity() {
                     stopService(Intent(this, HeyNekoListenerService::class.java))
                     result.success(true)
                 }
+                // A background wake match brings the app forward so the Hey
+                // Neko session opens on a visible window. Legal from the
+                // background via the SYSTEM_ALERT_WINDOW exemption.
+                "bringNekoToFront" -> {
+                    startActivity(
+                        Intent(this, MainActivity::class.java).addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+                        ),
+                    )
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
