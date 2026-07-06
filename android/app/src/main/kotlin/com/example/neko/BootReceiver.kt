@@ -31,7 +31,7 @@ class BootReceiver : BroadcastReceiver() {
         )
 
         if (!canDrawOverlays(context)) return
-        if (!prefs.getBoolean("flutter.notch_enabled", false) &&
+        if (!NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false) &&
             !hasRestorableState(prefs)
         ) {
             return
@@ -47,6 +47,6 @@ class BootReceiver : BroadcastReceiver() {
     /// Mirrors NotchController: the restore payload lives under the Flutter
     /// SharedPreferences key "flutter.notch_restore".
     private fun hasRestorableState(prefs: SharedPreferences): Boolean {
-        return !prefs.getString("flutter.notch_restore", null).isNullOrEmpty()
+        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_restore", null).isNullOrEmpty()
     }
 }

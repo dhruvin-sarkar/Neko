@@ -159,8 +159,9 @@ object NotchBridge {
             }
             return
         }
-        // App not listening: only drive the overlay if the notch is enabled.
-        if (!isEnabled(context)) return
+        // App not listening: drive the overlay when the notch is enabled or when
+        // there is persisted restore/pending state to recover.
+        if (!shouldBootstrap(context)) return
         val command = buildCommand(event) ?: return
         if (deliverToOverlay(command)) return
         // App killed and overlay down: stash + cold-start the overlay.
@@ -168,13 +169,22 @@ object NotchBridge {
         startBootService(context)
     }
 
-    private fun isEnabled(context: Context): Boolean {
+    private fun shouldBootstrap(context: Context): Boolean {
         return try {
-            context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                .getBoolean("flutter.notch_enabled", false)
+            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            val enabled = NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false)
+            enabled || hasPersistedRestore(prefs) || hasPending(prefs)
         } catch (_: Exception) {
             false
         }
+    }
+
+    private fun hasPersistedRestore(prefs: android.content.SharedPreferences): Boolean {
+        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_restore", null).isNullOrEmpty()
+    }
+
+    private fun hasPending(prefs: android.content.SharedPreferences): Boolean {
+        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_pending", null).isNullOrEmpty()
     }
 
     /// Pushes a NotchCommand JSON string onto the overlay engine's messenger.
@@ -197,10 +207,8 @@ object NotchBridge {
 
     private fun persistPending(context: Context, command: String) {
         try {
-            context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-                .edit()
-                .putString("flutter.notch_pending", command)
-                .commit()
+            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            NotchPreferencesCompat.putString(prefs, "flutter.notch_pending", command)
         } catch (_: Exception) {
         }
     }

@@ -14,11 +14,10 @@ import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugins.GeneratedPluginRegistrant
 
-/// A short-lived foreground service started at boot. It runs the Dart
-/// `notchBootMain` entrypoint in its own Flutter engine (with plugins
-/// registered) so that entrypoint can call `FlutterOverlayWindow.showOverlay`
-/// and restore persisted state. Once Dart signals `stop`, the service and its
-/// engine tear down — the overlay lives on in its own service.
+/// A foreground service that keeps the notch overlay bootstrap alive so the
+/// overlay can remain available even when the main app process is no longer
+/// running. It starts a small Flutter engine once, runs `notchBootMain` to show
+/// and restore the overlay, then stays alive as the host for that bootstrap path.
 class NotchBootService : Service() {
     private var engine: FlutterEngine? = null
 
@@ -49,7 +48,7 @@ class NotchBootService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int =
-        START_NOT_STICKY
+        START_STICKY
 
     private fun startForegroundNotification() {
         val manager = getSystemService(NotificationManager::class.java)

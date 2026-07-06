@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 abstract final class NotchChannels {
   const NotchChannels._();
   static const String method = 'neko/notch';
@@ -26,4 +28,51 @@ abstract final class NotchPrefs {
   static const String pending = 'notch_pending';
 
   static const String restore = 'notch_restore';
+
+  static List<String> _candidateKeys(String key) {
+    final String normalized = key.startsWith('flutter.') ? key : 'flutter.$key';
+    return <String>[key, normalized];
+  }
+
+  static bool getBool(SharedPreferences prefs, String key, {bool defaultValue = false}) {
+    for (final String candidate in _candidateKeys(key)) {
+      if (prefs.containsKey(candidate)) {
+        return prefs.getBool(candidate) ?? defaultValue;
+      }
+    }
+    return defaultValue;
+  }
+
+  static Future<bool> setBool(SharedPreferences prefs, String key, bool value) async {
+    bool ok = true;
+    for (final String candidate in _candidateKeys(key)) {
+      ok = ok && (await prefs.setBool(candidate, value));
+    }
+    return ok;
+  }
+
+  static String? getString(SharedPreferences prefs, String key, {String? defaultValue}) {
+    for (final String candidate in _candidateKeys(key)) {
+      if (prefs.containsKey(candidate)) {
+        return prefs.getString(candidate) ?? defaultValue;
+      }
+    }
+    return defaultValue;
+  }
+
+  static Future<bool> setString(SharedPreferences prefs, String key, String value) async {
+    bool ok = true;
+    for (final String candidate in _candidateKeys(key)) {
+      ok = ok && (await prefs.setString(candidate, value));
+    }
+    return ok;
+  }
+
+  static Future<bool> remove(SharedPreferences prefs, String key) async {
+    bool ok = true;
+    for (final String candidate in _candidateKeys(key)) {
+      ok = ok && (await prefs.remove(candidate));
+    }
+    return ok;
+  }
 }

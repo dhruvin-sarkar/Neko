@@ -32,6 +32,15 @@ const List<String> _searchCues = <String>[
   'compare',
   'cheapest',
   'find me',
+  'search',
+  'search for',
+  'look up',
+  'lookup',
+  'browse',
+  'research',
+  'find',
+  'show me',
+  'look for',
   'should i buy',
   "what's a good",
   'what is a good',
@@ -43,10 +52,17 @@ const List<String> _searchCues = <String>[
 /// mis-classification is low-harm: an empty/failed search falls back to a plain
 /// answer either way.
 bool isSearchQuery(String text) {
-  final String t = text.toLowerCase();
+  final String t = text.toLowerCase().trim();
+  if (t.isEmpty) return false;
+
   for (final String cue in _searchCues) {
     if (t.contains(cue)) return true;
   }
+
+  // Avoid misclassifying ordinary questions that only happen to contain a
+  // generic verb like "find" or "look". The explicit search phrases above
+  // already cover the intended voice queries; this fallback keeps the detector
+  // conservative for plain conversational prompts.
   return false;
 }
 

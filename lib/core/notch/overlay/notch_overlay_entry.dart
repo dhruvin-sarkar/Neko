@@ -71,7 +71,7 @@ Future<void> runNotchBoot() async {
 
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    if (!(prefs.getBool(NotchPrefs.enabled) ?? false)) {
+    if (!NotchPrefs.getBool(prefs, NotchPrefs.enabled)) {
       return;
     }
 
@@ -82,7 +82,7 @@ Future<void> runNotchBoot() async {
       NotchThemeCommand(NotchThemeMapper.fromPalette(palette)).encode(),
     );
 
-    final String? restore = prefs.getString(NotchPrefs.restore);
+    final String? restore = NotchPrefs.getString(prefs, NotchPrefs.restore);
     if (restore != null && restore.isNotEmpty) {
       try {
         final Object? decoded = jsonDecode(restore);
@@ -103,19 +103,13 @@ Future<void> runNotchBoot() async {
       }
     }
 
-    final String? pending = prefs.getString(NotchPrefs.pending);
+    final String? pending = NotchPrefs.getString(prefs, NotchPrefs.pending);
     if (pending != null && pending.isNotEmpty) {
       await FlutterOverlayWindow.shareData(pending);
-      await prefs.remove(NotchPrefs.pending);
+      await NotchPrefs.remove(prefs, NotchPrefs.pending);
     }
   } on Object {
     // Boot restore is best-effort; a failure just means no overlay until the
     // app is next opened.
-  } finally {
-    try {
-      await bootChannel.invokeMethod<void>(NotchChannels.stopBoot);
-    } on Object {
-      // The boot service times itself out if the stop signal doesn't land.
-    }
   }
 }

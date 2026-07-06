@@ -82,7 +82,7 @@ class NotchController extends Notifier<NotchState> {
 
   @override
   NotchState build() {
-    final bool enabled = _prefs.getBool(NotchPrefs.enabled) ?? false;
+    final bool enabled = NotchPrefs.getBool(_prefs, NotchPrefs.enabled);
 
     const EventChannel channel = EventChannel(NotchChannels.events);
     _eventsSub = channel.receiveBroadcastStream().listen(
@@ -118,7 +118,7 @@ class NotchController extends Notifier<NotchState> {
           return;
         }
       }
-      await _prefs.setBool(NotchPrefs.enabled, true);
+      await NotchPrefs.setBool(_prefs, NotchPrefs.enabled, true);
       state = state.copyWith(enabled: true);
       // Android 13+ gates the notch's foreground-service tray notification behind
       // the runtime notification permission. Best-effort + non-blocking — the
@@ -144,10 +144,10 @@ class NotchController extends Notifier<NotchState> {
 
       unawaited(_showWelcome());
     } else {
-      await _prefs.setBool(NotchPrefs.enabled, false);
+      await NotchPrefs.setBool(_prefs, NotchPrefs.enabled, false);
       state = state.copyWith(enabled: false);
       _ongoing.clear();
-      await _prefs.remove(NotchPrefs.restore);
+      await NotchPrefs.remove(_prefs, NotchPrefs.restore);
       await _emit(const ClearCommand());
       await _service.close();
     }
@@ -415,7 +415,7 @@ class NotchController extends Notifier<NotchState> {
       await syncTheme(force: true);
 
       await _service.resync();
-      final String? restore = _prefs.getString(NotchPrefs.restore);
+      final String? restore = NotchPrefs.getString(_prefs, NotchPrefs.restore);
       if (restore != null && restore.isNotEmpty) {
         final Object? decoded = jsonDecode(restore);
         bool dropped = false;
@@ -462,9 +462,9 @@ class NotchController extends Notifier<NotchState> {
         .map((NotchActivity a) => a.toJson())
         .toList(growable: false);
     if (list.isEmpty) {
-      await _prefs.remove(NotchPrefs.restore);
+      await NotchPrefs.remove(_prefs, NotchPrefs.restore);
       return;
     }
-    await _prefs.setString(NotchPrefs.restore, jsonEncode(list));
+    await NotchPrefs.setString(_prefs, NotchPrefs.restore, jsonEncode(list));
   }
 }
