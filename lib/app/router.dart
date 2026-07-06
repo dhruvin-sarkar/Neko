@@ -166,8 +166,14 @@ class RouterNotifier extends ChangeNotifier {
     }
 
     final onboardingValue = _ref.read(onboardingCompleteProvider);
-    // Onboarding status not resolved yet — keep waiting on splash
-    if (!onboardingValue.hasValue && !onboardingValue.hasError) {
+    // Wait for a RESOLVED answer, not merely a present one. When this provider
+    // rebuilds on sign-in, Riverpod carries the previous value into the new
+    // AsyncLoading (`copyWithPrevious`) — and the previous value is the `false`
+    // it emits while signed out. A `hasValue` check reads that stale `false` as
+    // "resolved: needs onboarding" and bounces a fully onboarded returning
+    // user into the sticky /onboarding flow. `isLoading` stays true through
+    // the reload, holding on splash until the real answer lands.
+    if (onboardingValue.isLoading) {
       return onSplash ? null : Routes.splash;
     }
 
