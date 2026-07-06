@@ -156,6 +156,21 @@ had this restraint — body snippet in debug, status code only in release.)
 
 ---
 
+## Accepted risks (SonarQube)
+
+- **Gradle dependency lock file not added.** Enabling Gradle's strict
+  dependency locking within 24h of the deadline would break teammates' builds
+  the moment their Flutter SDK resolves slightly different plugin versions
+  (locking fails the build on any drift). Versions are already effectively
+  pinned: `pubspec.lock` is committed (pins every Dart/Flutter plugin, which
+  in turn pins their Android artifacts), and the only direct native
+  dependencies are exact-versioned with `resolutionStrategy.force` for the two
+  known conflicts. Revisit after the hackathon.
+- **BootReceiver intent-filter warning (xml:S5322).** The rule flags any
+  receiver with an intent-filter. This receiver is now `exported="false"`,
+  keeps an exact action allow-list, and gates on overlay permission +
+  persisted state — the spoofing vector the rule targets is closed.
+
 ## Out-of-band items for submission
 
 - [ ] Rotate the Hack Club AI key (any previously distributed APK bundled it).
