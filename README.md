@@ -104,7 +104,7 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
 - ***Android native overlay service*** dual-engine implementation powering the Dynamic Island
 - ***Lottie*** in-app animations
 - ***Material 3*** component system
-- 
+
 <div align='center'>
   
 ## Prerequisites
