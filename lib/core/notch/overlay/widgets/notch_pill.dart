@@ -246,10 +246,16 @@ class _NotchPillState extends State<NotchPill>
   /// After a fresh activity has peeked for a few seconds, recede it to the
   /// minimal pill (like Apple's Dynamic Island) — unless the user has expanded
   /// it. Tapping the minimal pill brings the activity back.
+  ///
+  /// LIVE activities (navigation, timers, stopwatches, calls, music, workouts —
+  /// anything ongoing) never auto-recede: turn-by-turn directions or a running
+  /// countdown must stay readable for their whole lifetime. Only transient
+  /// notifications peek-then-recede; the user can still minimise by hand.
   void _scheduleRecede() {
     _recedeTimer?.cancel();
     _recedeTimer = Timer(_peekDuration, () {
       if (!mounted || _expanded || _primary == null || _minimized) return;
+      if (_primary?.isOngoing ?? false) return;
       _expand.value = 0;
       if (_reduceMotion) {
         setState(() => _minimized = true);
@@ -761,7 +767,8 @@ class _NotchPillState extends State<NotchPill>
   /// Size the card per type, each with clip-safe margin over its tallest variant.
   static int _expandedContentForType(NotchActivityType? type) {
     return switch (type) {
-      NotchActivityType.music => NotchMetrics.expandedContent, // 136, tallest
+      NotchActivityType.navigation => 164, // header + the minimap panel
+      NotchActivityType.music => NotchMetrics.expandedContent, // 136
       NotchActivityType.timer => 108,
       _ => 92,
     };
@@ -1337,6 +1344,16 @@ class _Expanded extends StatelessWidget {
         onOpenUrl: onOpenUrl,
       );
     }
+    // Navigation expands into a mini turn-by-turn panel: maneuver glyph,
+    // instruction, and a stylised minimap.
+    if (activity.type == NotchActivityType.navigation) {
+      return _NavExpanded(
+        activity: activity,
+        theme: theme,
+        total: total,
+        index: index,
+      );
+    }
     final bool isTimer =
         activity.type == NotchActivityType.timer && activity.endsAtMs != null;
     return SingleChildScrollView(
@@ -1472,6 +1489,221 @@ class _Expanded extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The expanded navigation card: maneuver glyph + instruction on top, a
+/// stylised minimap below. Real map tiles can't render here — the overlay
+/// window's engine doesn't composite platform views, and live tiles would need
+/// location access plus a maps key inside this second engine — so the panel
+/// draws a map-flavoured scene (street grid, accent route, position dot)
+/// around the notification's real instruction text, which IS the live data
+/// Maps/Waze publish.
+class _NavExpanded extends StatelessWidget {
+  const _NavExpanded({
+    required this.activity,
+    required this.theme,
+    required this.total,
+    required this.index,
+  });
+
+  final NotchActivity activity;
+  final NotchTheme theme;
+  final int total;
+  final int index;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: theme.accent.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    _maneuverIconFor('${activity.title} ${activity.subtitle}'),
+                    color: theme.accent,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (activity.appName != null &&
+                          activity.appName!.isNotEmpty)
+                        Text(
+                          activity.appName!.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _nunito(
+                            color: theme.subdued,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.6,
+                          ),
+                        ),
+                      Text(
+                        activity.title.isEmpty ? 'Navigating' : activity.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _nunito(
+                          color: theme.foreground,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                      ),
+                      if (activity.subtitle.isNotEmpty)
+                        Text(
+                          activity.subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _nunito(
+                            color: theme.subdued,
+                            fontSize: 12,
+                            height: 1.25,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 9),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                height: 72,
+                width: double.infinity,
+                child: RepaintBoundary(
+                  child: CustomPaint(painter: _MiniMapPainter(theme: theme)),
+                ),
+              ),
+            ),
+            if (total > 1) ...<Widget>[
+              const SizedBox(height: 8),
+              Center(
+                child: _PageDots(
+                  total: total,
+                  index: index,
+                  color: theme.foreground,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Picks a maneuver glyph from the instruction text Maps/Waze publish. Purely
+/// textual — nav apps don't expose a structured maneuver through their
+/// notification — so unknown phrasings fall back to the generic arrow.
+IconData _maneuverIconFor(String instruction) {
+  final String t = instruction.toLowerCase();
+  if (t.contains('u-turn') || t.contains('u turn')) {
+    return Icons.u_turn_left_rounded;
+  }
+  if (t.contains('roundabout')) return Icons.roundabout_left_rounded;
+  if (t.contains('merge')) return Icons.merge_rounded;
+  if (t.contains('exit') || t.contains('ramp') || t.contains('fork')) {
+    return Icons.fork_right_rounded;
+  }
+  if (t.contains('left')) return Icons.turn_left_rounded;
+  if (t.contains('right')) return Icons.turn_right_rounded;
+  if (t.contains('arriv') || t.contains('destination')) {
+    return Icons.sports_score_rounded;
+  }
+  return Icons.navigation_rounded;
+}
+
+/// Paints the nav card's stylised minimap: a soft street grid, the
+/// accent-coloured route with a bend, a halo'd position dot at the start and a
+/// destination marker at the end. A static scene — it repaints only on theme
+/// change, so it costs nothing while directions tick.
+class _MiniMapPainter extends CustomPainter {
+  const _MiniMapPainter({required this.theme});
+
+  final NotchTheme theme;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = theme.foreground.withValues(alpha: 0.05),
+    );
+
+    // Street grid at map-ish offsets.
+    final Paint street = Paint()
+      ..color = theme.foreground.withValues(alpha: 0.10)
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    for (final double fy in <double>[0.28, 0.62, 0.88]) {
+      final double y = size.height * fy;
+      canvas.drawLine(Offset(6, y), Offset(size.width - 6, y), street);
+    }
+    for (final double fx in <double>[0.18, 0.42, 0.71, 0.9]) {
+      final double x = size.width * fx;
+      canvas.drawLine(Offset(x, 6), Offset(x, size.height - 6), street);
+    }
+
+    // The route: bottom-left, a junction bend, then off to the top-right.
+    final Path route = Path()
+      ..moveTo(size.width * 0.12, size.height * 0.88)
+      ..lineTo(size.width * 0.42, size.height * 0.88)
+      ..lineTo(size.width * 0.42, size.height * 0.28)
+      ..lineTo(size.width * 0.9, size.height * 0.28);
+    canvas.drawPath(
+      route,
+      Paint()
+        ..color = theme.accent.withValues(alpha: 0.28)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 9
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+    canvas.drawPath(
+      route,
+      Paint()
+        ..color = theme.accent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
+    );
+
+    // Position dot (halo + core) at the start; destination marker at the end.
+    final Offset pos = Offset(size.width * 0.12, size.height * 0.88);
+    canvas.drawCircle(
+      pos,
+      9,
+      Paint()..color = theme.accent.withValues(alpha: 0.25),
+    );
+    canvas.drawCircle(pos, 5, Paint()..color = theme.accent);
+    canvas.drawCircle(pos, 2.2, Paint()..color = theme.background);
+
+    final Offset dest = Offset(size.width * 0.9, size.height * 0.28);
+    canvas.drawCircle(dest, 5.5, Paint()..color = theme.foreground);
+    canvas.drawCircle(dest, 2.5, Paint()..color = theme.background);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MiniMapPainter oldDelegate) =>
+      oldDelegate.theme != theme;
 }
 
 /// Maps a Hey Neko phase to its Lottie cat animation. The island is always
