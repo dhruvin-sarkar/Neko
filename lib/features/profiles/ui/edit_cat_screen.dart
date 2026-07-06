@@ -134,7 +134,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
         ),
         content: Text(
           "This deletes ${original.name}'s profile and all their documents. "
-          "This can't be undone.",
+          "This can’t be undone.",
           style: AppTextStyles.bodyMedium,
         ),
         actions: [
@@ -204,7 +204,7 @@ class _EditCatScreenState extends ConsumerState<EditCatScreen> {
           child: (cat == null && stillLoading)
               ? const NekoLoader()
               : Text(
-                  "We can't find that cat to edit.",
+                  "We can’t find that cat to edit.",
                   style: AppTextStyles.headlineLarge,
                 ),
         ),

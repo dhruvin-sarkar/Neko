@@ -61,7 +61,7 @@ class DocumentsSection extends ConsumerWidget {
         unawaited(ref.read(feedbackServiceProvider).onError());
         NekoSnackBar.show(
           context,
-          "We couldn't open that document.",
+          "We couldn’t open that document.",
           error: true,
         );
       }
@@ -71,7 +71,7 @@ class DocumentsSection extends ConsumerWidget {
         unawaited(ref.read(feedbackServiceProvider).onError());
         NekoSnackBar.show(
           context,
-          "We couldn't open that document.",
+          "We couldn’t open that document.",
           error: true,
         );
       }
@@ -158,7 +158,7 @@ class DocumentsSection extends ConsumerWidget {
         docsAsync.when(
           loading: () => const _DocumentsLoading(),
           error: (_, _) => const _DocumentsMessage(
-            text: "We couldn't load documents right now.",
+            text: "We couldn’t load documents right now.",
           ),
           data: (docs) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

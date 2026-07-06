@@ -74,6 +74,7 @@ class HomeScreen extends ConsumerWidget {
                   ? HomeGreeting(
                       key: tourKeys.greeting,
                       displayName: displayName,
+                      hasCats: cats.valueOrNull?.isNotEmpty ?? true,
                     )
                   : HomeGreeting(
                           key: tourKeys.greeting,
@@ -139,7 +140,9 @@ List<Widget> _catSlivers(
   }
   return [
     SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppResponsive.horizontalPadding(context),
+      ),
       sliver: SliverList.builder(
         itemCount: cats.length,
         itemBuilder: (context, index) {
@@ -201,7 +204,7 @@ class _EmptyCats extends StatelessWidget {
     return Column(
       children: [
         Text(
-          "It's a little quiet in here.",
+          "It’s a little quiet in here.",
           textAlign: TextAlign.center,
           style: AppTextStyles.headlineLarge,
         ),

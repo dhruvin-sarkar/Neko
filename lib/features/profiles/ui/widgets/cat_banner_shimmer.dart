@@ -19,8 +19,12 @@ class CatBannerShimmer extends StatelessWidget {
           for (int i = 0; i < count; i++) ...[
             if (i > 0) const SizedBox(height: 16),
             Shimmer.fromColors(
-              baseColor: AppColors.surfaceMuted,
-              highlightColor: AppColors.surfaceElevated,
+              // The real banners are near-black (AppColors.darkBanner) — shimmer
+              // on the same dark base so the load doesn't flash cream→dark.
+              baseColor: AppColors.darkBanner,
+              highlightColor:
+                  Color.lerp(AppColors.darkBanner, Colors.white, 0.12) ??
+                  AppColors.darkBanner,
               // Match the cadence of the other skeletons (documents, profile).
               period: const Duration(milliseconds: 1400),
               child: Container(

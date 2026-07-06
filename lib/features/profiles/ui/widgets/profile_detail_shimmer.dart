@@ -35,21 +35,11 @@ class ProfileDetailShimmer extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
           children: [
-            Center(
-              child: Container(
-                width: 112,
-                height: 112,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Center(child: box(160, 28)),
-            const SizedBox(height: 10),
-            Center(child: box(110, 18)),
-            const SizedBox(height: 32),
+            // The real screen wraps avatar + name + breed in one full-width
+            // elevated header card — ghost that, not a bare avatar, so the swap
+            // to real content doesn't jump.
+            box(double.infinity, 270, 28),
+            const SizedBox(height: 24),
             Row(children: [statCard(), const SizedBox(width: 16), statCard()]),
             const SizedBox(height: 16),
             Row(children: [statCard(), const SizedBox(width: 16), statCard()]),

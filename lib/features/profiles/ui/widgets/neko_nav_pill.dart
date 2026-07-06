@@ -168,31 +168,43 @@ class _NavItem extends StatelessWidget {
               // target), springing up when the tab is chosen so it reads as a
               // cohesive part of the pill. Unlike the old bottom-heavy paw
               // glyph, the head is symmetric, so no optical-centring nudges.
+              // Head + its white glyph scale as ONE unit, so the glyph never
+              // snaps in white-on-white before the head arrives. Elastic pop on
+              // the incoming head; plain ease on the outgoing shrink (elasticOut
+              // would wobble a marker that's leaving).
               AnimatedScale(
                 scale: selected ? 1.0 : 0.0,
                 duration: reduceMotion ? Duration.zero : NekoMotion.quick,
-                curve: reduceMotion ? Curves.linear : NekoMotion.pop,
-                child: CustomPaint(
-                  size: const Size(40, 40),
-                  painter: _CatHeadPainter(color: AppColors.primary),
+                curve: reduceMotion
+                    ? Curves.linear
+                    : (selected ? NekoMotion.pop : NekoMotion.standardCurve),
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CustomPaint(
+                        size: const Size(40, 40),
+                        painter: _CatHeadPainter(color: AppColors.primary),
+                      ),
+                      // The head sits a touch low in its box to leave ear room,
+                      // hence the small positive y.
+                      Align(
+                        alignment: const Alignment(0, 0.11),
+                        child: Icon(
+                          selectedIcon,
+                          size: 15,
+                          color: AppColors.textOnPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              // The destination glyph: white and centred on the head circle
-              // when selected (the head sits a touch low in its box to leave
-              // ear room, hence the small positive y), a muted outline icon
-              // otherwise.
-              Align(
-                alignment: selected
-                    ? const Alignment(0, 0.11)
-                    : Alignment.center,
-                child: Icon(
-                  selected ? selectedIcon : unselectedIcon,
-                  size: selected ? 15 : 24,
-                  color: selected
-                      ? AppColors.textOnPrimary
-                      : AppColors.navInactive,
-                ),
-              ),
+              // The muted outline glyph, shown only while unselected.
+              if (!selected)
+                Icon(unselectedIcon, size: 24, color: AppColors.navInactive),
             ],
           ),
         ),

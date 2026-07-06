@@ -92,11 +92,15 @@ class _CatProfileBody extends StatelessWidget {
     return '${cat.months}m';
   }
 
+  /// Tile-scale value — the 'Activity' caption already carries the noun, the
+  /// same way 'Weight' pairs with '4.2 kg'. Keeps it on one line in the
+  /// half-width stat card (the full descriptive labels live on the onboarding
+  /// selection cards, which have room).
   String get _activityLabel {
     return switch (cat.activityLevel) {
-      'couch' => 'Low Activity',
-      'outdoor' => 'Highly Active',
-      _ => 'Moderately Active',
+      'couch' => 'Low',
+      'outdoor' => 'High',
+      _ => 'Moderate',
     };
   }
 
@@ -152,7 +156,10 @@ class _CatProfileBody extends StatelessWidget {
                           child: _StatCard(
                             icon: Icons.monitor_weight_outlined,
                             label: 'Weight',
-                            value: '${cat.weightKg} kg',
+                            // Drop a trailing .0 so whole kilos read '4 kg'.
+                            value: cat.weightKg % 1 == 0
+                                ? '${cat.weightKg.toInt()} kg'
+                                : '${cat.weightKg} kg',
                           ),
                         ),
                       ],
@@ -162,7 +169,7 @@ class _CatProfileBody extends StatelessWidget {
                       children: [
                         Expanded(
                           child: _StatCard(
-                            icon: Icons.directions_run_rounded,
+                            icon: Icons.directions_run_outlined,
                             label: 'Activity',
                             value: _activityLabel,
                           ),
@@ -392,7 +399,10 @@ class _FeedingTimerCardState extends ConsumerState<_FeedingTimerCard> {
                   color: AppColors.selectedFill,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.restaurant_rounded, color: AppColors.primary),
+                child: Icon(
+                  Icons.restaurant_outlined,
+                  color: AppColors.primary,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -475,7 +485,7 @@ class _PresetChip extends StatelessWidget {
       onTap: onTap,
       semanticLabel: 'Start $label feeding timer',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.selectedFill,
           borderRadius: BorderRadius.circular(100),
@@ -496,7 +506,7 @@ class _NotFound extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          "Hmm, we can't find that cat.",
+          "Hmm, we can’t find that cat.",
           textAlign: TextAlign.center,
           style: AppTextStyles.headlineLarge,
         ),
