@@ -105,11 +105,14 @@ abstract final class NekoPalettes {
   const NekoPalettes._();
 
   // ── Default: warm amber background, coral accent, amber secondary ──────────
+  // The coral is #F05252 (not the original #FF6B6B): the closest coral that
+  // clears the WCAG floors in palette_contrast_test.dart on both white button
+  // text (3.48 ≥ 3.0) and the amber background (2.13 ≥ 2.0).
   static const NekoPalette gingerTabby = NekoPalette(
     id: 'gingerTabby',
     label: 'Ginger & Coral',
     emoji: '🧡',
-    primary: Color(0xFFFF6B6B),
+    primary: Color(0xFFF05252),
     primaryDark: Color(0xFFCC4444),
     primaryLight: Color(0xFFFFE5E5),
     secondary: Color(0xFFF5C275),
