@@ -174,7 +174,7 @@ class _NavItem extends StatelessWidget {
                 // to the evenly-weighted outline glyphs — lift it a couple of
                 // pixels so its optical centre sits level with them.
                 child: Transform.translate(
-                  offset: const Offset(0, -2.5),
+                  offset: const Offset(0, -5.5),
                   child: Icon(
                     Icons.pets_rounded,
                     size: 38,
@@ -187,7 +187,7 @@ class _NavItem extends StatelessWidget {
               // icon otherwise.
               Align(
                 alignment: selected
-                    ? const Alignment(0, 0.13)
+                    ? const Alignment(0, -0.03)
                     : Alignment.center,
                 child: Icon(
                   selected ? selectedIcon : unselectedIcon,
