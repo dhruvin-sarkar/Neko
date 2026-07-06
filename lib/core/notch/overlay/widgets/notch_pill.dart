@@ -7,7 +7,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show ByteData, MethodChannel, rootBundle;
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 
 import '../../../neko_motion.dart';
@@ -1082,7 +1081,11 @@ TextStyle _nunito({
   double? letterSpacing,
   bool tabular = false,
 }) {
-  return GoogleFonts.nunito(
+  // Bundled Nunito (same family the main app declares) so the overlay engine
+  // renders it with no runtime fetch — a separate isolate can't rely on
+  // google_fonts' cache being warm.
+  return TextStyle(
+    fontFamily: 'Nunito',
     color: color,
     fontSize: fontSize,
     fontWeight: fontWeight,
@@ -1094,7 +1097,8 @@ TextStyle _nunito({
     // Nunito's intrinsic line box is tall (~1.35em); with our tight height:1.1
     // even leading centres each glyph in its box so text never rides high and
     // gets clipped by the fixed-height island containers.
-  ).copyWith(leadingDistribution: TextLeadingDistribution.even);
+    leadingDistribution: TextLeadingDistribution.even,
+  );
 }
 
 IconData _iconFor(NotchActivityType type) {

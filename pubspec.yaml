@@ -101,3 +101,13 @@ flutter:
     - assets/images/avatars/
     - assets/sounds/
     - assets/animations/
+  # Bundled so the first cold-start frame renders in the brand fonts — no
+  # runtime google_fonts fetch, no flash of a fallback font, works offline.
+  # Variable TTFs cover every weight the app uses via the wght axis.
+  fonts:
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/Nunito.ttf
