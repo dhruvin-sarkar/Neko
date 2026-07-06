@@ -457,8 +457,10 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
   }
 }
 
-/// Toggles the optional always-listening "Hey Neko" wake word. Off by default —
-/// it holds the mic while the app is open, so the copy is honest about that.
+/// Toggles the optional always-listening "Hey Neko" wake word. Off by default,
+/// gated behind the notch master toggle, and honest about the open mic — while
+/// on, it listens even with the app in the background (a persistent
+/// notification says so).
 class _HeyNekoCard extends ConsumerStatefulWidget {
   const _HeyNekoCard();
 
@@ -474,7 +476,16 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
     setState(() => _busy = true);
     unawaited(ref.read(feedbackServiceProvider).onSelect());
     await ref.read(wakeWordControllerProvider.notifier).setEnabled(value);
-    if (mounted) setState(() => _busy = false);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    // Enabling silently fails when the mic permission is declined — say so
+    // instead of just snapping the switch back to off.
+    if (value && !ref.read(wakeWordControllerProvider).enabled) {
+      NekoSnackBar.show(
+        context,
+        'Neko needs the microphone to hear “Hey Neko”.',
+      );
+    }
   }
 
   @override
@@ -482,6 +493,10 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
     ref.watch(themeControllerProvider);
     final bool enabled = ref.watch(
       wakeWordControllerProvider.select((s) => s.enabled),
+    );
+    // Master gate: no notch, no listener — the switch stays off and disabled.
+    final bool notchOn = ref.watch(
+      notchControllerProvider.select((s) => s.enabled),
     );
     return Container(
       padding: const EdgeInsets.all(16),
@@ -510,8 +525,10 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
                 Text('Hey Neko voice', style: AppTextStyles.bodyLarge),
                 const SizedBox(height: 2),
                 Text(
-                  enabled
-                      ? 'Listening for “Hey Neko” while the app is open'
+                  !notchOn
+                      ? 'Turn on the Neko notch first'
+                      : enabled
+                      ? 'Listening for “Hey Neko” — even in the background'
                       : 'Off — tap the mic in chat to talk',
                   style: AppTextStyles.caption,
                 ),
@@ -521,7 +538,7 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
           Switch(
             value: enabled,
             activeThumbColor: AppColors.primary,
-            onChanged: _busy ? null : _toggle,
+            onChanged: (_busy || !notchOn) ? null : _toggle,
           ),
         ],
       ),

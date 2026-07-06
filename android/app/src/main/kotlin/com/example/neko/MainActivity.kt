@@ -47,6 +47,20 @@ class MainActivity : FlutterActivity() {
                     NekoNotificationListenerService.instance?.control(action)
                     result.success(true)
                 }
+                // Hey Neko wake word: the mic foreground service may only be
+                // started while the app is in the foreground — which is exactly
+                // when these calls arrive (Settings toggle / app resume).
+                "startHeyNekoListener" -> {
+                    androidx.core.content.ContextCompat.startForegroundService(
+                        this,
+                        Intent(this, HeyNekoListenerService::class.java),
+                    )
+                    result.success(true)
+                }
+                "stopHeyNekoListener" -> {
+                    stopService(Intent(this, HeyNekoListenerService::class.java))
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }

@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <!-- Hey Neko wake word: keeps the mic listening while the app is
+         backgrounded. Only ever started from a foreground context. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <!-- Relaunch the overlay after device reboot (see NEKO_NOTCH boot note). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Hey Neko voice + workout sensors. -->
@@ -89,6 +92,14 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Holds the microphone foreground grant while "Hey Neko" listens in
+             the background. Started only from a foreground context (Settings
+             toggle / app resume) — never from boot or a background event. -->
+        <service
+            android:name=".HeyNekoListenerService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <!-- Relaunch the notch overlay on device boot (permission-gated).
              exported=false: boot broadcasts come from the system, which can
