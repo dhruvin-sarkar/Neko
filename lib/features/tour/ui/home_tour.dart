@@ -43,10 +43,11 @@ class _Step {
 /// The premium first-run guided tour.
 ///
 /// Runs once per user (tracked in Firestore `users/{uid}.guidedTourComplete`,
-/// mirrored to a local cache). It spans three segments: a Home intro, a deep
+/// mirrored to a local cache). It spans four segments: a Home intro, a deep
 /// dive into a cat's profile (it actually opens the profile and points out the
-/// stats, edit action, and documents), then back to Home for the add-cat and
-/// Settings affordances — all with one continuous progress indicator.
+/// stats, edit action, and documents), back to Home for the add-cat / AI /
+/// Settings affordances, then into Settings itself to introduce the Neko notch
+/// and the Hey Neko voice toggles — all with one continuous progress indicator.
 class HomeTour {
   HomeTour._();
 
@@ -119,7 +120,12 @@ class _TourRunner {
         ? <_Step>[_profileStats, _profileEdit, _profileDocuments]
         : <_Step>[];
     final List<_Step> homeOutro = <_Step>[_addCat, _aiAssistant, _settings];
-    final int total = homeIntro.length + profile.length + homeOutro.length;
+    final List<_Step> settingsCards = <_Step>[_notchCard, _heyNekoCard];
+    final int total =
+        homeIntro.length +
+        profile.length +
+        homeOutro.length +
+        settingsCards.length;
     int offset = 0;
 
     // ── Segment 1: Home intro ──
@@ -168,7 +174,25 @@ class _TourRunner {
 
     // ── Segment 3: Home outro ──
     if (!context.mounted) return _complete();
-    await _showSegment(homeOutro, offset, total);
+    if (await _showSegment(homeOutro, offset, total)) return _complete();
+    offset += homeOutro.length;
+
+    // ── Segment 4: Settings — the notch + Hey Neko voice toggles ──
+    if (!context.mounted) return _complete();
+    context.go(Routes.settings);
+    final bool settingsReady = await _waitFor(
+      () =>
+          _keys.settingsNotch.currentContext != null &&
+          _keys.settingsHeyNeko.currentContext != null,
+    );
+    if (settingsReady && context.mounted) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (context.mounted) {
+        await _showSegment(settingsCards, offset, total);
+      }
+    }
+    // Land back on Home so the tour ends where the user started.
+    if (context.mounted) context.go(Routes.home);
     return _complete();
   }
 
@@ -291,31 +315,36 @@ class _TourRunner {
 
   /// Scrolls the right list so [step]'s target is on screen before spotlighting.
   Future<void> _reveal(_Step step) async {
-    final ScrollController c = step.isProfile
-        ? ref.read(profileScrollControllerProvider)
-        : ref.read(homeScrollControllerProvider);
-    if (!c.hasClients) return;
+    // The Settings cards live in that tab's own scrollable (no shared
+    // controller) — the ensureVisible below does all the scrolling for them.
+    final bool isSettingsCard = step.identify.startsWith('settings_');
+    if (!isSettingsCard) {
+      final ScrollController c = step.isProfile
+          ? ref.read(profileScrollControllerProvider)
+          : ref.read(homeScrollControllerProvider);
+      if (!c.hasClients) return;
 
-    final double target;
-    switch (step.identify) {
-      case 'greeting':
-      case 'first_cat':
-      case 'profile_stats':
-        target = 0;
-      case 'add_cat':
-      case 'profile_documents':
-        target = c.position.maxScrollExtent;
-      default:
-        return; // Settings + edit live in fixed bars — nothing to scroll.
-    }
+      final double target;
+      switch (step.identify) {
+        case 'greeting':
+        case 'first_cat':
+        case 'profile_stats':
+          target = 0;
+        case 'add_cat':
+        case 'profile_documents':
+          target = c.position.maxScrollExtent;
+        default:
+          return; // Settings + edit live in fixed bars — nothing to scroll.
+      }
 
-    if ((c.offset - target).abs() > 1) {
-      await c.animateTo(
-        target,
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeOutCubic,
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 70));
+      if ((c.offset - target).abs() > 1) {
+        await c.animateTo(
+          target,
+          duration: const Duration(milliseconds: 380),
+          curve: Curves.easeOutCubic,
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 70));
+      }
     }
     final BuildContext? ctx = step.key.currentContext;
     if (ctx != null && ctx.mounted) {
@@ -325,7 +354,11 @@ class _TourRunner {
         ctx,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        alignment: atBottom ? 0.65 : 0.2,
+        alignment: atBottom
+            ? 0.65
+            : isSettingsCard
+            ? 0.35
+            : 0.2,
       );
       await Future<void>.delayed(const Duration(milliseconds: 40));
     }
@@ -462,8 +495,35 @@ class _TourRunner {
     icon: Icons.settings_rounded,
     title: 'Settings live here',
     body:
-        'Manage your account, preferences, and sign-out from here. That is the tour — enjoy Neko!',
+        "Account, themes, sounds — and two special powers. Let's peek inside.",
     align: ContentAlign.top,
     shape: ShapeLightFocus.Circle,
+  );
+
+  _Step get _notchCard => _Step(
+    key: _keys.settingsNotch,
+    identify: 'settings_notch',
+    icon: Icons.crop_16_9_rounded,
+    title: 'The Neko notch',
+    body:
+        'Flip this on and your status bar becomes a live island — music, '
+        'timers, calls, and Neko itself, right up top. Off until you say so.',
+    align: ContentAlign.bottom,
+    shape: ShapeLightFocus.RRect,
+    radius: 20,
+  );
+
+  _Step get _heyNekoCard => _Step(
+    key: _keys.settingsHeyNeko,
+    identify: 'settings_hey_neko',
+    icon: Icons.hearing_rounded,
+    title: 'Hands-free Neko',
+    body:
+        'With the notch on, enable this and just say “Hey Neko” — even with '
+        'the app in the background (a notification shows while the mic is '
+        'on). That’s the tour — enjoy Neko!',
+    align: ContentAlign.bottom,
+    shape: ShapeLightFocus.RRect,
+    radius: 20,
   );
 }

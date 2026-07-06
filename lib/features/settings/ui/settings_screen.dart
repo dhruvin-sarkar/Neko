@@ -21,6 +21,7 @@ import '../../../shared/widgets/neko_dialog.dart';
 import '../../../core/widgets/neko_button.dart';
 import '../../../shared/widgets/neko_snackbar.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../tour/providers/tour_keys.dart';
 import '../../voice/providers/wake_word_controller.dart';
 import '../providers/sound_settings_controller.dart';
 import '../providers/theme_controller.dart';
@@ -155,9 +156,16 @@ class SettingsScreen extends ConsumerWidget {
                             const SizedBox(height: 16),
                             const _SoundCard(),
                             const SizedBox(height: 16),
-                            const _NotchCard(),
+                            // Keyed so the guided tour can spotlight them.
+                            KeyedSubtree(
+                              key: ref.read(tourKeysProvider).settingsNotch,
+                              child: const _NotchCard(),
+                            ),
                             const SizedBox(height: 16),
-                            const _HeyNekoCard(),
+                            KeyedSubtree(
+                              key: ref.read(tourKeysProvider).settingsHeyNeko,
+                              child: const _HeyNekoCard(),
+                            ),
                             const SizedBox(height: 16),
                             const _AboutCard(),
                           ],
