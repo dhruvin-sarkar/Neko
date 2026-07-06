@@ -92,6 +92,16 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
     <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/Notch.gif?raw=true" width=300px></td>
   </tr>
 </table>
+<table align="center">
+  <tr>
+    <th>Themes</th>
+    <th>Voice Assistant</th>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/Themes.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/Themes.gif?raw=true" width=300px></td>
+  </tr>
+</table>
 
 <div align='center'>
   
