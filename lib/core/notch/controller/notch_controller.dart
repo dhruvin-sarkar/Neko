@@ -111,13 +111,6 @@ class NotchController extends Notifier<NotchState> {
 
   Future<void> setEnabled(bool value) async {
     if (value) {
-      // The one hard requirement is the overlay permission. If it's missing,
-      // send the user to grant it — but do NOT trust the request call's return
-      // value: the plugin resolves it from onActivityResult the moment the
-      // settings screen closes, and many devices report canDrawOverlays() as
-      // still-false for a beat right after the grant. Re-read the real system
-      // state instead, so granting it and coming back actually turns the notch
-      // on rather than silently snapping back to off.
       if (!await _service.hasOverlayPermission()) {
         await _service.requestOverlayPermission();
         if (!await _service.hasOverlayPermission()) {
@@ -127,16 +120,8 @@ class NotchController extends Notifier<NotchState> {
       }
       await NotchPrefs.setBool(_prefs, NotchPrefs.enabled, true);
       state = state.copyWith(enabled: true);
-      // Everything below is best-effort activation of an already-enabled notch.
-      // None of it may throw back into the toggle: a hiccup here (a denied
-      // notification prompt, a stale read at show time, a channel blip) must
-      // not abort the enable or leave the Settings switch wedged — the toggle
-      // is on, persisted, and the overlay heals on the next resync/resume.
+
       try {
-        // Android 13+ gates the notch's foreground-service tray notification
-        // behind the runtime notification permission. Best-effort +
-        // non-blocking — the island still shows via SYSTEM_ALERT_WINDOW if it's
-        // denied, and permission_handler auto-grants on Android < 13.
         if (Platform.isAndroid) {
           await Permission.notification.request();
         }
@@ -290,12 +275,7 @@ class NotchController extends Notifier<NotchState> {
     _timerEnd = Timer(left.isNegative ? Duration.zero : left, () {
       _timerEnd = null;
       state = state.copyWith(clearTimer: true);
-      // The overlay engine owns the visible completion: it holds 00:00 for a
-      // beat, plays the celebratory trill, and removes its own pill. Emitting a
-      // remove here would cut that grace short and a second sound would play.
-      // So we only clear local bookkeeping — and when the notch is off (there's
-      // no island to trill) we give an in-app meow so the countdown still lands.
-      _ongoing.remove(activity.key);
+
       unawaited(_persistRestore());
       if (!state.enabled) {
         unawaited(AudioService.playSound(SoundId.catMeowSuccess));
