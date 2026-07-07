@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Neko.gif?raw=true" width=90%>
+  <img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Neko.gif?raw=true" width=100%>
   <br>
   <br>
   Neko
