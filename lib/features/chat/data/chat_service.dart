@@ -144,6 +144,27 @@ class HackClubChatService implements ChatService {
       messages.add(await _encodeMessage(m));
     }
 
+    // A safety scan is a verdict ON A PHOTO. If the image failed to encode
+    // (`_toDataUrl` swallows a read error and `_encodeMessage` falls back to
+    // text-only), the request would still carry the SAFE/CAUTION/DANGER
+    // directive with no image attached — inviting a confident verdict on a
+    // picture the model never saw. Refuse rather than ship a blind judgement;
+    // the scan controller surfaces this message and the owner re-takes the shot.
+    if (safety) {
+      final bool hasImage = messages.any((Map<String, dynamic> msg) {
+        final Object? content = msg['content'];
+        return content is List &&
+            content.any(
+              (Object? part) => part is Map && part['type'] == 'image_url',
+            );
+      });
+      if (!hasImage) {
+        throw const ChatException(
+          'Meow — I couldn’t read that photo. Try again with a clearer shot?',
+        );
+      }
+    }
+
     final http.Request request =
         http.Request('POST', Uri.parse('$_baseUrl/chat/completions'))
           ..headers.addAll(<String, String>{
