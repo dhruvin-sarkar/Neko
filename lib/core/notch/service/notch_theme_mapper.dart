@@ -18,6 +18,15 @@ abstract final class NotchThemeMapper {
   static const Color _inkBase = Color(0xFF0B0B0E);
   static const Color _softWhite = Color(0xFFF6F6F8);
 
+  /// WCAG relative-contrast ratio between two opaque colours (1.0 .. 21.0).
+  static double _contrast(Color a, Color b) {
+    final double la = a.computeLuminance();
+    final double lb = b.computeLuminance();
+    final double hi = la > lb ? la : lb;
+    final double lo = la > lb ? lb : la;
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
   static NotchTheme fromPalette(NekoPalette palette, {double topInset = 0}) {
     final bool dark = palette.isDark;
 
@@ -43,10 +52,19 @@ abstract final class NotchThemeMapper {
       foreground = _softWhite;
     }
 
-    // Accent drives waves/progress/ears; keep it visible against the ink.
+    // Accent drives the waves/progress/ears AND the timer countdown text and
+    // the nav route line — the most glanceable elements — so it has to actually
+    // contrast with the island ink, not merely avoid being near-black. A fixed
+    // luminance floor let mid-luminance coats (sealPoint's muted brown) sit at
+    // ~2.4:1 on the dark background. Guard on real WCAG contrast against the
+    // background we just computed, stepping to the secondary and then a soft
+    // white until it clears the 3.0 floor the palette contrast test enforces.
     Color accent = palette.primary;
-    if (accent.computeLuminance() < 0.06) {
+    if (_contrast(accent, background) < 3.0) {
       accent = palette.secondary;
+      if (_contrast(accent, background) < 3.0) {
+        accent = Color.lerp(accent, _softWhite, 0.5) ?? _softWhite;
+      }
     }
 
     return NotchTheme(
