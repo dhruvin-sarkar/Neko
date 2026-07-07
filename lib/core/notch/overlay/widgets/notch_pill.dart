@@ -242,19 +242,42 @@ class _NotchPillState extends State<NotchPill>
     }
   }
 
+  /// Live activities that must stay readable for their whole lifetime — a map
+  /// giving turn-by-turn directions, a running feeding timer, an active call —
+  /// stay pinned and never auto-recede. Everything else that lingers (music,
+  /// downloads) or is transient (notifications) peeks, then steps aside to the
+  /// minimal pill so the island stays out of the way, Dynamic-Island style.
+  static bool _staysPinned(NotchActivityType type) =>
+      type == NotchActivityType.timer ||
+      type == NotchActivityType.navigation ||
+      type == NotchActivityType.call;
+
   /// After a fresh activity has peeked for a few seconds, recede it to the
-  /// minimal pill (like Apple's Dynamic Island) — unless the user has expanded
-  /// it. Tapping the minimal pill brings the activity back.
+  /// minimal pill — unless the user has expanded it, or it's a pinned live
+  /// activity (see [_staysPinned]). Tapping the minimal pill brings it back.
   ///
-  /// LIVE activities (navigation, timers, stopwatches, calls, music, workouts —
-  /// anything ongoing) never auto-recede: turn-by-turn directions or a running
-  /// countdown must stay readable for their whole lifetime. Only transient
-  /// notifications peek-then-recede; the user can still minimise by hand.
+  /// When the peeking activity is transient (music, a notification) but a pinned
+  /// live activity is waiting underneath, the island promotes that one to the
+  /// front instead of minimising to an empty pill — so a running map or timer
+  /// stays on screen even as the music that arrived over it recedes.
   void _scheduleRecede() {
     _recedeTimer?.cancel();
     _recedeTimer = Timer(_peekDuration, () {
-      if (!mounted || _expanded || _primary == null || _minimized) return;
-      if (_primary?.isOngoing ?? false) return;
+      final NotchActivity? primary = _primary;
+      if (!mounted || _expanded || primary == null || _minimized) return;
+      if (_staysPinned(primary.type)) return;
+      final int pinnedIndex = _stack.indexWhere(
+        (NotchActivity a) => _staysPinned(a.type),
+      );
+      if (pinnedIndex != -1) {
+        setState(() {
+          _shownIndex = pinnedIndex;
+          _cycleDir = 1;
+        });
+        _syncCompactWidth(animate: true);
+        _applyFlag();
+        return;
+      }
       _expand.value = 0;
       if (_reduceMotion) {
         setState(() => _minimized = true);
@@ -770,7 +793,7 @@ class _NotchPillState extends State<NotchPill>
   /// Size the card per type, each with clip-safe margin over its tallest variant.
   static int _expandedContentForType(NotchActivityType? type) {
     return switch (type) {
-      NotchActivityType.navigation => 164, // header + the minimap panel
+      NotchActivityType.navigation => 186, // header + the taller minimap panel
       NotchActivityType.music => NotchMetrics.expandedContent, // 136
       NotchActivityType.timer => 108,
       _ => 92,
@@ -1591,14 +1614,18 @@ class _NavExpanded extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 9),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                height: 72,
-                width: double.infinity,
-                child: RepaintBoundary(
-                  child: CustomPaint(painter: _MiniMapPainter(theme: theme)),
+            Container(
+              height: 92,
+              width: double.infinity,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.foreground.withValues(alpha: 0.08),
                 ),
+              ),
+              child: RepaintBoundary(
+                child: CustomPaint(painter: _MiniMapPainter(theme: theme)),
               ),
             ),
             if (total > 1) ...<Widget>[
@@ -1639,9 +1666,10 @@ IconData _maneuverIconFor(String instruction) {
   return Icons.navigation_rounded;
 }
 
-/// Paints the nav card's stylised minimap: a soft street grid, the
-/// accent-coloured route with a bend, a halo'd position dot at the start and a
-/// destination marker at the end. A static scene — it repaints only on theme
+/// Paints the nav card's stylised minimap: a lit gradient base, two faint map
+/// districts, a two-tier street grid, an accent route with a rounded junction
+/// bend layered glow → core, a white heading chevron, a teardrop destination
+/// pin and a haloed position puck. A static scene — it repaints only on theme
 /// change, so it costs nothing while directions tick.
 class _MiniMapPainter extends CustomPainter {
   const _MiniMapPainter({required this.theme});
@@ -1650,37 +1678,104 @@ class _MiniMapPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final Rect rect = Offset.zero & size;
+
+    // Base: a soft top-to-bottom gradient so the panel reads as a lit map
+    // surface rather than a flat grey block.
     canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = theme.foreground.withValues(alpha: 0.05),
+      rect,
+      Paint()
+        ..shader = ui.Gradient.linear(rect.topCenter, rect.bottomCenter, <Color>[
+          theme.foreground.withValues(alpha: 0.10),
+          theme.foreground.withValues(alpha: 0.03),
+        ]),
     );
 
-    // Street grid at map-ish offsets.
-    final Paint street = Paint()
-      ..color = theme.foreground.withValues(alpha: 0.10)
-      ..strokeWidth = 3
+    // Two faint districts give the grid some geography to sit on: a block up
+    // top-left, a softly accent-tinted body bottom-right (a park / water feel).
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          size.width * 0.05,
+          size.height * 0.08,
+          size.width * 0.24,
+          size.height * 0.32,
+        ),
+        const Radius.circular(5),
+      ),
+      Paint()..color = theme.foreground.withValues(alpha: 0.06),
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          size.width * 0.62,
+          size.height * 0.5,
+          size.width * 0.32,
+          size.height * 0.42,
+        ),
+        const Radius.circular(7),
+      ),
+      Paint()..color = theme.accent.withValues(alpha: 0.05),
+    );
+
+    // Street grid, two tiers: a couple of wide avenues, then thinner streets.
+    final Paint avenue = Paint()
+      ..color = theme.foreground.withValues(alpha: 0.11)
+      ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
-    for (final double fy in <double>[0.28, 0.62, 0.88]) {
+    final Paint street = Paint()
+      ..color = theme.foreground.withValues(alpha: 0.06)
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+    for (final double fy in <double>[0.30, 0.66]) {
       final double y = size.height * fy;
-      canvas.drawLine(Offset(6, y), Offset(size.width - 6, y), street);
+      canvas.drawLine(Offset(7, y), Offset(size.width - 7, y), avenue);
     }
-    for (final double fx in <double>[0.18, 0.42, 0.71, 0.9]) {
+    for (final double fx in <double>[0.34, 0.72]) {
       final double x = size.width * fx;
-      canvas.drawLine(Offset(x, 6), Offset(x, size.height - 6), street);
+      canvas.drawLine(Offset(x, 7), Offset(x, size.height - 7), avenue);
+    }
+    for (final double fy in <double>[0.16, 0.48, 0.84]) {
+      final double y = size.height * fy;
+      canvas.drawLine(Offset(7, y), Offset(size.width - 7, y), street);
+    }
+    for (final double fx in <double>[0.17, 0.53, 0.88]) {
+      final double x = size.width * fx;
+      canvas.drawLine(Offset(x, 7), Offset(x, size.height - 7), street);
     }
 
-    // The route: bottom-left, a junction bend, then off to the top-right.
+    // The route: bottom-left origin, a rounded junction bend, then a sweep to
+    // the top-right destination.
+    final Offset start = Offset(size.width * 0.14, size.height * 0.84);
+    final Offset bend = Offset(size.width * 0.46, size.height * 0.84);
+    final Offset bend2 = Offset(size.width * 0.46, size.height * 0.30);
+    final Offset dest = Offset(size.width * 0.9, size.height * 0.30);
+    const double r = 13;
     final Path route = Path()
-      ..moveTo(size.width * 0.12, size.height * 0.88)
-      ..lineTo(size.width * 0.42, size.height * 0.88)
-      ..lineTo(size.width * 0.42, size.height * 0.28)
-      ..lineTo(size.width * 0.9, size.height * 0.28);
+      ..moveTo(start.dx, start.dy)
+      ..lineTo(bend.dx - r, bend.dy)
+      ..quadraticBezierTo(bend.dx, bend.dy, bend.dx, bend.dy - r)
+      ..lineTo(bend2.dx, bend2.dy + r)
+      ..quadraticBezierTo(bend2.dx, bend2.dy, bend2.dx + r, bend2.dy)
+      ..lineTo(dest.dx, dest.dy);
+
+    // Layered stroke: a blurred glow casing, a mid band, then the bright core.
     canvas.drawPath(
       route,
       Paint()
-        ..color = theme.accent.withValues(alpha: 0.28)
+        ..color = theme.accent.withValues(alpha: 0.16)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 9
+        ..strokeWidth = 11
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    );
+    canvas.drawPath(
+      route,
+      Paint()
+        ..color = theme.accent.withValues(alpha: 0.38)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 7
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
@@ -1694,19 +1789,44 @@ class _MiniMapPainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
-    // Position dot (halo + core) at the start; destination marker at the end.
-    final Offset pos = Offset(size.width * 0.12, size.height * 0.88);
-    canvas.drawCircle(
-      pos,
-      9,
-      Paint()..color = theme.accent.withValues(alpha: 0.25),
+    // A white heading chevron riding up the vertical leg.
+    final double cx = bend2.dx;
+    final double cy = size.height * 0.57;
+    canvas.drawPath(
+      Path()
+        ..moveTo(cx - 4, cy + 4)
+        ..lineTo(cx, cy)
+        ..lineTo(cx + 4, cy + 4),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.85)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round,
     );
-    canvas.drawCircle(pos, 5, Paint()..color = theme.accent);
-    canvas.drawCircle(pos, 2.2, Paint()..color = theme.background);
 
-    final Offset dest = Offset(size.width * 0.9, size.height * 0.28);
-    canvas.drawCircle(dest, 5.5, Paint()..color = theme.foreground);
-    canvas.drawCircle(dest, 2.5, Paint()..color = theme.background);
+    // Destination: a teardrop pin — rounded head, pointed tail, punched dot.
+    const double pinR = 5.5;
+    final Offset head = Offset(dest.dx, dest.dy - pinR * 1.7);
+    canvas.drawPath(
+      Path()
+        ..moveTo(dest.dx, dest.dy)
+        ..lineTo(head.dx - pinR * 0.72, head.dy)
+        ..lineTo(head.dx + pinR * 0.72, head.dy)
+        ..close(),
+      Paint()..color = theme.foreground,
+    );
+    canvas.drawCircle(head, pinR, Paint()..color = theme.foreground);
+    canvas.drawCircle(head, 2.2, Paint()..color = theme.background);
+
+    // Position puck at the origin: soft halo, white ring, accent core.
+    canvas.drawCircle(
+      start,
+      10,
+      Paint()..color = theme.accent.withValues(alpha: 0.22),
+    );
+    canvas.drawCircle(start, 6.5, Paint()..color = Colors.white);
+    canvas.drawCircle(start, 4.6, Paint()..color = theme.accent);
   }
 
   @override
