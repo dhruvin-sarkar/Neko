@@ -51,6 +51,24 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
 | **Feeding Timers** | Countdowns so mealtime's never a cat-astrophe |
 | **Voice Assistant** | Voice chat, right in the notch |
 
+Like Apple's, it lives in three sizes — and steps aside when you're not looking:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle: notch enabled
+    Idle --> Compact: activity arrives
+    Compact --> Expanded: tap / swipe down
+    Expanded --> Compact: swipe up
+    Compact --> Minimized: after a short peek
+    Minimized --> Compact: tap to bring back
+    Compact --> Idle: activity ends
+    note right of Minimized
+      Music and alerts recede after their peek.
+      Live activities — maps, timers, calls —
+      stay pinned until you dismiss them.
+    end note
+```
+
 ### Core Features
 
 | Feature | What it does |
@@ -111,22 +129,61 @@ The Flutter app is the main surface; a native Android overlay service draws the 
 
 ```mermaid
 flowchart LR
-    subgraph app["Flutter App"]
-        UI["UI · Material 3"]
-        Anim["Lottie animations"]
+    You([" You "])
+
+    subgraph app["📱 Flutter App"]
+        UI["Chat · Profiles<br/>Onboarding · Settings"]
+        Voice["Hey Neko<br/>wake word + STT"]
     end
-    subgraph native["Android Native"]
-        Overlay["Dual-engine overlay<br/>Dynamic Island"]
+
+    subgraph native["⚙️ Android Native"]
+        Overlay["Dynamic Island<br/>overlay engine"]
+        Listener["Notification &<br/>media listener"]
     end
-    subgraph fb["Firebase"]
-        Auth["Authentication"]
+
+    subgraph cloud["☁️ Firebase"]
+        Auth["Auth"]
         Store["Firestore"]
         Files["Storage"]
     end
+
+    AI["🤖 AI proxy"]
+
+    You --> UI
+    You -. "Hey Neko" .-> Voice
+    Voice --> AI
     UI -->|platform channel| Overlay
+    Listener --> Overlay
     UI --> Auth
     UI --> Store
     UI --> Files
+
+    classDef appcls fill:#ff6f61,stroke:#e0523f,color:#ffffff
+    classDef natcls fill:#2ec4b6,stroke:#1f9c90,color:#ffffff
+    classDef cloudcls fill:#f4a340,stroke:#d4842a,color:#ffffff
+    classDef aicls fill:#7c6bff,stroke:#5f4fd6,color:#ffffff
+    class UI,Voice appcls
+    class Overlay,Listener natcls
+    class Auth,Store,Files cloudcls
+    class AI aicls
+```
+
+Ask it something out loud and the answer comes back up top — not three taps deep in a menu:
+
+```mermaid
+sequenceDiagram
+    actor You
+    participant Neko as Neko app
+    participant STT as Speech-to-text
+    participant AI as AI assistant
+    participant Notch as Dynamic Island
+    You->>Neko: "Hey Neko, when did I last feed her?"
+    Neko->>STT: wake word detected
+    STT-->>Neko: transcript
+    Neko->>AI: question + cat context
+    AI-->>Neko: answer
+    Neko->>Notch: surface the reply
+    Notch-->>You: glanceable answer
 ```
 
 ## Prerequisites
