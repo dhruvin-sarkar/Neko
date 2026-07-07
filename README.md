@@ -136,7 +136,6 @@ flutter build apk --release --dart-define-from-file=.env \
   --obfuscate --split-debug-info=build/debug-symbols
 ```
 
-> A build run **without** `--dart-define-from-file=.env` shows a clear "configuration missing" screen rather than crashing — that's expected, just add the flag.
  
 ## Configuration
  
