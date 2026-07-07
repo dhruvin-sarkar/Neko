@@ -6,6 +6,15 @@ actually changed. Some findings were stale by the time I got to them; some
 needed a real fix; a few I decided to leave alone on purpose, and I say why.
 Everything below is against the code as it stands now, not the report text.
 
+## Contents
+
+- [1. Security (Aikido)](#1-security-aikido)
+- [2. Static Analysis (SonarQube)](#2-static-analysis-sonarqube)
+- [3. Build and environment](#3-build-and-environment)
+- [4. Design system and UX debt](#4-design-system-and-ux-debt)
+- [5. Notch](#5-notch)
+- [6. Decisions that were still open](#6-decisions-that-were-still-open)
+
 ---
 
 ## 1. Security (Aikido)
@@ -22,9 +31,11 @@ survived the sign-out and could be written back under the next account.
 **Email enumeration on sign-up.** The register error for an already-registered
 email was distinct enough to probe with. I softened it to a generic message that
 doesn't confirm whether the email exists. This reduces the signal but doesn't
-fully close it — Firebase's own email-enumeration protection is a console
-setting, which is the real fix and is a manual step, not something I can do from
-the code.
+fully close it.
+
+> [!IMPORTANT]
+> Firebase's own email-enumeration protection is a console setting, which is the
+> real fix and is a manual step, not something I can do from the code.
 
 **Chat content leaking into logs on a bad AI response.** When the AI proxy
 returned something that failed JSON parsing, the raw body (which can contain the
@@ -40,8 +51,11 @@ compile-time values injected with `--dart-define-from-file=.env` (see
 exposure but doesn't eliminate it: a compile-time constant can still be pulled
 out of a decompiled binary. Fully removing it would mean a server-side relay that
 holds the key and checks a Firebase token before forwarding, which is more than a
-same-day change. Rotating the current token is a manual step on the Hack Club
-dashboard — I left that to be done by hand, since it's a credential change.
+same-day change.
+
+> [!CAUTION]
+> Rotating the current token is a manual step on the Hack Club dashboard — I left
+> that to be done by hand, since it's a credential change.
 
 **BootReceiver accepting spoofed broadcasts.** The receiver was exported, so any
 app could send it `QUICKBOOT_POWERON` and kick off the overlay restore. I set
