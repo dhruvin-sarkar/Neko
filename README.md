@@ -15,7 +15,7 @@ Neko is the purr-fect (and honestly, the only) cat owner companion app you'll ne
  
 ### Overview
 </div>
-Neko was born out of pure cat-astrophe, juggling five different apps just to remember feeding times or vet visits something was actually wrong. So this app was created to bring it all together in one meow-nificent place, complete with an AI companion who talks back and guides you through it all.
+Neko was born out of pure cat-astrophe, juggling five different apps just to remember feeding times or vet visits something was actually wrong. So this app was created to bring it all together in one meow-nificent place
 
 <div align='center'>
   
@@ -36,7 +36,6 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
 - ***Downloads & Notifications*** mirrors system notifications live
 - ***Feeding Timers*** countdowns so mealtime's never a cat-astrophe
 - ***Voice Assistant*** voice chat, right in the notch
-- ***Dual-Engine Machina*** *(/ref)* separate overlay engine, keeps purring after app close
 
 <div align='center'>
 
@@ -51,7 +50,6 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
 - ***Photo Capture & Gallery*** fur-tographs, synced via Firebase
 - ***Guided Onboarding*** Duolingo-style walkthrough
 - ***Animations*** Lottie cat states + custom NekoMotion transitions
-- ***Keyboard Cat*** a little easter egg, because why not
 - ***Settings*** themes, sounds, feature toggles, Notch on/off
   
 <table align="center">
@@ -110,9 +108,6 @@ Before you can let the cat out of the bag, make sure you have:
 - ***Android Studio***, with:
   - Android SDK (API level 26 or higher; the app's minSdk is 24)
   - An emulator or physical Android device — a physical device is strongly recommended for testing the Notch overlay
-- ***A Firebase project***, with the following enabled:
-  - Authentication (Email/Password + Google Sign-In)
-  - Cloud Firestore
 
 ## Running the Project
  
@@ -129,11 +124,7 @@ flutter pub get
 4. Run the app on a connected device or emulator. Config is injected **at build time** via `--dart-define-from-file`, so it's never bundled as a readable file inside the APK:
 ```sh
 flutter run --dart-define-from-file=.env
-```
-5. To build a release APK (Dart obfuscation on; keep the symbols directory out of version control — it's what decodes a release stack trace and must never ship):
-```sh
-flutter build apk --release --dart-define-from-file=.env \
-  --obfuscate --split-debug-info=build/debug-symbols
+
 ```
 
  
@@ -144,9 +135,7 @@ A few things need to be set up before the app will actually purr to life. Copy `
 | Configuration | Purpose | Where to set it |
 |---|---|---|
 | `google-services.json` | Firebase project credentials for Android | Place in `android/app/` (gitignored) |
-| Firebase values | Auth + Firestore (`FIREBASE_API_KEY`, `FIREBASE_PROJECT_ID`, app IDs, …) | In `.env`; see `.env.example` |
 | `HACKCLUB_API_KEY` | Powers the AI chat and voice assistant — free at <https://ai.hackclub.com/dashboard> | In `.env` |
-| `SEARCH_API_KEY` | *Optional.* In-app web-results list for "best…/which…" queries; without it, those offer a one-tap Google search instead | In `.env` |
 | Google Sign-In | Required for Google auth | Enable in the Firebase console (Authentication → Sign-in method) and register your signing SHA-1 there. Email/Password works without this |
 | Dynamic Island overlay permission | Enables the system-level overlay | Requested at runtime; toggle on/off in Settings (off by default) |
 | Notification & microphone permissions | Notification mirroring + "Hey Neko" voice | Requested at runtime (both features off by default) |
