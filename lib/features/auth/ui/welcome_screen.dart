@@ -68,12 +68,15 @@ class _WelcomeMark extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       // The app's own paw art, not the stock Material glyph — this is the
-      // brand's first moment, so even the fallback stays on-brand.
+      // brand's first moment, so it stays on-brand. Shown in its natural
+      // colours (pink beans + black outlines): a solid `color:` tint would
+      // repaint every pixel one flat coral and collapse the toes and pad into
+      // a shapeless blob.
       child: Image.asset(
         'assets/images/paw.png',
-        width: 72,
-        height: 72,
-        color: AppColors.primary,
+        width: 84,
+        height: 84,
+        fit: BoxFit.contain,
       ),
     );
 
