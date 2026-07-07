@@ -19,6 +19,8 @@ Neko is the purr-fect (and honestly, the only) cat owner companion app you'll ne
 
 </div>
 
+<img align="right" width="250" src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Maneki.gif?raw=true" alt="Maneki-neko waving">
+
 ## Contents
 
 - [Overview](#overview)
@@ -33,25 +35,22 @@ Neko is the purr-fect (and honestly, the only) cat owner companion app you'll ne
 - [Trying the headline features](#trying-the-headline-features)
 - [Security](#security)
 
-## Overview
-
-Neko was born out of pure cat-astrophe, juggling five different apps just to remember feeding times or vet visits something was actually wrong. So this app was created to bring it all together in one meow-nificent place
+<br clear="all"/>
 
 ## Features
 
 ### The Dynamic Island
 
-Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Island, but with claws.
+Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Island.
 
-| Live activity | What it surfaces |
-|---|---|
-| **Music Playback** | Album art, track info, playback controls |
-| **Calls & Navigation** | Incoming calls, active directions, no cat-terruptions missed |
-| **Downloads & Notifications** | Mirrors system notifications live |
-| **Feeding Timers** | Countdowns so mealtime's never a cat-astrophe |
-| **Voice Assistant** | Voice chat, right in the notch |
-
-Like Apple's, it lives in three sizes — and steps aside when you're not looking:
+<table align="center">
+  <tr><th>Live activity</th><th>What it surfaces</th></tr>
+  <tr><td><b>Music Playback</b></td><td>Album art, track info, playback controls</td></tr>
+  <tr><td><b>Calls &amp; Navigation</b></td><td>Incoming calls, active directions, no interruptions missed</td></tr>
+  <tr><td><b>Downloads &amp; Notifications</b></td><td>Mirrors system notifications live</td></tr>
+  <tr><td><b>Feeding Timers</b></td><td>Countdowns so mealtime's never a cat-astrophe</td></tr>
+  <tr><td><b>Voice Assistant</b></td><td>Voice chat, right in the notch</td></tr>
+</table>
 
 ```mermaid
 stateDiagram-v2
@@ -71,16 +70,17 @@ stateDiagram-v2
 
 ### Core Features
 
-| Feature | What it does |
-|---|---|
-| **AI Chat** | Purr-sonal chats with full history |
-| **Voice Recognition** | "Hey Neko" wake word, background listening |
-| **Cat Profiles** | Purr-files for as many cats as you can herd |
-| **Document Management** | Vet records, digital pet passports |
-| **Photo Capture & Gallery** | Fur-tographs, synced via Firebase |
-| **Guided Onboarding** | Duolingo-style walkthrough |
-| **Animations** | Lottie cat states + custom NekoMotion transitions |
-| **Settings** | Themes, sounds, feature toggles, Notch on/off |
+<table align="center">
+  <tr><th>Feature</th><th>What it does</th></tr>
+  <tr><td><b>AI Chat</b></td><td>Purr-sonal chats with full history</td></tr>
+  <tr><td><b>Voice Recognition</b></td><td>"Hey Neko" wake word, background listening</td></tr>
+  <tr><td><b>Cat Profiles</b></td><td>Purr-files for as many cats as you can herd</td></tr>
+  <tr><td><b>Document Management</b></td><td>Vet records, digital pet passports</td></tr>
+  <tr><td><b>Photo Capture &amp; Gallery</b></td><td>Fur-tographs, synced via Firebase</td></tr>
+  <tr><td><b>Guided Onboarding</b></td><td>Duolingo-style walkthrough</td></tr>
+  <tr><td><b>Animations</b></td><td>Lottie cat states + custom NekoMotion transitions</td></tr>
+  <tr><td><b>Settings</b></td><td>Themes, sounds, feature toggles, Notch on/off</td></tr>
+</table>
 
 <table align="center">
   <tr>
@@ -115,13 +115,14 @@ stateDiagram-v2
 
 ## Tech Stack
 
-| Technology | Role |
-|---|---|
-| **Flutter** | The framework holding this whole cat-tastrophe together |
-| **Firebase** | Authentication, Firestore, and Storage |
-| **Android native overlay service** | Dual-engine implementation powering the Dynamic Island |
-| **Lottie** | In-app animations |
-| **Material 3** | Component system |
+<table align="center">
+  <tr><th>Technology</th><th>Role</th></tr>
+  <tr><td><b>Flutter</b></td><td>The framework holding this whole cat-tastrophe together</td></tr>
+  <tr><td><b>Firebase</b></td><td>Authentication, Firestore, and Storage</td></tr>
+  <tr><td><b>Android native overlay service</b></td><td>Dual-engine implementation powering the Dynamic Island</td></tr>
+  <tr><td><b>Lottie</b></td><td>In-app animations</td></tr>
+  <tr><td><b>Material 3</b></td><td>Component system</td></tr>
+</table>
 
 ## Architecture at a glance
 
@@ -223,13 +224,14 @@ Before you can let the cat out of the bag, make sure you have:
 
 A few things need to be set up before the app will actually purr to life. Copy `.env.example` to `.env` and fill it in — every value is injected at build time by the `--dart-define-from-file=.env` flag above (nothing is read from a bundled asset at runtime):
 
-| Configuration | Purpose | Where to set it |
-|---|---|---|
-| `google-services.json` | Firebase project credentials for Android | Place in `android/app/` (gitignored) |
-| `HACKCLUB_API_KEY` | Powers the AI chat and voice assistant — free at <https://ai.hackclub.com/dashboard> | In `.env` |
-| Google Sign-In | Required for Google auth | Enable in the Firebase console (Authentication → Sign-in method) and register your signing SHA-1 there. Email/Password works without this |
-| Dynamic Island overlay permission | Enables the system-level overlay | Requested at runtime; toggle on/off in Settings (off by default) |
-| Notification & microphone permissions | Notification mirroring + "Hey Neko" voice | Requested at runtime (both features off by default) |
+<table align="center">
+  <tr><th>Configuration</th><th>Purpose</th><th>Where to set it</th></tr>
+  <tr><td><code>google-services.json</code></td><td>Firebase project credentials for Android</td><td>Place in <code>android/app/</code> (gitignored)</td></tr>
+  <tr><td><code>HACKCLUB_API_KEY</code></td><td>Powers the AI chat and voice assistant — free at <a href="https://ai.hackclub.com/dashboard">ai.hackclub.com/dashboard</a></td><td>In <code>.env</code></td></tr>
+  <tr><td>Google Sign-In</td><td>Required for Google auth</td><td>Enable in the Firebase console (Authentication → Sign-in method) and register your signing SHA-1 there. Email/Password works without this</td></tr>
+  <tr><td>Dynamic Island overlay permission</td><td>Enables the system-level overlay</td><td>Requested at runtime; toggle on/off in Settings (off by default)</td></tr>
+  <tr><td>Notification &amp; microphone permissions</td><td>Notification mirroring + "Hey Neko" voice</td><td>Requested at runtime (both features off by default)</td></tr>
+</table>
 
 ## Trying the headline features
 
