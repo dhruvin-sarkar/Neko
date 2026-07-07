@@ -75,6 +75,15 @@ flowchart TD
     UI <--> Firestore
     UI <--> Storage
     NotchEngine -. persists after app close .-> NotificationListener
+
+    classDef appcls fill:#ff6f61,stroke:#e0523f,color:#ffffff
+    classDef natcls fill:#2ec4b6,stroke:#1f9c90,color:#ffffff
+    classDef cloudcls fill:#f4a340,stroke:#d4842a,color:#ffffff
+    classDef aicls fill:#7c6bff,stroke:#5f4fd6,color:#ffffff
+    class UI,VoicePipeline,AIClient appcls
+    class NotchEngine,NotificationListener,MediaSession natcls
+    class Auth,Firestore,Storage cloudcls
+    class AIAPI aicls
 ```
 
 **Walking through it:**
@@ -83,6 +92,55 @@ flowchart TD
 - **Native Android overlay service** is a separate engine that draws the Notch UI over other apps and keeps running after the Flutter app is backgrounded or killed. It listens to system notification and media session events directly so it can show calls, music, and downloads without the Flutter app being in the foreground. Flutter and the overlay communicate over Android platform channels.
 - **Firebase** is the shared source of truth — Auth gates access, Firestore holds structured data (profiles, feeding schedules, chat history, mood logs), and Storage holds photos and vet documents. Both the app UI and (indirectly, through the app) the overlay draw from this same backend, so a feeding timer set in the Notch reflects the same schedule stored in Firestore.
 - **HackClub AI API key** is called from the Flutter side only, keyed via `.env`, and is the single dependency both the chat feature and the voice assistant route through.
+
+### The "Hey Neko" voice flow
+
+A spoken question is answered on the spot instead of buried three taps deep:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant App as Flutter app
+    participant STT as speech_to_text
+    participant AI as Hack Club AI
+    participant Notch as Notch overlay
+    User->>App: "Hey Neko, when did I last feed her?"
+    App->>STT: wake word matched, capture speech
+    STT-->>App: transcript
+    App->>AI: prompt + cat context
+    AI-->>App: answer
+    App->>Notch: push assistant activity
+    Notch-->>User: reply shown in the island
+```
+
+### The Firestore data model
+
+Everything is scoped under the signed-in user; the security rules deny anything outside `users/{uid}`:
+
+```mermaid
+erDiagram
+    USER ||--o{ CAT : owns
+    USER ||--o{ CHAT_HISTORY : keeps
+    CAT ||--o{ FEEDING_SCHEDULE : has
+    CAT ||--o{ MOOD_LOG : has
+    CAT ||--o{ DOCUMENT : has
+    CAT ||--o{ PHOTO : has
+```
+
+### Dynamic Island states
+
+The overlay is a small state machine — idle until something happens, then a compact pill that can expand or step aside:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Compact: activity arrives
+    Compact --> Expanded: tap / swipe
+    Expanded --> Compact: collapse
+    Compact --> Minimized: transient peek ends
+    Minimized --> Compact: tap
+    Compact --> Idle: activity removed
+```
 
 ---
 
@@ -106,6 +164,14 @@ flowchart TD
 
 > [!IMPORTANT]
 > Because the overlay and voice features depend on OS-level permissions and hardware (microphone, notification access, draw-over-other-apps), physical-device testing was prioritized over emulator testing wherever those features were involved.
+
+```mermaid
+pie showData
+    title Manual behaviour-test outcomes
+    "Passed" : 7
+    "Working, known issue" : 1
+    "In progress" : 1
+```
 
 ---
 
