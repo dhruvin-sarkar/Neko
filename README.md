@@ -109,7 +109,7 @@ stateDiagram-v2
   </tr>
   <tr>
     <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Themes.gif?raw=true" width=300px></td>
-    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Notch.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Voice.gif?raw=true" width=300px></td>
   </tr>
 </table>
 
