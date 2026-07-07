@@ -406,9 +406,15 @@ class _NotchCardState extends ConsumerState<_NotchCard> {
     if (_busy) return;
     setState(() => _busy = true);
     unawaited(ref.read(feedbackServiceProvider).onSelect());
-    await ref.read(notchControllerProvider.notifier).setEnabled(value);
+    // try/finally so _busy always resets: if setEnabled throws (a plugin
+    // PlatformException from the overlay/permission path), the switch must not
+    // be left permanently disabled — that's the "can't turn it on" bug.
+    try {
+      await ref.read(notchControllerProvider.notifier).setEnabled(value);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
     if (!mounted) return;
-    setState(() => _busy = false);
     // Turning it on silently fails if the overlay permission is denied — tell the
     // user instead of just snapping the switch back to off.
     if (value && !ref.read(notchControllerProvider).enabled) {
@@ -484,9 +490,14 @@ class _HeyNekoCardState extends ConsumerState<_HeyNekoCard> {
     if (_busy) return;
     setState(() => _busy = true);
     unawaited(ref.read(feedbackServiceProvider).onSelect());
-    await ref.read(wakeWordControllerProvider.notifier).setEnabled(value);
+    // try/finally so _busy always resets: a throw from setEnabled (mic/plugin
+    // path) must not leave the switch permanently disabled.
+    try {
+      await ref.read(wakeWordControllerProvider.notifier).setEnabled(value);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
     if (!mounted) return;
-    setState(() => _busy = false);
     // Enabling silently fails when the mic permission is declined — say so
     // instead of just snapping the switch back to off.
     if (value && !ref.read(wakeWordControllerProvider).enabled) {
