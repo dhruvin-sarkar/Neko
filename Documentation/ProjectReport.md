@@ -1,15 +1,23 @@
 # Neko Project Report
 
+## Contents
+
+- [1. Project Overview](#1-project-overview)
+- [2. Technology Stack](#2-technology-stack)
+- [3. Technical Architecture](#3-technical-architecture)
+- [4. Testing Matrix](#4-testing-matrix)
+- [5. Tools Used](#5-tools-used)
+
 ---
 
 ## 1. Project Overview
 
 ### a. Why we're building this
- 
+
 You don't remember to check a cat-care app, you remember when your phone lights up. That's the gap Neko starts from, feeding schedules to vet records exist as apps you have to *go find*, so they get ignored until something's already wrong. iPhone users have had a Dynamic Island quietly surfacing what matters for years; Android has nothing like it, and nothing built for pet owners at all. So instead of building another tracker to forget about, we put the cat on screen, always, a live Notch that never gets hidden away, and gave it a voice, so "Hey Neko, when did I last feed her?" gets answered on the spot instead of buried three taps deep in a menu.
 
 ### b. How it relates to the theme
- 
+
 This fits #HackTheKitty because its two flagship features are literally an AI and a Dynamic-Island-style Notch, the app is built around a persistent, cat-branded overlay (something Android doesn't have natively) driven by a conversational AI voice assistant, not a checklist app with a cat icon slapped on it.
 
 ---
@@ -34,27 +42,27 @@ Neko is really two cooperating runtimes: the main Flutter app the user sees, and
 
 ```mermaid
 flowchart TD
-    User([User])
+    User(["User"])
 
     subgraph FlutterApp["Flutter App (lib/)"]
-        UI[App UI: Chat, Profiles, Settings, Onboarding]
-        VoicePipeline[Voice Pipeline: Hey Neko wake word + STT]
-        AIClient[AI Chat Client]
+        UI["App UI: Chat, Profiles, Settings, Onboarding"]
+        VoicePipeline["Voice Pipeline: Hey Neko wake word + STT"]
+        AIClient["AI Chat Client"]
     end
 
     subgraph NativeOverlay["Android Native Overlay Service (Kotlin)"]
-        NotchEngine[Dual-Engine Overlay: Notch UI]
-        NotificationListener[Notification Listener]
-        MediaSession[Media Session Listener]
+        NotchEngine["Dual-Engine Overlay: Notch UI"]
+        NotificationListener["Notification Listener"]
+        MediaSession["Media Session Listener"]
     end
 
     subgraph Backend["Firebase Backend"]
-        Auth[Authentication]
-        Firestore[(Firestore: profiles, schedules, chat history)]
-        Storage[(Storage: photos, documents)]
+        Auth["Authentication"]
+        Firestore[("Firestore: profiles, schedules, chat history")]
+        Storage[("Storage: photos, documents")]
     end
 
-    AIAPI
+    AIAPI["Hack Club AI API"]
 
     User --> UI
     User -. wake word .-> VoicePipeline
@@ -66,7 +74,7 @@ flowchart TD
     UI <--> Auth
     UI <--> Firestore
     UI <--> Storage
-    NotchEngine -.persists after app close.-> NotificationListener
+    NotchEngine -. persists after app close .-> NotificationListener
 ```
 
 **Walking through it:**
@@ -76,12 +84,12 @@ flowchart TD
 - **Firebase** is the shared source of truth — Auth gates access, Firestore holds structured data (profiles, feeding schedules, chat history, mood logs), and Storage holds photos and vet documents. Both the app UI and (indirectly, through the app) the overlay draw from this same backend, so a feeding timer set in the Notch reflects the same schedule stored in Firestore.
 - **HackClub AI API key** is called from the Flutter side only, keyed via `.env`, and is the single dependency both the chat feature and the voice assistant route through.
 
-
 ---
 
 ## 4. Testing Matrix
 
-Neko does not have an automated unit/widget test suite covering app behavior. Validation was done manually against physical devices and emulators, tracked against the project's own working checklist. Below reflects what has been verified and what was still open as of the latest commit:
+> [!NOTE]
+> Neko does not have an automated unit/widget test suite covering app behavior. Validation was done manually against physical devices and emulators, tracked against the project's own working checklist. Below reflects what has been verified and what was still open as of the latest commit.
 
 | Feature | How It Was Tested | Result |
 |---|---|---|
@@ -96,7 +104,8 @@ Neko does not have an automated unit/widget test suite covering app behavior. Va
 | Onboarding flow | Manual walkthrough on fresh install | Passed |
 | Static analysis / code quality | Automated scans (not app-behavior tests) via CodeRabbit, SonarQube, and Aikido | Scans planned/run as part of final polish pass, findings addressed before submission |
 
-Because the overlay and voice features depend on OS-level permissions and hardware (microphone, notification access, draw-over-other-apps), physical-device testing was prioritized over emulator testing wherever those features were involved.
+> [!IMPORTANT]
+> Because the overlay and voice features depend on OS-level permissions and hardware (microphone, notification access, draw-over-other-apps), physical-device testing was prioritized over emulator testing wherever those features were involved.
 
 ---
 
@@ -104,12 +113,14 @@ Because the overlay and voice features depend on OS-level permissions and hardwa
 
 Beyond the runtime tech stack, the following tools supported development, review, and shipping:
 
-- **Android Studio** primary IDE for Android-side native overlay development and device testing
-- **VS Code** (`.vscode/` config in repo) used alongside Android Studio for Flutter/Dart work
-- **Kiro** spec-driven development workflow (see `.kiro/specs/`), used for planning features such as page transition animations
-- **CodeRabbit** automated code review scans
-- **SonarQube** static code quality/analysis scanning
-- **Aikido** security scanning
-- **Cap** screen recording tool used for capturing the demo video
-- **Firebase Console** managing Authentication, Firestore, and Storage configuration
-- **Git/GitHub** version control and collaboration (126 commits across the team)
+| Tool | Role |
+|---|---|
+| **Android Studio** | Primary IDE for Android-side native overlay development and device testing |
+| **VS Code** | Used alongside Android Studio for Flutter/Dart work (`.vscode/` config in repo) |
+| **Kiro** | Spec-driven development workflow (see `.kiro/specs/`), used for planning features such as page transition animations |
+| **CodeRabbit** | Automated code review scans |
+| **SonarQube** | Static code quality/analysis scanning |
+| **Aikido** | Security scanning |
+| **Cap** | Screen recording tool used for capturing the demo video |
+| **Firebase Console** | Managing Authentication, Firestore, and Storage configuration |
+| **Git/GitHub** | Version control and collaboration (126 commits across the team) |
