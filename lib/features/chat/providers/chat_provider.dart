@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/providers/firebase_providers.dart';
 import '../../../shared/services/search_service.dart';
 import '../../onboarding/models/cat_profile.dart';
 import '../../profiles/providers/profile_provider.dart';
@@ -46,6 +47,14 @@ class ChatController extends Notifier<ChatState> {
 
   @override
   ChatState build() {
+    // The active transcript belongs to one account. Watching the uid re-runs
+    // this build on every sign-in/out, so the previous user's messages are
+    // dropped before they can render — or be saved — under the next account
+    // (the history provider already rebuilds per uid; without this, the live
+    // conversation survived in memory across a sign-out and leaked).
+    ref.watch(authStateChangesProvider.select((v) => v.valueOrNull?.uid));
+    _sub?.cancel();
+    _sub = null;
     _conversationId = _nextId();
     ref.onDispose(() => _sub?.cancel());
     return const ChatState();
@@ -94,8 +103,16 @@ class ChatController extends Notifier<ChatState> {
 
     if (wantsWeb && searchSvc.hasKey) {
       final List<SearchResult> results = await searchSvc.search(trimmed);
-      // Bail if the turn was stopped / a new chat started during the search.
-      if (!state.isGenerating) return;
+      // Bail unless THIS turn is still the live one: the ~8s search can outlive
+      // a Stop or a New chat, and a bare isGenerating check would let the stale
+      // result hijack a newer turn. The placeholder (unique assistantId) must
+      // still exist and still be streaming.
+      final bool stillThisTurn =
+          state.isGenerating &&
+          state.messages.any(
+            (ChatMessage m) => m.id == assistantId && m.isStreaming,
+          );
+      if (!stillThisTurn) return;
       if (results.isNotEmpty) {
         _setAssistantResults(assistantId, results);
         state = state.copyWith(isGenerating: false);
@@ -136,7 +153,7 @@ class ChatController extends Notifier<ChatState> {
           onError: (Object error) {
             final String message = error is ChatException
                 ? error.message
-                : 'Sorry — something went wrong. Please try again.';
+                : 'Mrow — something tripped me up mid-pounce. Try that again?';
             _setAssistant(
               assistantId,
               message,
@@ -261,11 +278,21 @@ class ChatController extends Notifier<ChatState> {
   }
 
   void _saveCurrent() {
-    if (state.messages.isEmpty) return;
-    final String title = state.messages
+    // Normalize before archiving — one choke point for every save path
+    // (onDone, onError, stop, voice/safety turn, newChat, load): an archived
+    // conversation must never carry a still-"typing" bubble (newChat/load can
+    // fire mid-stream) or an empty assistant placeholder (Stop before the first
+    // token). Un-stream survivors; drop empty assistant messages.
+    final List<ChatMessage> archived = <ChatMessage>[
+      for (final ChatMessage m in state.messages)
+        if (!(m.role == ChatRole.assistant && m.content.trim().isEmpty))
+          m.isStreaming ? m.copyWith(isStreaming: false) : m,
+    ];
+    if (archived.isEmpty) return;
+    final String title = archived
         .firstWhere(
           (m) => m.isUser && m.content.trim().isNotEmpty,
-          orElse: () => state.messages.first,
+          orElse: () => archived.first,
         )
         .content
         .trim();
@@ -276,7 +303,7 @@ class ChatController extends Notifier<ChatState> {
             id: _conversationId,
             title: title.isEmpty ? 'Conversation' : title,
             updatedAt: DateTime.now(),
-            messages: state.messages,
+            messages: archived,
           ),
         );
   }

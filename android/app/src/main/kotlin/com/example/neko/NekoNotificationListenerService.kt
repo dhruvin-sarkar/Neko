@@ -9,12 +9,13 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.net.Uri
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
-import java.net.URL
+import java.net.URI
 
 /// Mirrors real system notifications and now-playing media into the notch.
 /// Requires the user to grant notification access (Settings → Notification
@@ -62,6 +63,7 @@ class NekoNotificationListenerService : NotificationListenerService() {
         try {
             sessionManager?.removeOnActiveSessionsChangedListener(sessionsListener)
         } catch (_: Exception) {
+            // Already unregistered / listener access revoked — nothing to undo.
         }
         detachController()
     }
@@ -77,6 +79,7 @@ class NekoNotificationListenerService : NotificationListenerService() {
             val component = ComponentName(this, NekoNotificationListenerService::class.java)
             bindMediaController(msm.getActiveSessions(component))
         } catch (_: Exception) {
+            // Media resync is best-effort; notifications below still resync.
         }
         try {
             for (sbn in activeNotifications ?: emptyArray()) {
@@ -88,6 +91,8 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 emitNotification(sbn)
             }
         } catch (_: Exception) {
+            // activeNotifications can throw if the listener just disconnected;
+            // the next posted notification repopulates the island anyway.
         }
     }
 
@@ -116,63 +121,15 @@ class NekoNotificationListenerService : NotificationListenerService() {
         // correct for the native dialer; verify third-party VoIP apps on-device.)
         if (n.category == Notification.CATEGORY_CALL && !ongoing) return
 
-        // A count-down chronometer (the Clock app's timer, and most timer apps)
-        // exposes its end time through the notification's `when`. Detecting it
-        // lets a running timer show as a real Dynamic-Island countdown instead
-        // of a plain "Clock" notification.
-        val showChrono = extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false)
-        val countDown = extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false)
-        val timerEndsAt = n.`when`
         // Any ongoing Clock notification (timer / stopwatch / alarm) is a live
         // activity we want to surface, not a plain bell notification.
         val isClockActivity = sbn.packageName in CLOCK_PACKAGES && ongoing
-        // A count-down carries its end time in `when`: the standard chronometer
-        // flags, or a Clock activity whose `when` is in the future (some Clock
-        // apps drive the countdown via custom RemoteViews and never set the
-        // chronometer extras — that's why the timer showed as a plain
-        // notification before). Only then do we get a live ticking countdown.
-        val isCountdown = (showChrono && countDown && timerEndsAt > 0L) ||
-            (isClockActivity && timerEndsAt > System.currentTimeMillis())
+        val timerEndsAt = n.`when`
+        val isCountdown = isCountdown(extras, timerEndsAt, isClockActivity)
 
-        // Navigation apps (Maps) post custom RemoteViews notifications that
-        // often omit EXTRA_TITLE, so fall back through the other text fields and
-        // finally the ticker / app name — otherwise turn-by-turn never shows.
-        val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
-            ?: n.tickerText?.toString()
-            ?: appLabel(sbn.packageName)
+        val title = resolveTitle(extras, n, sbn.packageName)
         if (title.isBlank()) return
         if (shouldIgnoreNotification(sbn.packageName, title, n.category)) return
-        val body = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
-            ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
-            ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
-            ?: ""
-
-        // Category drives the typed presentation (call / navigation / …).
-        // Turn-by-turn is only the *ongoing* notification from a nav app (or one
-        // that declares Android's navigation category). Gating the package match
-        // on `ongoing` keeps transient posts from those same apps (Maps "rate
-        // your visit", Waze promos) as normal, auto-dismissing notifications
-        // instead of a stuck turn-by-turn card.
-        val category = when {
-            // Countdown timer, or any other ongoing clock activity (stopwatch /
-            // alarm / paused timer) — all shown with the timer treatment.
-            isCountdown || isClockActivity -> "timer"
-            n.category == "navigation" -> "navigation"
-            ongoing && sbn.packageName in NAV_PACKAGES -> "navigation"
-            else -> n.category ?: ""
-        }
-
-        // Determinate progress (downloads, uploads, nav ETA bars).
-        val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
-        val progressCur = extras.getInt(Notification.EXTRA_PROGRESS, 0)
-        val indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
-        val progress =
-            if (progressMax > 0 && !indeterminate) {
-                (progressCur.toDouble() / progressMax).coerceIn(0.0, 1.0)
-            } else {
-                -1.0
-            }
 
         NotchBridge.send(
             applicationContext,
@@ -182,13 +139,78 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 "package" to appLabel(sbn.packageName),
                 "packageId" to sbn.packageName,
                 "title" to title,
-                "body" to body,
-                "category" to category,
+                "body" to resolveBody(extras),
+                "category" to resolveCategory(n, sbn.packageName, ongoing, isCountdown, isClockActivity),
                 "ongoing" to ongoing,
-                "progress" to progress,
+                "progress" to resolveProgress(extras),
                 "endsAtMs" to if (isCountdown) timerEndsAt else 0L,
             ),
         )
+    }
+
+    /// A count-down chronometer (the Clock app's timer, and most timer apps)
+    /// exposes its end time through the notification's `when`. Detecting it
+    /// lets a running timer show as a real Dynamic-Island countdown instead of
+    /// a plain "Clock" notification: the standard chronometer flags, or a Clock
+    /// activity whose `when` is in the future (some Clock apps drive the
+    /// countdown via custom RemoteViews and never set the chronometer extras).
+    private fun isCountdown(
+        extras: Bundle,
+        timerEndsAt: Long,
+        isClockActivity: Boolean,
+    ): Boolean {
+        val showChrono = extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false)
+        val countDown = extras.getBoolean(Notification.EXTRA_CHRONOMETER_COUNT_DOWN, false)
+        return (showChrono && countDown && timerEndsAt > 0L) ||
+            (isClockActivity && timerEndsAt > System.currentTimeMillis())
+    }
+
+    /// Navigation apps (Maps) post custom RemoteViews notifications that often
+    /// omit EXTRA_TITLE, so fall back through the other text fields and finally
+    /// the ticker / app name — otherwise turn-by-turn never shows.
+    private fun resolveTitle(extras: Bundle, n: Notification, packageName: String): String =
+        extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
+            ?: n.tickerText?.toString()
+            ?: appLabel(packageName)
+
+    private fun resolveBody(extras: Bundle): String =
+        extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+            ?: extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
+            ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+            ?: ""
+
+    /// Category drives the typed presentation (call / navigation / …).
+    /// Turn-by-turn is only the *ongoing* notification from a nav app (or one
+    /// that declares Android's navigation category). Gating the package match
+    /// on `ongoing` keeps transient posts from those same apps (Maps "rate
+    /// your visit", Waze promos) as normal, auto-dismissing notifications
+    /// instead of a stuck turn-by-turn card.
+    private fun resolveCategory(
+        n: Notification,
+        packageId: String,
+        ongoing: Boolean,
+        isCountdown: Boolean,
+        isClockActivity: Boolean,
+    ): String = when {
+        // Countdown timer, or any other ongoing clock activity (stopwatch /
+        // alarm / paused timer) — all shown with the timer treatment.
+        isCountdown || isClockActivity -> "timer"
+        n.category == "navigation" -> "navigation"
+        ongoing && packageId in NAV_PACKAGES -> "navigation"
+        else -> n.category ?: ""
+    }
+
+    /// Determinate progress (downloads, uploads, nav ETA bars); -1 when absent.
+    private fun resolveProgress(extras: Bundle): Double {
+        val progressMax = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+        val progressCur = extras.getInt(Notification.EXTRA_PROGRESS, 0)
+        val indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
+        return if (progressMax > 0 && !indeterminate) {
+            (progressCur.toDouble() / progressMax).coerceIn(0.0, 1.0)
+        } else {
+            -1.0
+        }
     }
 
     /// Drops Android's overlay-permission nag and other system chrome that would
@@ -212,17 +234,12 @@ class NekoNotificationListenerService : NotificationListenerService() {
         ) {
             return true
         }
-        if (category == Notification.CATEGORY_SYSTEM ||
+        // System/service posts from non-user apps (e.g. overlay FGS nags).
+        val systemCategory = category == Notification.CATEGORY_SYSTEM ||
             category == Notification.CATEGORY_SERVICE
-        ) {
-            // System/service posts from non-user apps (e.g. overlay FGS nags).
-            if (packageName.startsWith("com.android.") ||
-                packageName.startsWith("android.")
-            ) {
-                return true
-            }
-        }
-        return false
+        val systemPackage = packageName.startsWith("com.android.") ||
+            packageName.startsWith("android.")
+        return systemCategory && systemPackage
     }
 
     /// Human-readable app name (e.g. "WhatsApp") rather than a raw package id.
@@ -382,13 +399,15 @@ class NekoNotificationListenerService : NotificationListenerService() {
                         cb(BitmapFactory.decodeStream(it))
                     }
                 } catch (_: Exception) {
+                    // Unreadable local art — the island keeps its icon fallback.
                 }
             }
             "http", "https" -> {
                 downloadingArtUri = uri
                 Thread {
                     val bmp = try {
-                        val conn = (URL(uri).openConnection() as HttpURLConnection)
+                        // URI.toURL() replaces the deprecated URL(String) ctor.
+                        val conn = (URI(uri).toURL().openConnection() as HttpURLConnection)
                             .apply {
                                 connectTimeout = 4000
                                 readTimeout = 4000
@@ -444,6 +463,8 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 "previous" -> controls.skipToPrevious()
             }
         } catch (_: Exception) {
+            // Session died between tap and dispatch — the next media event
+            // rebinds; a lost button press is the correct outcome here.
         }
     }
 

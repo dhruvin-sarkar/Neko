@@ -5,11 +5,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app/neko_app.dart';
+import 'core/config/app_env.dart';
 import 'core/neko_motion.dart';
 import 'core/notch/overlay/notch_overlay_entry.dart';
 import 'core/services/audio_service.dart';
@@ -42,12 +42,15 @@ void main() {
         return true;
       };
 
-      try {
-        await dotenv.load(fileName: '.env');
-      } on Object catch (e) {
-        // The app needs .env for its Firebase + AI config, so this isn't really
-        // recoverable — log it loudly rather than pretending otherwise.
-        AppLogger.error('Could not load .env — app config is missing', e);
+      // Config now arrives at compile time (--dart-define-from-file=.env), so
+      // nothing secret ships inside the APK. A build made without the flag has
+      // empty Firebase config — surface that clearly instead of crashing.
+      if (!AppEnv.hasFirebaseConfig) {
+        AppLogger.error(
+          'App config missing — build with --dart-define-from-file=.env',
+        );
+        runApp(const _ConfigErrorApp());
+        return;
       }
 
       try {
@@ -146,8 +149,9 @@ class _ConfigErrorApp extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.all(32),
             child: Text(
-              "Neko can't start because its configuration is missing.\n\n"
-              'Add the .env file (see .env.example) and relaunch.',
+              'Neko can’t start because its configuration is missing.\n\n'
+              'Build the app with --dart-define-from-file=.env '
+              '(see .env.example) and relaunch.',
               textAlign: TextAlign.center,
             ),
           ),

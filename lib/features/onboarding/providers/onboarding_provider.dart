@@ -10,6 +10,7 @@ import '../data/calorie_calculator.dart';
 import '../data/onboarding_persistence.dart';
 import '../data/onboarding_repository.dart';
 import '../models/cat_profile.dart';
+import 'onboarding_status_provider.dart';
 import '../models/onboarding_state.dart';
 import '../models/step_config.dart';
 
@@ -181,6 +182,10 @@ class OnboardingNotifier extends _$OnboardingNotifier {
         await persistence.clearDraft(uid);
       }
       if (_disposed) return true;
+      // Rebuild the status provider now that the local flag is set: its fast
+      // path emits `true` immediately, so leaving /onboarding never depends on
+      // the Firestore snapshot echoing back (or on stream health at all).
+      ref.invalidate(onboardingCompleteProvider);
       state = state.copyWith(isSaving: false);
       return true;
     } on AppException catch (e) {

@@ -53,6 +53,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   void _resetPassword() {
+    // The snackbars below are this tap's only visible outcome — give it the
+    // standard tap sound+haptic so the moment isn't mute.
+    unawaited(ref.read(feedbackServiceProvider).onTap());
     if (Validators.email(_emailController.text) != null) {
       _showSnack('Enter your email above first, then tap reset.');
       return;
@@ -77,8 +80,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           error is AppException ? error.message : 'Something went wrong.',
           error: true,
         );
-      } else if (next is AsyncData && (previous?.isLoading ?? false)) {
-        // Sign-in succeeded; the router will redirect.
+      } else if (next is AsyncData &&
+          (previous?.isLoading ?? false) &&
+          ref.read(authRepositoryProvider).currentUser != null) {
+        // A real session exists — not a cancelled Google picker (which also
+        // resolves to AsyncData but leaves no user). Only then celebrate.
         unawaited(ref.read(feedbackServiceProvider).onSuccess());
       }
     });
@@ -88,8 +94,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        leading: BackButton(
+        // IconButton (not BackButton) so a null onPressed actually greys out
+        // and disables while signing in — BackButton falls back to maybePop.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
           color: AppColors.textPrimary,
+          tooltip: 'Back',
           onPressed: isLoading ? null : () => context.go(Routes.welcome),
         ),
       ),

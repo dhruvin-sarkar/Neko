@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- All Neko traffic (Hack Club AI proxy, Hack Club search, Firebase) is HTTPS
+     validated against the system trust store. No cleartext anywhere, no custom
+     trust anchors, no debug overrides. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

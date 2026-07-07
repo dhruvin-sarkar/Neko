@@ -197,11 +197,23 @@ class AuthRepository {
   }
 
   Future<void> signOut() async {
+    // Firebase first — `authStateChanges` emitting null is the signal the
+    // router and every per-account cleanup actually key off.
     try {
-      await _googleSignIn.signOut();
       await _auth.signOut();
     } on Object catch (e, st) {
       throw _mapUnknown(e, st);
+    }
+    // Google second, best-effort: a Play-Services hiccup must never leave the
+    // user signed in to Firebase with the UI stuck on the curtain.
+    try {
+      await _googleSignIn.signOut();
+    } on Object catch (e, st) {
+      AppLogger.warning(
+        'Google sign-out failed after Firebase sign-out; continuing',
+        e,
+        st,
+      );
     }
   }
 
@@ -295,16 +307,21 @@ class AuthRepository {
   AppException _mapAuthError(FirebaseAuthException e, StackTrace st) {
     AppLogger.warning('Auth error: ${e.code}', e, st);
     final String message = switch (e.code) {
-      'invalid-email' => 'That email address doesn\'t look right.',
+      'invalid-email' => 'That email address doesn’t look right.',
       'user-disabled' => 'This account has been disabled.',
       'user-not-found' ||
       'wrong-password' ||
       'invalid-credential' => 'Email or password is incorrect.',
-      'email-already-in-use' => 'An account already exists with that email.',
+      // Softens the enumeration oracle rather than eliminating it (the string
+      // no longer names the email as taken, though it still differs from other
+      // failure copy) — full closure is Firebase's server-side Email
+      // Enumeration Protection, tracked in SECURITY_FIXES.md (Aikido finding).
+      'email-already-in-use' =>
+        'We couldn’t create your account with those details. '
+            'Try signing in instead.',
       'weak-password' =>
         'Please choose a stronger password (at least 8 characters).',
-      'operation-not-allowed' =>
-        'This sign-in method isn\'t enabled right now.',
+      'operation-not-allowed' => 'This sign-in method isn’t enabled right now.',
       'too-many-requests' =>
         'Too many attempts. Please wait a moment and try again.',
       'network-request-failed' =>

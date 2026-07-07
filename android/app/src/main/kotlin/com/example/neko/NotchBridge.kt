@@ -82,6 +82,7 @@ object NotchBridge {
                     }
                 controlBoundEngine = engine
             } catch (_: Exception) {
+                // Engine torn down mid-bind — the next send() retries the bind.
             }
         }
     }
@@ -118,6 +119,7 @@ object NotchBridge {
                 }
             }
         } catch (_: Exception) {
+            // No vibrator / haptics disabled system-wide — skip the tick.
         }
     }
 
@@ -131,6 +133,7 @@ object NotchBridge {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ctx.startActivity(intent)
         } catch (_: Exception) {
+            // App uninstalled between notification and tap — nothing to open.
         }
     }
 
@@ -143,6 +146,7 @@ object NotchBridge {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ctx.startActivity(intent)
         } catch (_: Exception) {
+            // Malformed URL or no browser installed — the tap does nothing.
         }
     }
 
@@ -155,6 +159,7 @@ object NotchBridge {
                 try {
                     target.success(event)
                 } catch (_: Exception) {
+                    // Sink detached between the null-check and this post.
                 }
             }
             return
@@ -172,19 +177,13 @@ object NotchBridge {
     private fun shouldBootstrap(context: Context): Boolean {
         return try {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            val enabled = NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false)
-            enabled || hasPersistedRestore(prefs) || hasPending(prefs)
+            // The master toggle is the sole authority — restore/pending state
+            // only matters while the notch is on. (Previously OR'd with those,
+            // which let stale state resurrect a switched-off notch.)
+            NotchPreferencesCompat.getBoolean(prefs, "flutter.notch_enabled", false)
         } catch (_: Exception) {
             false
         }
-    }
-
-    private fun hasPersistedRestore(prefs: android.content.SharedPreferences): Boolean {
-        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_restore", null).isNullOrEmpty()
-    }
-
-    private fun hasPending(prefs: android.content.SharedPreferences): Boolean {
-        return !NotchPreferencesCompat.getString(prefs, "flutter.notch_pending", null).isNullOrEmpty()
     }
 
     /// Pushes a NotchCommand JSON string onto the overlay engine's messenger.
@@ -200,6 +199,8 @@ object NotchBridge {
                     JSONMessageCodec.INSTANCE,
                 ).send(command)
             } catch (_: Exception) {
+                // Overlay engine died after the cache lookup — the pending-
+                // command path picks the event up on the next send.
             }
         }
         return true
@@ -208,8 +209,17 @@ object NotchBridge {
     private fun persistPending(context: Context, command: String) {
         try {
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            NotchPreferencesCompat.putString(prefs, "flutter.notch_pending", command)
+            // Only the "flutter."-prefixed key: it's the only one the Dart
+            // side (which flushes and then deletes the pending command) can
+            // see — shared_preferences namespaces everything under "flutter.".
+            // Also drop the raw legacy key older builds wrote, which Dart
+            // could never delete.
+            prefs.edit()
+                .putString("flutter.notch_pending", command)
+                .remove("notch_pending")
+                .commit()
         } catch (_: Exception) {
+            // Prefs unavailable — the event is dropped; the next one retries.
         }
     }
 
@@ -220,63 +230,69 @@ object NotchBridge {
                 Intent(context, NotchBootService::class.java),
             )
         } catch (_: Exception) {
+            // Background FGS start restrictions can deny this — the overlay
+            // then simply waits for the app or a boot to bring it back.
         }
     }
 
     private fun buildCommand(event: Map<String, Any?>): String? {
         return when (event["kind"]) {
-            "notification" -> {
-                val category = (event["category"] as? String) ?: ""
-                val ongoing = event["ongoing"] == true
-                val progress = (event["progress"] as? Number)?.toDouble() ?: -1.0
-                val endsAtMs = (event["endsAtMs"] as? Number)?.toLong() ?: 0L
-                val type = when {
-                    category == "timer" -> "timer"
-                    category == "call" -> "call"
-                    category == "navigation" -> "navigation"
-                    progress >= 0.0 && ongoing -> "download"
-                    else -> "notification"
-                }
-                val activity = JSONObject()
-                    .put("type", type)
-                    .put("id", event["key"] ?: "")
-                    .put("appName", event["package"] ?: "")
-                    .put("packageId", event["packageId"] ?: "")
-                    .put("title", event["title"] ?: "")
-                    .put("body", event["body"] ?: "")
-                    .put("ongoing", ongoing || type != "notification")
-                if (progress >= 0.0) activity.put("progress", progress)
-                if (type == "timer" && endsAtMs > 0L) activity.put("endsAtMs", endsAtMs)
-                JSONObject().put("cmd", "push").put("activity", activity).toString()
-            }
-            "media" -> {
-                // Paused music stays on the island; it only leaves on
-                // 'mediaStopped' (the session ending).
-                val cmd = if (mediaShownDirect) "update" else {
-                    mediaShownDirect = true
-                    "push"
-                }
-                val durMs = (event["duration"] as? Number)?.toLong() ?: 0L
-                val posMs = (event["position"] as? Number)?.toLong() ?: 0L
-                val progress =
-                    if (durMs > 0) (posMs.toDouble() / durMs).coerceIn(0.0, 1.0) else 0.0
-                val activity = JSONObject()
-                    .put("type", "music")
-                    .put("songTitle", event["title"] ?: "")
-                    .put("artistName", event["artist"] ?: "")
-                    .put("packageId", event["packageId"] ?: "")
-                    .put("isPlaying", event["playing"] == true)
-                    .put("progress", progress)
-                    .put("durationMs", if (durMs > 0) durMs else JSONObject.NULL)
-                    .put("albumArt", event["art"] ?: "")
-                    .put("source", "system")
-                JSONObject().put("cmd", cmd).put("activity", activity).toString()
-            }
+            "notification" -> notificationCommand(event)
+            "media" -> mediaCommand(event)
             "mediaStopped" -> {
                 mediaShownDirect = false
                 JSONObject().put("cmd", "remove").put("removeType", "music").toString()
             }
             else -> null
         }
+    }
+
+    private fun notificationCommand(event: Map<String, Any?>): String {
+        val category = (event["category"] as? String) ?: ""
+        val ongoing = event["ongoing"] == true
+        val progress = (event["progress"] as? Number)?.toDouble() ?: -1.0
+        val endsAtMs = (event["endsAtMs"] as? Number)?.toLong() ?: 0L
+        val type = when {
+            category == "timer" -> "timer"
+            category == "call" -> "call"
+            category == "navigation" -> "navigation"
+            progress >= 0.0 && ongoing -> "download"
+            else -> "notification"
+        }
+        val activity = JSONObject()
+            .put("type", type)
+            .put("id", event["key"] ?: "")
+            .put("appName", event["package"] ?: "")
+            .put("packageId", event["packageId"] ?: "")
+            .put("title", event["title"] ?: "")
+            .put("body", event["body"] ?: "")
+            .put("ongoing", ongoing || type != "notification")
+        if (progress >= 0.0) activity.put("progress", progress)
+        if (type == "timer" && endsAtMs > 0L) activity.put("endsAtMs", endsAtMs)
+        return JSONObject().put("cmd", "push").put("activity", activity).toString()
+    }
+
+    private fun mediaCommand(event: Map<String, Any?>): String {
+        // Paused music stays on the island; it only leaves on 'mediaStopped'
+        // (the session ending).
+        val cmd = if (mediaShownDirect) "update" else {
+            mediaShownDirect = true
+            "push"
+        }
+        val durMs = (event["duration"] as? Number)?.toLong() ?: 0L
+        val posMs = (event["position"] as? Number)?.toLong() ?: 0L
+        val progress =
+            if (durMs > 0) (posMs.toDouble() / durMs).coerceIn(0.0, 1.0) else 0.0
+        val activity = JSONObject()
+            .put("type", "music")
+            .put("songTitle", event["title"] ?: "")
+            .put("artistName", event["artist"] ?: "")
+            .put("packageId", event["packageId"] ?: "")
+            .put("isPlaying", event["playing"] == true)
+            .put("progress", progress)
+            .put("durationMs", if (durMs > 0) durMs else JSONObject.NULL)
+            .put("albumArt", event["art"] ?: "")
+            .put("source", "system")
+        return JSONObject().put("cmd", cmd).put("activity", activity).toString()
     }
 }

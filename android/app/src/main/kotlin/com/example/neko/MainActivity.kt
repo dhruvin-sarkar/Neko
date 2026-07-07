@@ -47,6 +47,41 @@ class MainActivity : FlutterActivity() {
                     NekoNotificationListenerService.instance?.control(action)
                     result.success(true)
                 }
+                // Hey Neko wake word: the mic foreground service may only be
+                // started while the app is in the foreground — which is exactly
+                // when these calls arrive (Settings toggle / app resume).
+                "startHeyNekoListener" -> {
+                    // Android 14+ crashes a microphone-typed startForeground
+                    // when the mic permission has been revoked — never start
+                    // the service without it (the Dart side also checks; this
+                    // is the last line of defence).
+                    val micGranted = checkSelfPermission(
+                        android.Manifest.permission.RECORD_AUDIO,
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (micGranted) {
+                        androidx.core.content.ContextCompat.startForegroundService(
+                            this,
+                            Intent(this, HeyNekoListenerService::class.java),
+                        )
+                    }
+                    result.success(micGranted)
+                }
+                "stopHeyNekoListener" -> {
+                    stopService(Intent(this, HeyNekoListenerService::class.java))
+                    result.success(true)
+                }
+                // A background wake match brings the app forward so the Hey
+                // Neko session opens on a visible window. Legal from the
+                // background via the SYSTEM_ALERT_WINDOW exemption.
+                "bringNekoToFront" -> {
+                    startActivity(
+                        Intent(this, MainActivity::class.java).addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT,
+                        ),
+                    )
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }

@@ -28,7 +28,7 @@ class HomeErrorCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            "Even cats have off days. We couldn't load your cats just now.",
+            "Even cats have off days. We couldn’t load your cats just now.",
             style: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textSecondary,
             ),

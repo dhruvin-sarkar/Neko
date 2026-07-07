@@ -55,13 +55,19 @@ class _HeyNekoPageState extends ConsumerState<HeyNekoPage> {
   late final WakeWordController _wake = ref.read(
     wakeWordControllerProvider.notifier,
   );
-  bool _closing = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _wake.pause();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Await the wake loop fully releasing the mic before starting the
+      // session: channel ordering guarantees the cancelled loop's stray
+      // 'done'/'notListening' status is drained before the new session
+      // re-points the shared recogniser callbacks — otherwise that stray
+      // status lands mid-session and instantly fails it with "didn't catch
+      // that" the moment tap-to-talk is opened with the wake word enabled.
+      await _wake.pause();
+      if (!mounted) return;
       _voice.start();
     });
   }
@@ -86,14 +92,6 @@ class _HeyNekoPageState extends ConsumerState<HeyNekoPage> {
   @override
   Widget build(BuildContext context) {
     ref.watch(themeControllerProvider);
-    ref.listen<HeyNekoState>(heyNekoControllerProvider, (prev, next) {
-      if (!_closing &&
-          prev?.phase == HeyNekoPhase.speaking &&
-          next.phase == HeyNekoPhase.idle) {
-        _closing = true;
-        Future<void>.delayed(const Duration(milliseconds: 700), _close);
-      }
-    });
 
     final NotchTheme t = NotchThemeMapper.fromPalette(AppColors.palette);
     final HeyNekoState state = ref.watch(heyNekoControllerProvider);
@@ -168,10 +166,30 @@ class _IslandPanel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                _title(state.phase),
-                style: AppTextStyles.headlineLarge.copyWith(
-                  color: theme.foreground,
+              // Cross-fade the title between phases so the largest text on the
+              // page doesn't hard-snap while everything beneath it eases.
+              AnimatedSwitcher(
+                duration: reduceMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 200),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeIn,
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.2),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: Text(
+                  _title(state.phase),
+                  key: ValueKey<HeyNekoPhase>(state.phase),
+                  style: AppTextStyles.headlineLarge.copyWith(
+                    color: theme.foreground,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -255,7 +273,8 @@ class _IslandPanel extends StatelessWidget {
     HeyNekoPhase.searching => 'Searching the web…',
     HeyNekoPhase.speaking => 'Neko says',
     HeyNekoPhase.results => 'A few options',
-    HeyNekoPhase.error => 'Hey Neko',
+    // State-descriptive like every other phase (not the bare product name).
+    HeyNekoPhase.error => 'Neko missed that',
   };
 
   String _body(HeyNekoState state) => switch (state.phase) {
@@ -432,9 +451,12 @@ class _Actions extends StatelessWidget {
         );
       case HeyNekoPhase.thinking:
       case HeyNekoPhase.searching:
+        return NekoButton.secondary(label: 'Cancel', onPressed: onClose);
       case HeyNekoPhase.speaking:
-        return NekoButton.secondary(
-          label: state.phase == HeyNekoPhase.speaking ? 'Stop' : 'Cancel',
+        // The answer is on screen to read — this is the deliberate finish.
+        return NekoButton.primary(
+          label: 'Done',
+          icon: Icons.check_rounded,
           onPressed: onClose,
         );
       case HeyNekoPhase.results:

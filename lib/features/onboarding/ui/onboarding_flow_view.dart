@@ -51,6 +51,9 @@ class _OnboardingFlowViewState extends ConsumerState<OnboardingFlowView> {
   }
 
   Future<void> _onContinue(StepConfig config) async {
+    // Dismiss the keyboard before the step slides so an autofocused field
+    // (name, weight) doesn't animate the whole layout mid-transition.
+    FocusManager.instance.primaryFocus?.unfocus();
     final notifier = ref.read(onboardingNotifierProvider.notifier);
     final FeedbackService feedback = ref.read(feedbackServiceProvider);
     if (!config.isFinal) {

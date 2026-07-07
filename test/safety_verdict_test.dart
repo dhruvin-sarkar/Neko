@@ -41,14 +41,15 @@ void main() {
     });
 
     // The reason the parser exists: a WARNING that merely begins with the
-    // letters "safe" must never be shown as a green "Looks safe" verdict.
+    // letters "safe" must never be shown as a green "Looks safe" verdict. An
+    // off-format reply like this errs to CAUTION (a warning), never safe.
     test('does NOT read "Safety first…" as safe', () {
       final SafetyVerdict v = SafetyVerdict.parse(
         "Safety first — that's a lily, and lilies are highly toxic to cats. "
         'Contact your vet or animal poison control right away.',
       );
       expect(v.level, isNot(SafetyLevel.safe));
-      expect(v.level, SafetyLevel.unknown);
+      expect(v.level, SafetyLevel.caution);
     });
 
     test('does NOT read "Safe to say…" as safe', () {
@@ -66,11 +67,15 @@ void main() {
       expect(v.level, isNot(SafetyLevel.safe));
     });
 
-    test('an unlabelled reply falls through to unknown with the full text', () {
+    // A non-empty reply that doesn't lead with a label errs to CAUTION — this
+    // is the prompt-injection backstop: a manipulated reply engineered to skip
+    // the DANGER label can never surface as safe, and never as a reassuring
+    // neutral verdict. The model's full text is still shown.
+    test('an unlabelled reply falls through to CAUTION with the full text', () {
       final SafetyVerdict v = SafetyVerdict.parse(
         'That looks like catnip, which cats love and is perfectly fine.',
       );
-      expect(v.level, SafetyLevel.unknown);
+      expect(v.level, SafetyLevel.caution);
       expect(v.detail, contains('catnip'));
     });
 

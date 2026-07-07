@@ -15,6 +15,14 @@ abstract final class NotchChannels {
 
   static const String mediaControl = 'mediaControl';
 
+  /// Start/stop the Hey Neko microphone foreground service (wake word).
+  static const String startHeyNekoListener = 'startHeyNekoListener';
+  static const String stopHeyNekoListener = 'stopHeyNekoListener';
+
+  /// Bring MainActivity to the foreground (a background "Hey Neko" match needs
+  /// the window visible before the session opens).
+  static const String bringToFront = 'bringNekoToFront';
+
   static const String controlCommand = '__notchControl';
 
   static const String stopBoot = 'stop';
@@ -34,7 +42,11 @@ abstract final class NotchPrefs {
     return <String>[key, normalized];
   }
 
-  static bool getBool(SharedPreferences prefs, String key, {bool defaultValue = false}) {
+  static bool getBool(
+    SharedPreferences prefs,
+    String key, {
+    bool defaultValue = false,
+  }) {
     for (final String candidate in _candidateKeys(key)) {
       if (prefs.containsKey(candidate)) {
         return prefs.getBool(candidate) ?? defaultValue;
@@ -43,7 +55,11 @@ abstract final class NotchPrefs {
     return defaultValue;
   }
 
-  static Future<bool> setBool(SharedPreferences prefs, String key, bool value) async {
+  static Future<bool> setBool(
+    SharedPreferences prefs,
+    String key,
+    bool value,
+  ) async {
     bool ok = true;
     for (final String candidate in _candidateKeys(key)) {
       ok = ok && (await prefs.setBool(candidate, value));
@@ -51,7 +67,11 @@ abstract final class NotchPrefs {
     return ok;
   }
 
-  static String? getString(SharedPreferences prefs, String key, {String? defaultValue}) {
+  static String? getString(
+    SharedPreferences prefs,
+    String key, {
+    String? defaultValue,
+  }) {
     for (final String candidate in _candidateKeys(key)) {
       if (prefs.containsKey(candidate)) {
         return prefs.getString(candidate) ?? defaultValue;
@@ -60,7 +80,11 @@ abstract final class NotchPrefs {
     return defaultValue;
   }
 
-  static Future<bool> setString(SharedPreferences prefs, String key, String value) async {
+  static Future<bool> setString(
+    SharedPreferences prefs,
+    String key,
+    String value,
+  ) async {
     bool ok = true;
     for (final String candidate in _candidateKeys(key)) {
       ok = ok && (await prefs.setString(candidate, value));

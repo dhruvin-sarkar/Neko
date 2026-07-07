@@ -105,18 +105,26 @@ abstract final class NekoPalettes {
   const NekoPalettes._();
 
   // ── Default: warm amber background, coral accent, amber secondary ──────────
+  // The coral is #F05252 (not the original #FF6B6B): the closest coral that
+  // clears the WCAG floors in palette_contrast_test.dart on both white button
+  // text (3.48 ≥ 3.0) and the amber background (2.13 ≥ 2.0).
   static const NekoPalette gingerTabby = NekoPalette(
     id: 'gingerTabby',
     label: 'Ginger & Coral',
     emoji: '🧡',
-    primary: Color(0xFFF2564C),
-    primaryDark: Color(0xFF8F2A22),
-    primaryLight: Color(0xFFFFE1DA),
-    secondary: Color(0xFFFFA63D),
+    primary: Color(0xFFF05252),
+    // primaryDark and error are depth/state partners of the primary: both were
+    // re-tuned when the coral deepened to #F05252 so the chiclet drop-shadow
+    // keeps its 3D contrast and the error state stays distinct from focus.
+    primaryDark: Color(0xFFB03B3B),
+    primaryLight: Color(0xFFFFE5E5),
+    secondary: Color(0xFFF5C275),
     surface: Color(0xFFFFFCFA),
     surfaceElevated: Color(0xFFFFF6EF),
-    background: Color(0xFFFFEEDF),
-    inputFill: Color(0xFFFCE3D2),
+    background: Color(0xFFF5C275),
+    // Distinct from primaryLight so a selected fill never blends into a
+    // neutral input/tile fill (every other palette keeps these separate too).
+    inputFill: Color(0xFFFBE7DA),
     textPrimary: Color(0xFF3A1E13),
     textSecondary: Color(0xFF7C4630),
     textTertiary: Color(0xFFA9745A),
@@ -124,7 +132,7 @@ abstract final class NekoPalettes {
     divider: Color(0xFFF6D2BD),
     success: Color(0xFF3F8F43),
     warning: Color(0xFFE07B00),
-    error: Color(0xFFD8362B),
+    error: Color(0xFFC22B20),
     navInactive: Color(0xFFA57860),
     isDark: false,
   );
@@ -387,7 +395,8 @@ abstract final class NekoPalettes {
     primary: Color(0xFFF5F5F5),
     primaryDark: Color(0xFFBDBDBD),
     primaryLight: Color(0xFF2A2E36),
-    secondary: Color(0xFFFF6B6B),
+    // The "coral bowtie" tracks the brand coral (kept in step with gingerTabby).
+    secondary: Color(0xFFF05252),
     surface: Color(0xFF20232B),
     surfaceElevated: Color(0xFF2A2E37),
     background: Color(0xFF14161B),

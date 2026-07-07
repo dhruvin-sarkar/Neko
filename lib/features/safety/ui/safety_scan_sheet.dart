@@ -42,7 +42,7 @@ class _SafetyScanSheetState extends ConsumerState<SafetyScanSheet> {
     ref
         .read(chatControllerProvider.notifier)
         .appendVoiceTurn(
-          'Is this safe for my cat? (safety scan)',
+          'Safety scan — is this safe for my cat?',
           '${verdict.headline}. ${verdict.detail}',
         );
     Navigator.of(context).maybePop();
@@ -96,7 +96,9 @@ class _ScanHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String title = switch (state.phase) {
-      SafetyScanPhase.result => state.verdict?.headline ?? 'Safety check',
+      // Constant, calm header — the colour-coded verdict card owns the headline,
+      // so it isn't echoed here (it was showing 'Not safe' twice).
+      SafetyScanPhase.result => 'Safety check',
       SafetyScanPhase.error => 'Safety check',
       _ => 'Cat safety scan',
     };

@@ -32,6 +32,16 @@ class TourKeys {
   final GlobalKey profileDocuments = GlobalKey(
     debugLabel: 'tour_profile_documents',
   );
+
+  // ── Settings screen ──
+
+  /// The Neko notch master-toggle card.
+  final GlobalKey settingsNotch = GlobalKey(debugLabel: 'tour_settings_notch');
+
+  /// The Hey Neko voice toggle card.
+  final GlobalKey settingsHeyNeko = GlobalKey(
+    debugLabel: 'tour_settings_hey_neko',
+  );
 }
 
 /// App-wide [TourKeys]. Kept alive so the keys are stable across rebuilds.

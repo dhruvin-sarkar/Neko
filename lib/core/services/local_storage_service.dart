@@ -38,7 +38,43 @@ class LocalStorageService {
     await Directory(_root).create(recursive: true);
   }
 
-  static String _catDir(String catId) => '$_root/cats/$catId';
+  static String _catDir(String catId) => '$_root/cats/${_safeId(catId)}';
+
+  // ── Path-safety helpers ──
+  //
+  // Every path under `_root` is built from three kinds of input: ids
+  // (catId/docType), display filenames, and previously stored index paths.
+  // Ids and filenames are sanitised before they touch a path; stored paths are
+  // re-checked against the root before any filesystem operation. Together these
+  // make `../`-style traversal out of the sandbox impossible even if an id or
+  // filename arrives hostile.
+
+  /// Collapses an id (catId, docType) to `[A-Za-z0-9_-]` so it can never
+  /// introduce separators or dot-segments into a directory path.
+  static String _safeId(String id) => id.replaceAll(RegExp(r'[^\w\-]'), '_');
+
+  /// Reduces an externally supplied filename to a harmless basename: strips
+  /// any directory components, drops disallowed characters, and refuses
+  /// dot-only names ('.', '..') that survive the character filter.
+  static String _safeName(String filename) {
+    final String base = filename.split(RegExp(r'[/\\]')).last;
+    final String safe = base.replaceAll(RegExp(r'[^\w.\- ]'), '_');
+    if (RegExp(r'^\.+$').hasMatch(safe) || safe.isEmpty) return '_';
+    return safe;
+  }
+
+  /// Whether [path], fully normalised (`..` segments resolved), still lives
+  /// inside the app's `<documents>/neko/` root.
+  static bool _isInsideRoot(String path) {
+    final String normalized = Uri.file(
+      File(path).absolute.path,
+    ).normalizePath().toFilePath();
+    final String root = Uri.file(
+      Directory(_root).absolute.path,
+    ).normalizePath().toFilePath();
+    return normalized == root ||
+        normalized.startsWith('$root${Platform.pathSeparator}');
+  }
 
   // ── Profile picture ──
 
@@ -90,9 +126,11 @@ class LocalStorageService {
     required String filename,
   }) async {
     try {
-      final Directory dir = Directory('${_catDir(catId)}/docs/$docType');
+      final Directory dir = Directory(
+        '${_catDir(catId)}/docs/${_safeId(docType)}',
+      );
       await dir.create(recursive: true);
-      final String safe = filename.replaceAll(RegExp(r'[^\w.\- ]'), '_');
+      final String safe = _safeName(filename);
       final String onDisk = '${DateTime.now().millisecondsSinceEpoch}_$safe';
       final String path = '${dir.path}/$onDisk';
       await File(path).writeAsBytes(bytes, flush: true);
@@ -134,6 +172,12 @@ class LocalStorageService {
     final List<Map<String, dynamic>> docs = await getDocuments(catId);
     docs.removeWhere((Map<String, dynamic> d) => d['path'] == path);
     await _media.put('docs_$catId', docs);
+    // Only ever delete inside our own sandbox — a tampered index entry must
+    // not be able to aim this delete at an arbitrary file on the device.
+    if (!_isInsideRoot(path)) {
+      AppLogger.warning('Refused to delete a path outside the media root');
+      return;
+    }
     try {
       final File file = File(path);
       if (await file.exists()) await file.delete();

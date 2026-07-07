@@ -67,7 +67,14 @@ class _WelcomeMark extends StatelessWidget {
         color: AppColors.primaryLight,
         shape: BoxShape.circle,
       ),
-      child: Icon(Icons.pets_rounded, size: 64, color: AppColors.primary),
+      // The app's own paw art, not the stock Material glyph — this is the
+      // brand's first moment, so even the fallback stays on-brand.
+      child: Image.asset(
+        'assets/images/paw.png',
+        width: 72,
+        height: 72,
+        color: AppColors.primary,
+      ),
     );
 
     return Column(
@@ -86,7 +93,7 @@ class _WelcomeMark extends StatelessWidget {
             .slideY(begin: 0.2, end: 0),
         const SizedBox(height: 8),
         Text(
-              "Your cat's new best friend.",
+              'Your cat’s new best friend.',
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textSecondary,

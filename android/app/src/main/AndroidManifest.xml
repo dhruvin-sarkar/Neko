@@ -7,21 +7,32 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
+    <!-- Hey Neko wake word: keeps the mic listening while the app is
+         backgrounded. Only ever started from a foreground context. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE"/>
     <!-- Relaunch the overlay after device reboot (see NEKO_NOTCH boot note). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-    <!-- Hey Neko voice + workout sensors. -->
+    <!-- Hey Neko voice. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
     <!-- Notch haptics: a light tick on expand / tap / cycle and a buzz when a
          countdown finishes, driven natively from the overlay via NotchBridge. -->
     <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Cat safety scan: point the camera at a plant/food/item to check if it's
          safe for the cat. Photos are analysed and discarded, never persisted. -->
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- allowBackup + dataExtractionRules: nothing Neko stores locally (chat
+         transcripts, cat documents, prefs) may leave the device via cloud
+         backup or device-to-device transfer.
+         usesCleartextTraffic + networkSecurityConfig: HTTPS only, validated
+         against the system trust store — no cleartext, no custom trust. -->
     <application
         android:label="Neko"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -81,11 +92,22 @@
             </intent-filter>
         </service>
 
-        <!-- Relaunch the notch overlay on device boot (permission-gated). -->
+        <!-- Holds the microphone foreground grant while "Hey Neko" listens in
+             the background. Started only from a foreground context (Settings
+             toggle / app resume) — never from boot or a background event. -->
+        <service
+            android:name=".HeyNekoListenerService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <!-- Relaunch the notch overlay on device boot (permission-gated).
+             exported=false: boot broadcasts come from the system, which can
+             always reach a non-exported receiver — but another app can no
+             longer spoof QUICKBOOT_POWERON to re-trigger the restore flow. -->
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
@@ -114,6 +136,13 @@
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="https"/>
+        </intent>
+        <!-- Package-visibility for the on-device speech recogniser: without
+             this, SpeechRecognizer.isRecognitionAvailable() can report false
+             on Android 11+ and Hey Neko / tap-to-talk silently never start
+             (required per speech_to_text's own setup docs). -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

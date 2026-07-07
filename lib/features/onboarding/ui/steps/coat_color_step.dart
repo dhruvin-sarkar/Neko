@@ -1,18 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_styled_toast/flutter_styled_toast.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_text_styles.dart';
 import '../../../../app/theme/neko_palette.dart';
 import '../../../../core/neko_motion.dart';
-import '../../../../core/services/audio_service.dart';
 import '../../../../features/settings/providers/theme_controller.dart';
 import '../../../../shared/services/feedback_service.dart';
+import '../../../../shared/widgets/neko_snackbar.dart';
 import '../../data/onboarding_options.dart';
 import '../../providers/onboarding_provider.dart';
 import '../widgets/color_swatch_card.dart';
@@ -41,7 +39,14 @@ class CoatColorStep extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         StepHeadline('What does $display look like?'),
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
+        Text(
+          'Their coat becomes the app’s whole look — try a few.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 24),
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.only(bottom: 8),
@@ -65,21 +70,16 @@ class CoatColorStep extends ConsumerWidget {
                         ref
                             .read(themeControllerProvider.notifier)
                             .select(NekoPalettes.byId(themeId));
-                        unawaited(HapticFeedback.mediumImpact());
-                        unawaited(AudioService.playClickSoft());
-                        showToast(
-                          '${option.label} theme applied ✓',
-                          context: context,
-                          duration: const Duration(milliseconds: 1200),
-                          position: StyledToastPosition.center,
-                          backgroundColor: AppColors.primary.withValues(
-                            alpha: 0.9,
-                          ),
-                          textStyle: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textOnPrimary,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          animation: StyledToastAnimation.slideFromBottomFade,
+                        // Same select triad as every other choice in the app —
+                        // the whole-app re-theme is the star of the moment, so
+                        // the standard snackbar just names what happened.
+                        unawaited(feedback.onSelect());
+                        NekoSnackBar.show(
+                          context,
+                          '${option.label} theme applied',
+                          // Float clear of the Continue chiclet: judges tap
+                          // several coats in a row to watch the re-theme.
+                          bottomMargin: 88,
                         );
                       } else {
                         unawaited(feedback.onSelect());

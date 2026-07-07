@@ -142,7 +142,7 @@ class SafetyScanController extends Notifier<SafetyScanState> {
             unawaited(_removeActivity());
             final String msg = error is ChatException
                 ? error.message
-                : 'Sorry — the safety check failed. Please try again.';
+                : 'Meow — the safety check slipped away. Let’s try that again?';
             state = state.copyWith(phase: SafetyScanPhase.error, message: msg);
           },
         );

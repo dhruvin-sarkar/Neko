@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../app/theme/app_spacing.dart';
 import 'pressable.dart';
 
 /// Google sign-in button following Google's branding (Roboto, neutral border,
@@ -24,7 +25,8 @@ class GoogleSignInButton extends StatelessWidget {
       height: compact ? 48 : 52,
       width: double.infinity,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+        // Match the chiclet CTA + text-field radius it stacks with (not a pill).
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         color: Colors.white,
         border: Border.all(color: const Color(0xFF747775)),
       ),

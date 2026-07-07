@@ -54,7 +54,14 @@ class _WeightStepState extends ConsumerState<WeightStep> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           textInputAction: TextInputAction.done,
           inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            // Reject malformed edits (4..5, 4.5.) rather than letting them
+            // type and silently fail to parse: at most two digits, an optional
+            // single dot, up to two decimals.
+            TextInputFormatter.withFunction((oldValue, newValue) {
+              return RegExp(r'^\d{0,2}(\.\d{0,2})?$').hasMatch(newValue.text)
+                  ? newValue
+                  : oldValue;
+            }),
           ],
           onChanged: (value) => ref
               .read(onboardingNotifierProvider.notifier)

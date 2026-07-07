@@ -10,20 +10,31 @@ abstract final class NekoSnackBar {
   const NekoSnackBar._();
 
   /// Shows [message]. Set [error] for error styling (a warning icon).
-  static void show(BuildContext context, String message, {bool error = false}) {
+  /// [bottomMargin] lifts the toast when a bottom-pinned control would
+  /// otherwise sit under it (e.g. the onboarding Continue chiclet).
+  static void show(
+    BuildContext context,
+    String message, {
+    bool error = false,
+    double bottomMargin = 16,
+  }) {
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(_build(message, error: error));
+      ..showSnackBar(_build(message, error: error, bottomMargin: bottomMargin));
   }
 
-  static SnackBar _build(String message, {required bool error}) {
+  static SnackBar _build(
+    String message, {
+    required bool error,
+    double bottomMargin = 16,
+  }) {
     return SnackBar(
       behavior: SnackBarBehavior.floating,
       backgroundColor: AppColors.darkBanner,
       elevation: 6,
       duration: const Duration(seconds: 3),
-      margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
+      margin: EdgeInsets.fromLTRB(16, 0, 16, bottomMargin),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       content: Row(
         children: <Widget>[

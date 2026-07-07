@@ -59,7 +59,10 @@ class _KeyboardCatState extends State<KeyboardCat>
         Positioned(
           left: 0,
           right: 12,
-          bottom: inset,
+          // Sit ABOVE the input strip, not on it: at `bottom: inset` the cat
+          // covered the chat composer's send button (and bottom-pinned CTAs on
+          // the auth/onboarding forms). Clear a standard composer's height.
+          bottom: inset + 92,
           child: IgnorePointer(
             child: AnimatedSlide(
               offset: keyboardOpen ? Offset.zero : const Offset(0, 0.6),

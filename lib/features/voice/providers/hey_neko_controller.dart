@@ -498,10 +498,10 @@ class HeyNekoController extends Notifier<HeyNekoState> {
     );
     // Record the exchange so it shows in the chat transcript and history.
     ref.read(chatControllerProvider.notifier).appendVoiceTurn(_prompt, reply);
-    if (_disposed) return;
-    await _removeActivity();
-    if (_disposed) return;
-    state = state.copyWith(phase: HeyNekoPhase.idle);
+    // Rest in `speaking` with the answer on screen — there's no text-to-speech
+    // to wait out, so the user reads it and dismisses with Done (which tears
+    // the session down: cancel → _removeActivity). Auto-idling here flashed the
+    // answer for a fraction of a second before the sheet self-closed.
   }
 
   // ── Notch mirror ────────────────────────────────────────────────────────────

@@ -5,9 +5,13 @@ import '../../../../app/theme/app_text_styles.dart';
 
 /// Time-of-day greeting plus a short subtitle, shown at the top of home.
 class HomeGreeting extends StatelessWidget {
-  const HomeGreeting({super.key, this.displayName});
+  const HomeGreeting({super.key, this.displayName, this.hasCats = true});
 
   final String? displayName;
+
+  /// Whether the user has any cats — flips the subtitle so it never says
+  /// "Here's your crew" above an empty state.
+  final bool hasCats;
 
   String get _partOfDay {
     final int hour = DateTime.now().hour;
@@ -34,7 +38,7 @@ class HomeGreeting extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Here are your cats.',
+          hasCats ? 'Here’s your crew.' : 'Let’s meet your crew.',
           style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textSecondary,
           ),

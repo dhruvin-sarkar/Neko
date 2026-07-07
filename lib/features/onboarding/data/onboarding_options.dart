@@ -113,13 +113,13 @@ abstract final class OnboardingOptions {
     ),
     ActivityOption(
       value: 'active',
-      label: 'Moderately Active',
+      label: 'Moderate Activity',
       description: 'Regular indoor play and occasional exploration',
       icon: Icons.toys_rounded,
     ),
     ActivityOption(
       value: 'outdoor',
-      label: 'Highly Active',
+      label: 'High Activity',
       description: 'Frequent running, climbing, and outdoor exploration',
       icon: Icons.park_rounded,
     ),

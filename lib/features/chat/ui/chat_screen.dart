@@ -14,6 +14,7 @@ import '../../../app/theme/app_text_styles.dart';
 import '../../../core/neko_motion.dart';
 import '../../../shared/services/feedback_service.dart';
 import '../../../shared/services/image_picker_service.dart';
+import '../../../shared/widgets/neko_dialog.dart';
 import '../../../shared/widgets/neko_mascot.dart';
 import '../../settings/providers/theme_controller.dart';
 import '../models/chat_attachment.dart';
@@ -82,7 +83,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       context: context,
       backgroundColor: AppColors.snowWhite,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (_) => const _AttachSheet(),
     );
@@ -149,7 +150,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       backgroundColor: AppColors.snowWhite,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (_) => const _HistorySheet(),
     );
@@ -193,11 +194,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ),
                 IconButton(
                   tooltip: 'New chat',
-                  icon: Icon(Icons.edit_square, color: AppColors.textPrimary),
-                  onPressed: () {
-                    unawaited(ref.read(feedbackServiceProvider).onTap());
-                    ref.read(chatControllerProvider.notifier).newChat();
-                  },
+                  icon: Icon(
+                    Icons.add_comment_outlined,
+                    color: state.isEmpty
+                        ? AppColors.textDisabled
+                        : AppColors.textPrimary,
+                  ),
+                  onPressed: state.isEmpty
+                      ? null
+                      : () {
+                          unawaited(ref.read(feedbackServiceProvider).onTap());
+                          ref.read(chatControllerProvider.notifier).newChat();
+                        },
                 ),
               ],
             ),
@@ -207,16 +215,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 ? _EmptyState(onSelect: _selectPrompt)
                 : ListView.builder(
                     controller: _scroll,
-                    padding: EdgeInsets.fromLTRB(
-                      12,
-                      8,
-                      12,
-                      16,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
                     itemCount: state.messages.length,
                     itemBuilder: (context, index) {
                       final ChatMessage m = state.messages[index];
-                      final Widget bubble = ChatMessageBubble(message: m);
+                      // Extra breathing room where the speaker changes, so a
+                      // question and its answer read as a pair, not one stream.
+                      final bool speakerChanged =
+                          index > 0 &&
+                          state.messages[index].role !=
+                              state.messages[index - 1].role;
+                      final Widget bubble = Padding(
+                        padding: EdgeInsets.only(top: speakerChanged ? 8.0 : 0),
+                        child: ChatMessageBubble(message: m),
+                      );
                       // Only the newest bubble gets the entrance — otherwise
                       // flutter_animate replays it every time an old bubble
                       // scrolls back into view (and churns a controller per row).
@@ -271,31 +283,41 @@ class _EmptyState extends StatelessWidget {
       child: Icon(Icons.pets_rounded, size: 48, color: AppColors.primary),
     );
 
+    final Widget column = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        Center(child: NekoMascot(size: 96, fallback: fallback)),
+        const SizedBox(height: 16),
+        Text(
+          'Ask Neko anything',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.headlineLarge,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your assistant for cat care, tips, and reminders.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 28),
+        SuggestedPrompts(onSelect: onSelect),
+      ],
+    );
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 8),
-          Center(child: NekoMascot(size: 96, fallback: fallback)),
-          const SizedBox(height: 16),
-          Text(
-            'Ask Neko anything',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.headlineLarge,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Your assistant for cat care, tips, and reminders.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 28),
-          SuggestedPrompts(onSelect: onSelect),
-        ],
-      ).animate().fadeIn(duration: NekoMotion.entry).slideY(begin: 0.1, end: 0),
+      // Share the composer/transcript rail (12), not the wider responsive
+      // gutter — the prompt cards line up with the input beneath them.
+      padding: const EdgeInsets.fromLTRB(12, 24, 12, 16),
+      // Same reduce-motion guard the transcript entrance already uses.
+      child: MediaQuery.disableAnimationsOf(context)
+          ? column
+          : column
+                .animate()
+                .fadeIn(duration: NekoMotion.entry)
+                .slideY(begin: 0.1, end: 0),
     );
   }
 }
@@ -339,8 +361,43 @@ class _HistorySheet extends ConsumerWidget {
                   ),
                   if (history.isNotEmpty)
                     TextButton(
-                      onPressed: () =>
-                          ref.read(chatHistoryProvider.notifier).clearAll(),
+                      // Destructive + irreversible — confirm first, matching the
+                      // document-delete pattern (nothing else wipes silently).
+                      onPressed: () async {
+                        final bool? confirmed = await showNekoDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) => AlertDialog(
+                            title: Text(
+                              'Clear all chats?',
+                              style: AppTextStyles.headlineLarge,
+                            ),
+                            content: Text(
+                              'Every saved conversation will be gone for good.',
+                              style: AppTextStyles.bodyMedium,
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(true),
+                                child: Text(
+                                  'Clear all',
+                                  style: AppTextStyles.bodyLarge.copyWith(
+                                    color: AppColors.primaryDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed == true) {
+                          ref.read(chatHistoryProvider.notifier).clearAll();
+                        }
+                      },
                       child: Text(
                         'Clear all',
                         style: AppTextStyles.bodyMedium.copyWith(
@@ -449,8 +506,7 @@ class _HistoryTile extends StatelessWidget {
                 tooltip: 'Delete',
                 icon: Icon(
                   Icons.delete_outline_rounded,
-                  color: AppColors.textDisabled,
-                  size: 20,
+                  color: AppColors.textSecondary,
                 ),
                 onPressed: onDelete,
               ),
@@ -557,5 +613,19 @@ String _relativeTime(DateTime time) {
   if (d.inMinutes < 60) return '${d.inMinutes}m ago';
   if (d.inHours < 24) return '${d.inHours}h ago';
   if (d.inDays < 7) return '${d.inDays}d ago';
-  return '${time.day}/${time.month}/${time.year}';
+  const List<String> months = <String>[
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${time.day} ${months[time.month - 1]} ${time.year}';
 }

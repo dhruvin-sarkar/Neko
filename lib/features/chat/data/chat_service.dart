@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart' show XFile;
 
+import '../../../core/config/app_env.dart';
 import '../../../core/utils/logger.dart';
 import '../models/chat_attachment.dart';
 import '../models/chat_message.dart';
@@ -32,7 +32,8 @@ abstract class ChatService {
 /// Raised when the AI request fails; shown to the user as a friendly note.
 class ChatException implements Exception {
   const ChatException([
-    this.message = 'The assistant is unavailable right now.',
+    this.message =
+        'Meow — I couldn’t fetch that thought. Check your connection and try again?',
   ]);
   final String message;
 }
@@ -78,19 +79,14 @@ class HackClubChatService implements ChatService {
 
   final http.Client _client;
 
-  /// Placeholder shipped in `.env.example`; treated as "no key set".
-  static const String _placeholderKey = 'replace_with_your_hackclub_api_key';
+  /// Placeholder shipped in `.env.example`; treated as "no key set". Shared
+  /// with [AppEnv.aiApiKey] so the two placeholder checks can never drift.
+  static const String _placeholderKey = AppEnv.placeholderAiKey;
 
-  String get _apiKey {
-    final String key = dotenv.get('HACKCLUB_API_KEY', fallback: '');
-    if (key.isNotEmpty) return key;
-    return dotenv.get('AI_API_KEY', fallback: '');
-  }
+  String get _apiKey => AppEnv.aiApiKey;
 
-  String get _baseUrl =>
-      dotenv.get('AI_BASE_URL', fallback: 'https://ai.hackclub.com/proxy/v1');
-  String get _model =>
-      dotenv.get('AI_MODEL', fallback: 'google/gemini-3-flash-preview');
+  String get _baseUrl => AppEnv.aiBaseUrl;
+  String get _model => AppEnv.aiModel;
 
   @override
   Stream<String> streamReply(
@@ -102,7 +98,10 @@ class HackClubChatService implements ChatService {
     final String apiKey = _apiKey;
     if (apiKey.isEmpty || apiKey == _placeholderKey) {
       // The env-var detail is for the developer (logs), never the user.
-      AppLogger.warning('HACKCLUB_API_KEY missing or placeholder in .env');
+      AppLogger.warning(
+        'HACKCLUB_API_KEY missing or placeholder — pass it via '
+        '--dart-define-from-file=.env',
+      );
       throw const ChatException(
         'Meow — I can’t reach my brain right now. Give me a moment and try again.',
       );
@@ -215,8 +214,14 @@ class HackClubChatService implements ChatService {
       } on Object catch (e) {
         // Skip a malformed chunk — but log it. If the API envelope ever
         // changes, every chunk fails here and the reply would otherwise come
-        // back silently empty with no diagnostic trail.
-        AppLogger.warning('SSE chunk parse skipped', e);
+        // back silently empty with no diagnostic trail. Never attach the
+        // exception itself outside debug: a FormatException carries the raw
+        // chunk (conversation content) as its source.
+        if (kDebugMode) {
+          AppLogger.warning('SSE chunk parse skipped', e);
+        } else {
+          AppLogger.warning('SSE chunk parse skipped (${e.runtimeType})');
+        }
       }
     }
   }
@@ -231,7 +236,14 @@ class HackClubChatService implements ChatService {
               as Map<String, dynamic>;
       return (message['content'] as String?) ?? '';
     } on Object catch (e, st) {
-      AppLogger.warning('AI response parse failed', e, st);
+      // Same restraint as the SSE path: a FormatException's source is the full
+      // response body, which can echo conversation content — type only in
+      // release, full detail in debug.
+      if (kDebugMode) {
+        AppLogger.warning('AI response parse failed', e, st);
+      } else {
+        AppLogger.warning('AI response parse failed (${e.runtimeType})');
+      }
       throw const ChatException();
     }
   }
