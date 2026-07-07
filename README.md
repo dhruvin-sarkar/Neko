@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/Neko.gif?raw=true" width=90%>
+  <img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Neko.gif?raw=true" width=90%>
   <br>
   <br>
   Neko
@@ -60,8 +60,8 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
     <th>Adding a New Cat</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/CatProfile.gif?raw=true" width=300px></td>
-    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/NewCat.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/CatProfile.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/NewCat.gif?raw=true" width=300px></td>
   </tr>
 </table>
 <table align="center">
@@ -70,8 +70,8 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
     <th>The Dynamic Island</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/AI%20Chat.gif?raw=true" width=300px></td>
-    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/Notch.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/AI%20Chat.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Notch.gif?raw=true" width=300px></td>
   </tr>
 </table>
 <table align="center">
@@ -80,8 +80,8 @@ Turns your phone's punch hole cutout into an always-on activity pill, Dynamic Is
     <th>Voice Assistant</th>
   </tr>
   <tr>
-    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/Themes.gif?raw=true" width=300px></td>
-    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/readmeAssets/Notch.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Themes.gif?raw=true" width=300px></td>
+    <td><img src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Notch.gif?raw=true" width=300px></td>
   </tr>
 </table>
 
