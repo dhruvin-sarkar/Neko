@@ -49,6 +49,14 @@ This is a full inventory of everything flagged or run into during the build: Aik
 | Android components with exported attribute active | Medium | `AndroidManifest.xml` | Likely overlaps with the intents-not-received-safely finding from SonarQube and the `BootReceiver` finding above. |
 | Improper Android backup configuration | Medium | `AndroidManifest.xml` (x2 locations) | Overlaps with the SonarQube "backup of application data" finding below. |
 
+```mermaid
+pie showData
+    title Aikido findings by severity
+    "High" : 2
+    "Medium" : 5
+    "Low" : 3
+```
+
 ---
 
 ## 2. Static Analysis Findings — SonarQube

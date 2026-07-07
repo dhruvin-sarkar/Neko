@@ -6,6 +6,14 @@ actually changed. Some findings were stale by the time I got to them; some
 needed a real fix; a few I decided to leave alone on purpose, and I say why.
 Everything below is against the code as it stands now, not the report text.
 
+```mermaid
+flowchart LR
+    Report["Reported finding"] --> Check["Read the current code"]
+    Check --> Real{"Still real?"}
+    Real -->|yes| Fix["Fix and record what changed"]
+    Real -->|no| Note["Record that it was stale"]
+```
+
 ## Contents
 
 - [1. Security (Aikido)](#1-security-aikido)
