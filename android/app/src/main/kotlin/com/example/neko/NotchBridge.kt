@@ -238,6 +238,14 @@ object NotchBridge {
     private fun buildCommand(event: Map<String, Any?>): String? {
         return when (event["kind"]) {
             "notification" -> notificationCommand(event)
+            // A notification-derived card (ended call, finished navigation,
+            // completed download, ongoing notification) is dismissed. Without
+            // this branch the removal fell to `else -> null` and was dropped on
+            // the app-dead path, so the card stayed stuck on the live overlay
+            // until an unrelated event reused its key. The pushed card's id is
+            // event["key"] (see notificationCommand), so remove by that id.
+            "notificationRemoved" ->
+                JSONObject().put("cmd", "remove").put("id", event["key"] ?: "").toString()
             "media" -> mediaCommand(event)
             "mediaStopped" -> {
                 mediaShownDirect = false
