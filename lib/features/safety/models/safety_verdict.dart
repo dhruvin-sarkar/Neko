@@ -38,7 +38,13 @@ class SafetyVerdict {
     ).firstMatch(firstLine);
 
     if (match == null) {
-      return SafetyVerdict(level: SafetyLevel.unknown, detail: trimmed);
+      // A non-empty reply that doesn't lead with a label means the model
+      // didn't follow the format — which is exactly what a prompt-injection
+      // attempt to dodge a DANGER verdict looks like. Err toward CAUTION (a
+      // warning), not a neutral verdict, so a manipulated or off-format reply
+      // always lands on the cautious side. Only an explicit "SAFE:" above can
+      // ever surface as safe.
+      return SafetyVerdict(level: SafetyLevel.caution, detail: trimmed);
     }
 
     final SafetyLevel level = switch (match.group(1)!.toUpperCase()) {
