@@ -127,8 +127,20 @@ class NekoNotificationListenerService : NotificationListenerService() {
         val timerEndsAt = n.`when`
         val isCountdown = isCountdown(extras, timerEndsAt, isClockActivity)
 
-        val title = resolveTitle(extras, n, sbn.packageName)
-        if (title.isBlank()) return
+        val category = resolveCategory(n, sbn.packageName, ongoing, isCountdown, isClockActivity)
+        val progress = resolveProgress(extras)
+        // A live activity (turn-by-turn, an answered call, a countdown, a
+        // download) is worth surfacing even when the app posts it via custom
+        // RemoteViews with a blank EXTRA_TITLE — Google Maps navigation does
+        // exactly that, and dropping it on an empty title is why a started route
+        // never reached the notch. A plain, title-less notification is chrome.
+        val isLive = category == "navigation" || category == "call" ||
+            category == "timer" || (ongoing && progress >= 0.0)
+        var title = resolveTitle(extras, n)
+        if (title.isBlank()) {
+            if (!isLive) return
+            title = appLabel(sbn.packageName)
+        }
         if (shouldIgnoreNotification(sbn.packageName, title, n.category)) return
 
         NotchBridge.send(
@@ -140,9 +152,9 @@ class NekoNotificationListenerService : NotificationListenerService() {
                 "packageId" to sbn.packageName,
                 "title" to title,
                 "body" to resolveBody(extras),
-                "category" to resolveCategory(n, sbn.packageName, ongoing, isCountdown, isClockActivity),
+                "category" to category,
                 "ongoing" to ongoing,
-                "progress" to resolveProgress(extras),
+                "progress" to progress,
                 "endsAtMs" to if (isCountdown) timerEndsAt else 0L,
             ),
         )
@@ -166,13 +178,16 @@ class NekoNotificationListenerService : NotificationListenerService() {
     }
 
     /// Navigation apps (Maps) post custom RemoteViews notifications that often
-    /// omit EXTRA_TITLE, so fall back through the other text fields and finally
-    /// the ticker / app name — otherwise turn-by-turn never shows.
-    private fun resolveTitle(extras: Bundle, n: Notification, packageName: String): String =
-        extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()
-            ?: n.tickerText?.toString()
-            ?: appLabel(packageName)
+    /// omit OR blank EXTRA_TITLE, so skip blank candidates and fall through the
+    /// other text fields — otherwise a present-but-empty title short-circuits
+    /// the chain and turn-by-turn never shows. Returns "" when no real text is
+    /// found; the caller supplies the app name for a live activity and drops a
+    /// plain notification that has none.
+    private fun resolveTitle(extras: Bundle, n: Notification): String =
+        extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.takeIf { it.isNotBlank() }
+            ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG)?.toString()?.takeIf { it.isNotBlank() }
+            ?: n.tickerText?.toString()?.takeIf { it.isNotBlank() }
+            ?: ""
 
     private fun resolveBody(extras: Bundle): String =
         extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()
