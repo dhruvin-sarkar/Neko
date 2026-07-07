@@ -150,7 +150,7 @@ flowchart LR
     AI["🤖 AI proxy"]
 
     You --> UI
-    You -. "Hey Neko" .-> Voice
+    You -.->|"Hey Neko"| Voice
     Voice --> AI
     UI -->|platform channel| Overlay
     Listener --> Overlay
