@@ -379,8 +379,16 @@ class _NotchPillState extends State<NotchPill>
     }
     _cycleHoldTimer?.cancel();
     _cycleHoldType = null;
-    // A different activity may now be the shown one — hug its width.
-    if (_primary != null) _syncCompactWidth(animate: false);
+    // A different activity may now be the shown one — hug its width, and re-arm
+    // its recede. A removal can reveal a transient that had stepped aside for a
+    // pinned activity (music promoted behind a feeding timer that just ended);
+    // without this it would sit at the compact peek forever. _scheduleRecede's
+    // callback no-ops for a pinned/expanded/minimized primary, so this only
+    // melts a genuinely-transient reveal back to the minimal pill.
+    if (_primary != null) {
+      _syncCompactWidth(animate: false);
+      _scheduleRecede();
+    }
     if (!_expanded) _expand.value = 0;
     _applyWindow();
     _applyFlag();
