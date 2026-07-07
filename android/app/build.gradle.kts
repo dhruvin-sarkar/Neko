@@ -6,6 +6,9 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+dependencyLocking {
+    lockAllConfigurations()
+}
 android {
     namespace = "com.example.neko"
     compileSdk = flutter.compileSdkVersion
