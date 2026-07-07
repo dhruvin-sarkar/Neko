@@ -11,11 +11,11 @@
 ![Flutter](https://img.shields.io/badge/Made%20with-Flutter-2ec4b6)
 ![Firebase](https://img.shields.io/badge/Made%20with-Firebase-FFCA28)
  
-Neko is the purr-fect (and honestly, the only) cat owner companion app you'll need. Feeding schedules, vet records, and mood tracking, all wrapped up with an AI cat companion and an Apple-inspired Dynamic Island overlay, because your cat deserves nothing less pawsome.
+Neko is the purr-fect (and honestly, the only) cat owner companion app you'll need. Feeding schedules or vet records, all wrapped up with an AI cat companion and an Apple-inspired Dynamic Island overlay, because your cat deserves nothing less pawsome.
  
 ### Overview
 </div>
-Neko was born out of pure cat-astrophe, juggling five different apps just to remember feeding times, vet visits, and whether a mood swing meant something was actually wrong. So this app was created to bring it all together in one meow-nificent place, complete with an AI companion who talks back and guides you through it all.
+Neko was born out of pure cat-astrophe, juggling five different apps just to remember feeding times or vet visits something was actually wrong. So this app was created to bring it all together in one meow-nificent place, complete with an AI companion who talks back and guides you through it all.
 
 <div align='center'>
   
