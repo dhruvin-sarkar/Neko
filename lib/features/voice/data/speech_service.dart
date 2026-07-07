@@ -43,11 +43,34 @@ class SpeechService {
         onError: (SpeechRecognitionError e) => _errorCb?.call(e.errorMsg),
         debugLogging: false,
       );
+      if (_initialised) await _resolveEnglishLocale();
     } on Object catch (e, st) {
       AppLogger.warning('Speech recognition init failed', e, st);
       _initialised = false;
     }
     return _initialised;
+  }
+
+  /// The device's English recogniser locale, if one is installed. The wake word
+  /// ("Neko") is an English sound and recognises far more reliably under en-*
+  /// than under a non-English default locale — so the wake loop pins this while
+  /// the command session stays on the user's system language.
+  String? _englishLocaleId;
+  Future<void> _resolveEnglishLocale() async {
+    if (_englishLocaleId != null) return;
+    try {
+      final List<LocaleName> locales = await _speech.locales();
+      for (final LocaleName l in locales) {
+        final String id = l.localeId.toLowerCase().replaceAll('-', '_');
+        if (id == 'en_us') {
+          _englishLocaleId = l.localeId;
+          return;
+        }
+        _englishLocaleId ??= id.startsWith('en') ? l.localeId : null;
+      }
+    } on Object {
+      // No locale list available — fall back to the system default (null).
+    }
   }
 
   /// Starts a listening session. [onWords] fires repeatedly with the running
@@ -62,6 +85,10 @@ class SpeechService {
     // mic indicator and churns audio focus).
     Duration pauseFor = const Duration(seconds: 3),
     Duration listenFor = const Duration(seconds: 30),
+    // The wake loop sets this so "Neko" is recognised under English phonetics
+    // regardless of the device's default locale. The command session leaves it
+    // off so questions can be asked in the user's own language.
+    bool preferEnglish = false,
   }) async {
     await _speech.listen(
       onResult: (SpeechRecognitionResult r) {
@@ -73,6 +100,7 @@ class SpeechService {
         partialResults: true,
         cancelOnError: true,
         listenMode: ListenMode.dictation,
+        localeId: preferEnglish ? _englishLocaleId : null,
         pauseFor: pauseFor,
         listenFor: listenFor,
       ),

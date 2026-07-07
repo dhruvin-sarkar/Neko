@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -65,18 +66,27 @@ final wakeWordControllerProvider =
 class WakeWordController extends Notifier<WakeWordState> {
   static const String _prefKey = 'hey_neko_wake_enabled';
 
-  // Words STT commonly hears for "Neko" — kept loose so the wake still fires
-  // when recognition mangles the vowel.
-  static const List<String> _cues = <String>[
-    'hey neko',
-    'hey nico',
-    'hey niko',
-    'neko',
-    'neco',
-    'nico',
-    'niko',
-    'necko',
-  ];
+  // Whole-word tokens speech_to_text commonly emits for "Neko" — matched by
+  // word, not as a substring, so they can't fire inside an unrelated word.
+  static const Set<String> _nekoTokens = <String>{
+    'neko', 'neco', 'necko', 'nekko', 'neeko', 'neaco', 'neku', 'neka',
+    'nekoh', 'neyko', 'nekow', 'necco', 'negko', 'nemko', 'naco',
+  };
+
+  // Lead words that plausibly precede the name. A "strong" lead (an actual
+  // greeting) tolerates a fuzzy neko match ("hey neck"); any lead only clears an
+  // exact known mishear ("ok neko"), so a near-miss can't wake on a stray word.
+  static const Set<String> _leadStrong = <String>{'hey', 'hay', 'hi'};
+  static const Set<String> _leadAny = <String>{
+    'hey', 'hay', 'hi', 'ok', 'okay', 'yo', 'a', 'ay', 'ey',
+  };
+
+  // Real words / names that "Neko" is often misheard as ("neck", or the name
+  // "Nico") — only trusted right after a real greeting, so a bare occurrence of
+  // them can never wake it.
+  static const Set<String> _leadOnlyTokens = <String>{
+    'neck', 'necks', 'nico', 'niko', 'nika',
+  };
 
   AppLifecycleListener? _lifecycle;
   bool _foreground = true;
@@ -263,6 +273,8 @@ class WakeWordController extends Notifier<WakeWordState> {
           onFinal: (_) {},
           pauseFor: const Duration(seconds: 30),
           listenFor: const Duration(seconds: 60),
+          // Pin English so "Neko" is heard the same way on any device locale.
+          preferEnglish: true,
         );
       } on Object catch (e, st) {
         AppLogger.warning('Wake listen failed; re-arming', e, st);
@@ -299,13 +311,74 @@ class WakeWordController extends Notifier<WakeWordState> {
   }
 
   void _scan(String words) {
-    final String w = words.toLowerCase();
-    for (final String cue in _cues) {
-      if (w.contains(cue)) {
-        unawaited(_trigger());
-        return;
+    if (matchesWake(words)) unawaited(_trigger());
+  }
+
+  /// Pure wake-word matcher over a (possibly partial) transcript. Static and
+  /// side-effect-free so it can be unit-tested without a recogniser.
+  static bool matchesWake(String words) {
+    final List<String> toks = words
+        .toLowerCase()
+        .split(RegExp(r'[^a-z]+'))
+        .where((String t) => t.isNotEmpty)
+        .toList();
+    for (int i = 0; i < toks.length; i++) {
+      final String t = toks[i];
+      // "Neko" on its own (an exact known mishear).
+      if (_nekoTokens.contains(t)) return true;
+      final String? next = i + 1 < toks.length ? toks[i + 1] : null;
+      if (next != null && _leadAny.contains(t)) {
+        // Any lead + an exact mishear; or a real greeting + a fuzzy near-miss or
+        // a known look-alike word ("hey neck", "hey nico").
+        final bool strong = _leadStrong.contains(t);
+        if (_nekoTokens.contains(next) ||
+            (strong &&
+                (_isNekoLike(next) || _leadOnlyTokens.contains(next)))) {
+          return true;
+        }
+      }
+      // The recogniser sometimes fuses them into one token ("heyneko").
+      if (t.length >= 6 &&
+          (t.startsWith('hey') || t.startsWith('hay')) &&
+          _isNekoLike(t.substring(3))) {
+        return true;
       }
     }
+    return false;
+  }
+
+  /// Whether [token] is, or is one edit away from, the "Neko" sound. The fuzzy
+  /// arm is only ever consulted after a strong lead word, so a near-miss like
+  /// "neck" or "nero" can never wake on its own.
+  static bool _isNekoLike(String token) {
+    if (_nekoTokens.contains(token)) return true;
+    return token.length >= 4 &&
+        token.length <= 6 &&
+        _editDistance(token, 'neko') <= 1;
+  }
+
+  /// Levenshtein distance. Inputs are single short words, so the plain
+  /// two-row O(n*m) is more than fast enough.
+  static int _editDistance(String a, String b) {
+    final int n = a.length, m = b.length;
+    if (n == 0) return m;
+    if (m == 0) return n;
+    List<int> prev = List<int>.generate(m + 1, (int j) => j);
+    List<int> cur = List<int>.filled(m + 1, 0);
+    for (int i = 1; i <= n; i++) {
+      cur[0] = i;
+      for (int j = 1; j <= m; j++) {
+        final int cost = a.codeUnitAt(i - 1) == b.codeUnitAt(j - 1) ? 0 : 1;
+        cur[j] = math.min(
+          math.min(cur[j - 1] + 1, prev[j] + 1),
+          prev[j - 1] + cost,
+        );
+      }
+      final List<int> tmp = prev;
+      prev = cur;
+      cur = tmp;
+    }
+    return prev[m];
   }
 
   /// True between a wake trigger and the Hey Neko session claiming the mic
