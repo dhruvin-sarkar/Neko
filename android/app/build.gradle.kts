@@ -35,8 +35,11 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Intentionally debug-signed: the hackathon build is side-loaded by
+            // judges, not distributed through Play, so nothing trusts this
+            // signature for anything privileged. A production release would wire
+            // in a dedicated upload keystore here (and register its SHA-1 in the
+            // Firebase console for Google Sign-In).
             signingConfig = signingConfigs.getByName("debug")
             // R8: shrink + obfuscate release code so the shipped APK doesn't
             // carry readable symbols (SonarQube security finding).
