@@ -19,7 +19,7 @@ Neko is the purr-fect (and honestly, the only) cat owner companion app you'll ne
 
 </div>
 
-<img align="right" width="250" src="https://github.com/dhruvin-sarkar/Neko/blob/main/Documentation/readmeAssets/Maneki.gif?raw=true" alt="Maneki-neko waving">
+
 
 ## Contents
 
