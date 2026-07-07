@@ -141,6 +141,17 @@ class NotchController extends Notifier<NotchState> {
           await _service.resync();
         }
 
+        // A feeding countdown started while the notch was on keeps running if
+        // the notch is toggled off mid-count (state.activeTimer survives and
+        // its _timerEnd stays armed), but the disable path wiped _ongoing. Re-
+        // seed it from the surviving countdown before the replay loop — without
+        // this the loop iterates an empty map and the still-live timer never
+        // returns to the island, while the profile card keeps showing it.
+        final NotchActivity? liveTimer = state.activeTimer;
+        if (liveTimer != null) {
+          _ongoing[liveTimer.key] = liveTimer;
+        }
+
         // resync only re-emits NATIVE state (media, system notifications).
         // Replay app-owned activities (a feeding timer started while the notch
         // was off) so flipping the toggle on immediately shows them.
