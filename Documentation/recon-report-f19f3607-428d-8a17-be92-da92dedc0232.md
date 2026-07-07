@@ -96,6 +96,21 @@ A user crafts text or image inputs designed to override the system prompt and in
 | **Mitigation** | Enforce a client-side post-processing step that treats any safety scan response that does not begin with an explicit SAFE, CAUTION, or DANGER label as CAUTION by default, so a manipulated or ambiguous reply always falls back to the cautious outcome. |
 | **Validation** | Pentest: submit a set of adversarial prompt injection payloads and images for known cat toxins and verify that no response is surfaced to the user as SAFE without the model explicitly producing that label. |
 
+The client-side fail-safe in one glance — anything that is not an explicit label lands on CAUTION:
+
+```mermaid
+flowchart TD
+    Reply["AI safety reply"] --> Check{"Begins with an explicit<br/>SAFE / CAUTION / DANGER label?"}
+    Check -->|yes| Use["Surface the stated label"]
+    Check -->|no| Fallback["Force CAUTION"]
+    Use --> Owner["Shown to the owner"]
+    Fallback --> Owner
+    classDef safe fill:#2ec4b6,stroke:#1f9c90,color:#ffffff
+    classDef warn fill:#f4a340,stroke:#d4842a,color:#ffffff
+    class Use safe
+    class Fallback warn
+```
+
 ### AI API key extraction and unauthorized backend usage
 
 The Hack Club AI API key is loaded from the app's bundled environment configuration at build time and is therefore present in the distributed APK and IPA packages. An attacker who decompiles the package can extract the key and make direct requests to the AI proxy without any connection to the app or to a specific user account. This allows unlimited AI queries, exhaustion of rate limits or token quotas, and potential cost impact on the service.
