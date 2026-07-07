@@ -78,43 +78,52 @@ class ChatHistoryController extends Notifier<List<ChatConversation>> {
     }
   }
 
-  Future<void> _persist() async {
+  /// Writes the current history for the signed-in user. Returns `true` when the
+  /// write reached disk (or there was nothing to do), and `false` when it was
+  /// rejected — disk full, a platform-channel error, corrupted prefs. State is
+  /// updated optimistically before this runs, so a `false` is the caller's only
+  /// signal that the in-memory change did NOT persist and will be lost on the
+  /// next reload; the mutators forward it rather than swallowing it silently.
+  Future<bool> _persist() async {
     final String? uid = _uid;
     // Signed out — there's no account to attribute the write to.
-    if (uid == null) return;
+    if (uid == null) return true;
     final String raw = jsonEncode([for (final c in state) c.toJson()]);
     try {
       await ref
           .read(sharedPreferencesProvider)
           .setString(_historyKeyFor(uid), raw);
+      return true;
     } on Object catch (e, st) {
-      // State is already updated optimistically; surface the write failure
-      // rather than letting the rejected Future vanish.
       AppLogger.error('Failed to persist chat history', e, st);
+      return false;
     }
   }
 
   /// Inserts or updates [conversation] (matched by id), keeping newest first.
-  Future<void> upsert(ChatConversation conversation) async {
+  /// Returns whether the change reached disk (see [_persist]).
+  Future<bool> upsert(ChatConversation conversation) async {
     final List<ChatConversation> next = [
       conversation,
       for (final ChatConversation c in state)
         if (c.id != conversation.id) c,
     ]..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     state = next;
-    await _persist();
+    return _persist();
   }
 
-  Future<void> remove(String id) async {
+  /// Removes the conversation with [id]. Returns whether the change reached disk.
+  Future<bool> remove(String id) async {
     state = [
       for (final ChatConversation c in state)
         if (c.id != id) c,
     ];
-    await _persist();
+    return _persist();
   }
 
-  Future<void> clearAll() async {
+  /// Clears all history for the signed-in user. Returns whether it reached disk.
+  Future<bool> clearAll() async {
     state = const [];
-    await _persist();
+    return _persist();
   }
 }
