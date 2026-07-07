@@ -1685,13 +1685,14 @@ IconData _maneuverIconFor(String instruction) {
   return Icons.navigation_rounded;
 }
 
-/// Paints the nav card's stylised minimap: an OPAQUE cool-slate map surface
-/// (so the island's drifting paw pattern can't bleed through), a lit gradient
-/// with an inner vignette for depth, a water body + park block, a two-tier
-/// street grid, a glossy accent route (glow → core → white centreline) with a
-/// rounded junction bend and heading chevrons, a teardrop destination pin and a
-/// haloed position puck. A static scene — it repaints only on theme change, so
-/// it costs nothing while directions tick.
+/// Paints the nav card's stylised minimap in the app's own flat visual
+/// language: an opaque, subtly-elevated surface (so the island's drifting paw
+/// pattern can't bleed through), a subtle foreground street grid, and the route
+/// drawn as a foreground "road" track with the accent line on top — the same
+/// track+value pairing the notch uses for its progress rings. Flat markers (an
+/// accent target, a haloed location puck), no glow/gradient/vignette. A static
+/// scene — it repaints only on theme change, so it costs nothing as directions
+/// tick.
 class _MiniMapPainter extends CustomPainter {
   const _MiniMapPainter({required this.theme});
 
@@ -1701,102 +1702,40 @@ class _MiniMapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Rect rect = Offset.zero & size;
 
-    // OPAQUE cool-slate map surface (mostly neutral, faintly tinted by the coat
-    // theme) with a soft top-down gradient. Being opaque is the point: the old
-    // translucent base let the island's drifting paw pattern bleed through and
-    // clutter the map. A neutral map + a themed route reads like a real nav app.
-    final Color top =
-        Color.lerp(theme.background, const Color(0xFF222C3E), 0.92) ??
-        const Color(0xFF222C3E);
-    final Color bottom =
-        Color.lerp(theme.background, const Color(0xFF10151F), 0.92) ??
-        const Color(0xFF10151F);
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = ui.Gradient.linear(rect.topCenter, rect.bottomCenter, <Color>[
-          top,
-          bottom,
-        ]),
+    // A flat map surface that matches the app's Material-3 cards: an opaque,
+    // very subtly elevated tint of the island background. Opaque so the drifting
+    // paw pattern can't bleed through, but no gradient, vignette, glow or
+    // off-theme geography — the route and markers reuse the same accent /
+    // foreground-track language as the notch's own progress rings and dots.
+    final Color surface = Color.alphaBlend(
+      theme.foreground.withValues(alpha: 0.05),
+      theme.background,
     );
+    canvas.drawRect(rect, Paint()..color = surface);
 
-    // A touch of geography so the grid isn't floating on nothing: a water body
-    // tucked into the top-left, a park block in the bottom-right — both clear of
-    // the route and markers.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          -size.width * 0.06,
-          -size.height * 0.12,
-          size.width * 0.32,
-          size.height * 0.5,
-        ),
-        Radius.circular(size.height * 0.26),
-      ),
-      Paint()..color = const Color(0xFF2E4A6E).withValues(alpha: 0.55),
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          size.width * 0.7,
-          size.height * 0.58,
-          size.width * 0.42,
-          size.height * 0.6,
-        ),
-        Radius.circular(size.height * 0.12),
-      ),
-      Paint()..color = const Color(0xFF31513A).withValues(alpha: 0.5),
-    );
-
-    // Street grid, two tiers: brighter avenues, then thin cross-streets.
-    final Paint avenue = Paint()
-      ..color = Colors.white.withValues(alpha: 0.09)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
-    final Paint street = Paint()
-      ..color = Colors.white.withValues(alpha: 0.04)
+    // Subtle street grid — the same low-alpha foreground the app uses for its
+    // dividers and progress tracks.
+    final Paint grid = Paint()
+      ..color = theme.foreground.withValues(alpha: 0.09)
       ..strokeWidth = 1.4
       ..strokeCap = StrokeCap.round;
-    for (final double fy in <double>[0.34, 0.7]) {
+    for (final double fy in <double>[0.28, 0.56, 0.84]) {
       final double y = size.height * fy;
-      canvas.drawLine(Offset(6, y), Offset(size.width - 6, y), avenue);
+      canvas.drawLine(Offset(8, y), Offset(size.width - 8, y), grid);
     }
-    for (final double fx in <double>[0.36, 0.74]) {
+    for (final double fx in <double>[0.22, 0.46, 0.72]) {
       final double x = size.width * fx;
-      canvas.drawLine(Offset(x, 6), Offset(x, size.height - 6), avenue);
-    }
-    for (final double fy in <double>[0.18, 0.52, 0.86]) {
-      final double y = size.height * fy;
-      canvas.drawLine(Offset(6, y), Offset(size.width - 6, y), street);
-    }
-    for (final double fx in <double>[0.18, 0.55, 0.9]) {
-      final double x = size.width * fx;
-      canvas.drawLine(Offset(x, 6), Offset(x, size.height - 6), street);
+      canvas.drawLine(Offset(x, 8), Offset(x, size.height - 8), grid);
     }
 
-    // Soft inner vignette for depth — darker toward the edges, lit at the
-    // centre. Drawn under the route so the line and markers stay crisp on top.
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = ui.Gradient.radial(
-          rect.center,
-          size.longestSide * 0.7,
-          <Color>[
-            const Color(0x00000000),
-            Colors.black.withValues(alpha: 0.30),
-          ],
-          <double>[0.5, 1.0],
-        ),
-    );
-
-    // The route: bottom-left origin, a rounded junction bend, then a sweep to
-    // the top-right destination.
-    final Offset start = Offset(size.width * 0.13, size.height * 0.82);
+    // The route: a foreground "road" track with the accent line on top — the
+    // same track+value pairing the notch uses for its progress rings and bars.
+    // Flat and rounded, no glow, no highlight.
+    final Offset start = Offset(size.width * 0.14, size.height * 0.82);
     final Offset bend = Offset(size.width * 0.46, size.height * 0.82);
     final Offset bend2 = Offset(size.width * 0.46, size.height * 0.30);
-    final Offset dest = Offset(size.width * 0.9, size.height * 0.30);
-    const double r = 13;
+    final Offset dest = Offset(size.width * 0.88, size.height * 0.30);
+    const double r = 12;
     final Path route = Path()
       ..moveTo(start.dx, start.dy)
       ..lineTo(bend.dx - r, bend.dy)
@@ -1804,25 +1743,12 @@ class _MiniMapPainter extends CustomPainter {
       ..lineTo(bend2.dx, bend2.dy + r)
       ..quadraticBezierTo(bend2.dx, bend2.dy, bend2.dx + r, bend2.dy)
       ..lineTo(dest.dx, dest.dy);
-
-    // Layered stroke: blurred glow casing → mid band → bright core → a thin
-    // white centre highlight for a glossy nav-line finish.
     canvas.drawPath(
       route,
       Paint()
-        ..color = theme.accent.withValues(alpha: 0.18)
+        ..color = theme.foreground.withValues(alpha: 0.18)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 12
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-    );
-    canvas.drawPath(
-      route,
-      Paint()
-        ..color = theme.accent.withValues(alpha: 0.45)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 7.5
+        ..strokeWidth = 7
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
@@ -1831,64 +1757,24 @@ class _MiniMapPainter extends CustomPainter {
       Paint()
         ..color = theme.accent
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-    canvas.drawPath(
-      route,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.32)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.2
+        ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
 
-    // Two white heading chevrons riding up the vertical leg.
-    for (final double fy in <double>[0.46, 0.66]) {
-      final double cy = size.height * fy;
-      canvas.drawPath(
-        Path()
-          ..moveTo(bend2.dx - 3.5, cy + 3.5)
-          ..lineTo(bend2.dx, cy)
-          ..lineTo(bend2.dx + 3.5, cy + 3.5),
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.9)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.8
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round,
-      );
-    }
+    // Destination: a flat accent target with a punched-out centre.
+    canvas.drawCircle(dest, 5.5, Paint()..color = theme.accent);
+    canvas.drawCircle(dest, 2.4, Paint()..color = surface);
 
-    // Destination: a teardrop pin with a soft drop shadow and an accent dot.
-    const double pinR = 5.5;
-    final Offset head = Offset(dest.dx, dest.dy - pinR * 1.7);
-    canvas.drawCircle(
-      head.translate(0, 1.2),
-      pinR + 0.5,
-      Paint()..color = Colors.black.withValues(alpha: 0.35),
-    );
-    canvas.drawPath(
-      Path()
-        ..moveTo(dest.dx, dest.dy)
-        ..lineTo(head.dx - pinR * 0.72, head.dy)
-        ..lineTo(head.dx + pinR * 0.72, head.dy)
-        ..close(),
-      Paint()..color = theme.foreground,
-    );
-    canvas.drawCircle(head, pinR, Paint()..color = theme.foreground);
-    canvas.drawCircle(head, 2.2, Paint()..color = theme.accent);
-
-    // Position puck at the origin: soft halo, white ring, accent core.
+    // "You are here" puck at the origin: a soft flat accent halo, a foreground
+    // ring, and an accent core — the app's pulsing location dot, held still.
     canvas.drawCircle(
       start,
-      10.5,
-      Paint()..color = theme.accent.withValues(alpha: 0.26),
+      9,
+      Paint()..color = theme.accent.withValues(alpha: 0.20),
     );
-    canvas.drawCircle(start, 6.5, Paint()..color = Colors.white);
-    canvas.drawCircle(start, 4.4, Paint()..color = theme.accent);
+    canvas.drawCircle(start, 5.5, Paint()..color = theme.foreground);
+    canvas.drawCircle(start, 3.4, Paint()..color = theme.accent);
   }
 
   @override
