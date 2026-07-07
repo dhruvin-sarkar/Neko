@@ -162,7 +162,7 @@ Both are **off by default** — each needs a sensitive permission, so the user o
 ## Security
 
 - Firestore rules (`firestore.rules`): each user can only reach their own `users/{uid}` tree; everything else is default-deny.
-- No secrets in the repo or the APK — see `SECURITY_FIXES.md` for the full Aikido remediation log (path-traversal hardening, per-account chat isolation, locked-down manifest, R8 + Dart release obfuscation, and more).
+- No secrets in the repo or the APK — config is injected at build time via `--dart-define-from-file`, never bundled as a readable asset. Path-traversal hardening on local storage, per-account chat isolation, a locked-down manifest (HTTPS-only, backup-excluded, unexported receivers), and R8 + Dart release obfuscation round out the security pass.
 - Chat transcripts are stored per account and cleared on sign-out; app data is excluded from Android backup and device-to-device transfer.
 
 <div align='center'>
