@@ -351,6 +351,12 @@ class _NotchPillState extends State<NotchPill>
   }
 
   void _remove({String? id, NotchActivityType? type}) {
+    // Remember which activity is showing so it stays shown across the removal.
+    // Clamping the index alone silently swaps the visible card when an EARLIER
+    // stack entry is the one removed and the list shifts down — e.g. a pinned
+    // timer being displaced by an unrelated transient that had promoted the
+    // shown index off the end.
+    final String? shownKey = _primary?.key;
     setState(() {
       _stack.removeWhere((NotchActivity a) {
         final bool byId = id != null && id.isNotEmpty && a.id == id;
@@ -369,9 +375,14 @@ class _NotchPillState extends State<NotchPill>
         _expanded = false;
         _minimized = false;
       }
-      if (_shownIndex >= _stack.length) {
-        _shownIndex = _stack.isEmpty ? 0 : _stack.length - 1;
-      }
+      // Re-locate the shown activity by identity (it may have shifted), falling
+      // back to the last card only if it was the one removed.
+      final int found = shownKey == null
+          ? -1
+          : _stack.indexWhere((NotchActivity a) => a.key == shownKey);
+      _shownIndex = found != -1
+          ? found
+          : (_stack.isEmpty ? 0 : _stack.length - 1);
     });
     if (_stack.isEmpty) {
       _recedeTimer?.cancel();
