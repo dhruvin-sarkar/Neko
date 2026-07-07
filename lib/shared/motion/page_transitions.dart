@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:go_router/go_router.dart';
 
 import '../../app/theme/app_colors.dart';
@@ -109,7 +108,6 @@ abstract final class PageTransitions {
     double coverOut = 0.5,
   }) {
     final Duration d = duration ?? _curtainDuration;
-    unawaited(_ensurePawCurtainImage());
     return CustomTransitionPage<void>(
       key: key,
       transitionDuration: d,
@@ -559,27 +557,6 @@ Path _pawPath(Offset center, double scale) {
   return path;
 }
 
-/// The paw artwork, decoded once for the curtain trail so it matches the
-/// background paw. Null until loaded; the trail falls back to a vector paw.
-ui.Image? _pawCurtainImage;
-Future<void>? _pawCurtainImageLoad;
-
-Future<void> _ensurePawCurtainImage() {
-  if (_pawCurtainImage != null) return Future<void>.value();
-  return _pawCurtainImageLoad ??= () async {
-    try {
-      final data = await rootBundle.load('assets/images/paw.png');
-      final ui.Codec codec = await ui.instantiateImageCodec(
-        data.buffer.asUint8List(),
-      );
-      final ui.FrameInfo frame = await codec.getNextFrame();
-      _pawCurtainImage = frame.image;
-    } on Object {
-      // Keep the vector fallback if the asset can't be decoded.
-    }
-  }();
-}
-
 /// Paints the diagonal colored panel and the walking paw-print trail, driven
 /// by the route [progress] animation.
 class _PawCurtainPainter extends CustomPainter {
@@ -613,6 +590,9 @@ class _PawCurtainPainter extends CustomPainter {
   void _paintPawTrail(Canvas canvas, Size size, double t) {
     const int count = 6;
     final double pawScale = size.shortestSide * 0.055;
+    // Back navigation runs this same transition in reverse — flip the paws so
+    // they walk with the sweep instead of moonwalking against it.
+    final bool reversing = progress.status == AnimationStatus.reverse;
 
     final double angle = math.atan2(size.height, size.width);
     final Offset normal = Offset(-math.sin(angle), math.cos(angle));
@@ -638,30 +618,20 @@ class _PawCurtainPainter extends CustomPainter {
       final double alpha = a * trailFade;
       canvas.save();
       canvas.translate(center.dx, center.dy);
-      canvas.rotate(angle + math.pi / 2 + side * 0.12);
-      final ui.Image? img = _pawCurtainImage;
-      if (img != null) {
-        // The same paw artwork as the background, tinted to the brand paw
-        // colour — so one paw is used throughout the app.
-        final double s = pawScale * 2.4;
-        final Paint paint = Paint()
-          ..filterQuality = FilterQuality.medium
-          ..colorFilter = ColorFilter.mode(
-            pawColor.withValues(alpha: alpha),
-            BlendMode.srcIn,
-          );
-        canvas.drawImageRect(
-          img,
-          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
-          Rect.fromCenter(center: Offset.zero, width: s, height: s),
-          paint,
-        );
-      } else {
-        canvas.drawPath(
-          _pawPath(Offset.zero, pawScale),
-          Paint()..color = pawColor.withValues(alpha: alpha),
-        );
-      }
+      // Toes lead the walk: point them along the sweep going in, and flip them
+      // to face the other way on a reverse (back) transition.
+      canvas.rotate(
+        angle + math.pi / 2 + side * 0.12 + (reversing ? math.pi : 0),
+      );
+      // A clean vector paw — rounded pad + four separated toe beans — NOT a
+      // solid srcIn tint of the detailed artwork, which collapsed the toes and
+      // pad into a featureless blob.
+      canvas.drawPath(
+        _pawPath(Offset.zero, pawScale * 1.5),
+        Paint()
+          ..isAntiAlias = true
+          ..color = pawColor.withValues(alpha: alpha),
+      );
       canvas.restore();
     }
   }
@@ -713,7 +683,6 @@ Future<void> playPawCurtain(
     await onCovered();
     return;
   }
-  unawaited(_ensurePawCurtainImage());
 
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   final Completer<void> done = Completer<void>();
@@ -909,28 +878,15 @@ class _OverlayCurtainPainter extends CustomPainter {
       canvas.save();
       canvas.translate(center.dx, center.dy);
       canvas.rotate(angle + math.pi / 2 + side * 0.12);
-      final ui.Image? img = _pawCurtainImage;
-      if (img != null) {
-        // Same paw artwork as the route curtain and the background.
-        final double s = pawScale * 2.4;
-        final Paint paint = Paint()
-          ..filterQuality = FilterQuality.medium
-          ..colorFilter = ColorFilter.mode(
-            pawColor.withValues(alpha: alpha),
-            BlendMode.srcIn,
-          );
-        canvas.drawImageRect(
-          img,
-          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
-          Rect.fromCenter(center: Offset.zero, width: s, height: s),
-          paint,
-        );
-      } else {
-        canvas.drawPath(
-          _pawPath(Offset.zero, pawScale),
-          Paint()..color = pawColor.withValues(alpha: alpha),
-        );
-      }
+      // A clean vector paw — rounded pad + four separated toe beans — NOT a
+      // solid srcIn tint of the detailed artwork, which collapsed the toes and
+      // pad into a featureless blob.
+      canvas.drawPath(
+        _pawPath(Offset.zero, pawScale * 1.5),
+        Paint()
+          ..isAntiAlias = true
+          ..color = pawColor.withValues(alpha: alpha),
+      );
       canvas.restore();
     }
   }
