@@ -169,6 +169,15 @@ object NotchBridge {
         if (!shouldBootstrap(context)) return
         val command = buildCommand(event) ?: return
         if (deliverToOverlay(command)) return
+        // A remove-only command (a dismissed notification, a stopped media
+        // session) has nothing to act on once the overlay is down: the boot
+        // restore only re-adds what the app persisted, so cold-booting the
+        // engine just to process it would pop an idle pill and a "Restoring
+        // notch…" service for an unrelated dismissal (or a bare listener
+        // reconnect). The live-overlay clear above already handled the real
+        // stuck-card case; anything else must not wake the overlay.
+        val kind = event["kind"]
+        if (kind == "notificationRemoved" || kind == "mediaStopped") return
         // App killed and overlay down: stash + cold-start the overlay.
         persistPending(context, command)
         startBootService(context)
