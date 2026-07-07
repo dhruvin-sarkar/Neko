@@ -132,23 +132,23 @@ The Flutter app is the main surface; a native Android overlay service draws the 
 flowchart LR
     You([" You "])
 
-    subgraph app["📱 Flutter App"]
+    subgraph app[" Flutter App"]
         UI["Chat · Profiles<br/>Onboarding · Settings"]
         Voice["Hey Neko<br/>wake word + STT"]
     end
 
-    subgraph native["⚙️ Android Native"]
+    subgraph native[" Android Native"]
         Overlay["Dynamic Island<br/>overlay engine"]
         Listener["Notification &<br/>media listener"]
     end
 
-    subgraph cloud["☁️ Firebase"]
+    subgraph cloud[" Firebase"]
         Auth["Auth"]
         Store["Firestore"]
         Files["Storage"]
     end
 
-    AI["🤖 AI proxy"]
+    AI[" AI proxy"]
 
     You --> UI
     You -.->|"Hey Neko"| Voice
